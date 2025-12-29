@@ -1,4 +1,9 @@
+import page from './page';
+import route from './route';
+
 const local: App.I18n.Schema = {
+  route,
+  page,
   system: {
     title: 'PancakeAdmin',
     updateTitle: 'System Version Update Notification',
@@ -220,82 +225,6 @@ const local: App.I18n.Schema = {
       copySuccessMsg: 'Copy Success, Please replace the variable "themeSettings" in "src/theme/settings.ts"',
       resetConfig: 'Reset Config',
       resetSuccessMsg: 'Reset Success'
-    }
-  },
-  route: {
-    login: 'Login',
-    403: 'No Permission',
-    404: 'Page Not Found',
-    500: 'Server Error',
-    'iframe-page': 'Iframe',
-    home: 'Home'
-  },
-  page: {
-    login: {
-      common: {
-        loginOrRegister: 'Login / Register',
-        userNamePlaceholder: 'Please enter user name',
-        phonePlaceholder: 'Please enter phone number',
-        codePlaceholder: 'Please enter verification code',
-        passwordPlaceholder: 'Please enter password',
-        confirmPasswordPlaceholder: 'Please enter password again',
-        codeLogin: 'Verification code login',
-        confirm: 'Confirm',
-        back: 'Back',
-        validateSuccess: 'Verification passed',
-        loginSuccess: 'Login successfully',
-        welcomeBack: 'Welcome back, {userName} !'
-      },
-      pwdLogin: {
-        title: 'Password Login',
-        rememberMe: 'Remember me',
-        forgetPassword: 'Forget password?',
-        register: 'Register',
-        otherAccountLogin: 'Other Account Login',
-        otherLoginMode: 'Other Login Mode',
-        superAdmin: 'Super Admin',
-        admin: 'Admin',
-        user: 'User'
-      },
-      codeLogin: {
-        title: 'Verification Code Login',
-        getCode: 'Get verification code',
-        reGetCode: 'Reacquire after {time}s',
-        sendCodeSuccess: 'Verification code sent successfully',
-        imageCodePlaceholder: 'Please enter image verification code'
-      },
-      register: {
-        title: 'Register',
-        agreement: 'I have read and agree to',
-        protocol: '《User Agreement》',
-        policy: '《Privacy Policy》'
-      },
-      resetPwd: {
-        title: 'Reset Password'
-      },
-      bindWeChat: {
-        title: 'Bind WeChat'
-      }
-    },
-    home: {
-      branchDesc:
-        'For the convenience of everyone in developing and updating the merge, we have streamlined the code of the main branch, only retaining the homepage menu, and the rest of the content has been moved to the example branch for maintenance. The preview address displays the content of the example branch.',
-      greeting: 'Good morning, {userName}, today is another day full of vitality!',
-      weatherDesc: 'Today is cloudy to clear, 20℃ - 25℃!',
-      projectCount: 'Project Count',
-      todo: 'Todo',
-      message: 'Message',
-      downloadCount: 'Download Count',
-      registerCount: 'Register Count',
-      schedule: 'Work and rest Schedule',
-      study: 'Study',
-      work: 'Work',
-      rest: 'Rest',
-      entertainment: 'Entertainment',
-      visitCount: 'Visit Count',
-      turnover: 'Turnover',
-      dealCount: 'Deal Count',
-      creativity: 'Creativity'
     }
   },
   form: {

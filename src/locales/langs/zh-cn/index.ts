@@ -1,4 +1,9 @@
-const local: App.I18n.Schema = {
+import page from './page';
+import route from './route';
+
+const local = {
+  route,
+  page,
   system: {
     title: 'Pancake 管理系统',
     updateTitle: '系统版本更新通知',
@@ -216,82 +221,6 @@ const local: App.I18n.Schema = {
       copySuccessMsg: '复制成功，请替换 src/theme/settings.ts 中的变量 themeSettings',
       resetConfig: '重置配置',
       resetSuccessMsg: '重置成功'
-    }
-  },
-  route: {
-    login: '登录',
-    403: '无权限',
-    404: '页面不存在',
-    500: '服务器错误',
-    'iframe-page': '外链页面',
-    home: '首页'
-  },
-  page: {
-    login: {
-      common: {
-        loginOrRegister: '登录 / 注册',
-        userNamePlaceholder: '请输入用户名',
-        phonePlaceholder: '请输入手机号',
-        codePlaceholder: '请输入验证码',
-        passwordPlaceholder: '请输入密码',
-        confirmPasswordPlaceholder: '请再次输入密码',
-        codeLogin: '验证码登录',
-        confirm: '确定',
-        back: '返回',
-        validateSuccess: '验证成功',
-        loginSuccess: '登录成功',
-        welcomeBack: '欢迎回来，{userName} ！'
-      },
-      pwdLogin: {
-        title: '密码登录',
-        rememberMe: '记住我',
-        forgetPassword: '忘记密码？',
-        register: '注册账号',
-        otherAccountLogin: '其他账号登录',
-        otherLoginMode: '其他登录方式',
-        superAdmin: '超级管理员',
-        admin: '管理员',
-        user: '普通用户'
-      },
-      codeLogin: {
-        title: '验证码登录',
-        getCode: '获取验证码',
-        reGetCode: '{time}秒后重新获取',
-        sendCodeSuccess: '验证码发送成功',
-        imageCodePlaceholder: '请输入图片验证码'
-      },
-      register: {
-        title: '注册账号',
-        agreement: '我已经仔细阅读并接受',
-        protocol: '《用户协议》',
-        policy: '《隐私权政策》'
-      },
-      resetPwd: {
-        title: '重置密码'
-      },
-      bindWeChat: {
-        title: '绑定微信'
-      }
-    },
-    home: {
-      branchDesc:
-        '为了方便大家开发和更新合并，我们对main分支的代码进行了精简，只保留了首页菜单，其余内容已移至example分支进行维护。预览地址显示的内容即为example分支的内容。',
-      greeting: '早安，{userName}, 今天又是充满活力的一天!',
-      weatherDesc: '今日多云转晴，20℃ - 25℃!',
-      projectCount: '项目数',
-      todo: '待办',
-      message: '消息',
-      downloadCount: '下载量',
-      registerCount: '注册量',
-      schedule: '作息安排',
-      study: '学习',
-      work: '工作',
-      rest: '休息',
-      entertainment: '娱乐',
-      visitCount: '访问量',
-      turnover: '成交额',
-      dealCount: '成交量',
-      creativity: '创意'
     }
   },
   form: {
