@@ -9,6 +9,37 @@ export function fetchGetRoleList(params?: Api.SystemManage.RoleSearchParams) {
   });
 }
 
+export function fetchSaveRole(data: Api.SystemManage.CreateRoleParams) {
+  return request<App.Service.Response<any>>({
+    url: '/system/role/add',
+    method: 'post',
+    data
+  });
+}
+
+export function fetchUpdateRole(roleId: string, data: Api.SystemManage.CreateRoleParams) {
+  return request<App.Service.Response<any>>({
+    url: `/system/role/${roleId}`,
+    method: 'put',
+    data
+  });
+}
+
+export function fetchDeleteRole(roleId: string) {
+  return request({
+    url: `/system/role/${roleId}`,
+    method: 'delete'
+  });
+}
+
+export function fetchBatchDeleteRole(data: string[]) {
+  return request({
+    url: `/system/role/batch-delete`,
+    method: 'post',
+    data
+  });
+}
+
 /**
  * get all roles
  *

@@ -227,7 +227,8 @@ const local: App.I18n.Schema = {
     'iframe-page': '外链页面',
     home: '首页',
     system: '系统管理',
-    system_user: '用户管理'
+    system_user: '用户管理',
+    system_role: '角色管理'
   },
   page: {
     login: {
@@ -301,6 +302,23 @@ const local: App.I18n.Schema = {
           enable: '启用',
           disable: '禁用'
         }
+      },
+      role: {
+        title: '角色列表',
+        roleName: '角色名称',
+        roleCode: '角色编码',
+        roleStatus: '角色状态',
+        roleDesc: '角色描述',
+        menuAuth: '菜单权限',
+        buttonAuth: '按钮权限',
+        form: {
+          roleName: '请输入角色名称',
+          roleCode: '请输入角色编码',
+          roleStatus: '请选择角色状态',
+          roleDesc: '请输入角色描述'
+        },
+        addRole: '新增角色',
+        editRole: '编辑角色'
       },
       user: {
         title: '用户列表',
