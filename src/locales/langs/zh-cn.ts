@@ -228,7 +228,8 @@ const local: App.I18n.Schema = {
     home: '首页',
     system: '系统管理',
     system_user: '用户管理',
-    system_role: '角色管理'
+    system_role: '角色管理',
+    system_menu: '菜单管理'
   },
   page: {
     login: {
@@ -346,6 +347,77 @@ const local: App.I18n.Schema = {
           female: '女'
         },
         password: '密码'
+      },
+      menu: {
+        home: '首页',
+        title: '菜单列表',
+        id: 'ID',
+        parentId: '父级菜单ID',
+        menuType: '菜单类型',
+        parentMenu: '上级菜单',
+        menuName: '菜单名称',
+        routeName: '路由名称',
+        routePath: '路由路径',
+        pathParam: '路径参数',
+        layout: '布局',
+        page: '页面组件',
+        i18nKey: '国际化key',
+        icon: '图标',
+        localIcon: '本地图标',
+        iconTypeTitle: '图标类型',
+        order: '排序',
+        constant: '常量路由',
+        keepAlive: '缓存路由',
+        href: '外链',
+        hideInMenu: '隐藏菜单',
+        activeMenu: '高亮的菜单',
+        multiTab: '支持多页签',
+        fixedIndexInTab: '固定在页签中的序号',
+        query: '路由参数',
+        button: '按钮',
+        buttonCode: '按钮编码',
+        buttonDesc: '按钮描述',
+        menuStatus: '菜单状态',
+        form: {
+          home: '请选择首页',
+          menuType: '请选择菜单类型',
+          parentMenu: '请选择上级菜单',
+          menuName: '请输入菜单名称',
+          routeName: '请输入路由名称',
+          routePath: '请输入路由路径',
+          pathParam: '请输入路径参数',
+          page: '请选择页面组件',
+          layout: '请选择布局组件',
+          i18nKey: '请输入国际化key',
+          icon: '请输入图标',
+          localIcon: '请选择本地图标',
+          order: '请输入排序',
+          keepAlive: '请选择是否缓存路由',
+          href: '请输入外链',
+          hideInMenu: '请选择是否隐藏菜单',
+          activeMenu: '请选择高亮的菜单的路由名称',
+          multiTab: '请选择是否支持多标签',
+          fixedInTab: '请选择是否固定在页签中',
+          fixedIndexInTab: '请输入固定在页签中的序号',
+          queryKey: '请输入路由参数Key',
+          queryValue: '请输入路由参数Value',
+          button: '请选择是否按钮',
+          buttonCode: '请输入按钮编码',
+          buttonDesc: '请输入按钮描述',
+          menuStatus: '请选择菜单状态'
+        },
+        addMenu: '新增菜单',
+        editMenu: '编辑菜单',
+        addChildMenu: '新增子菜单',
+        type: {
+          directory: '目录',
+          menu: '菜单',
+          button: '按钮'
+        },
+        iconType: {
+          iconify: 'iconify图标',
+          local: '本地图标'
+        }
       }
     }
   },

@@ -2,12 +2,12 @@ import { request } from '../request';
 
 /** get constant routes */
 export function fetchGetConstantRoutes() {
-  return request<Api.Route.MenuRoute[]>({ url: '/route/getConstantRoutes' });
+  return request<Api.Route.MenuRoute[]>({ url: '/auth/getConstantRoutes' });
 }
 
 /** get user routes */
 export function fetchGetUserRoutes() {
-  return request<Api.Route.UserRoute>({ url: '/route/getUserRoutes' });
+  return request<Api.Route.UserRoute>({ url: '/auth/getUserRoutes' });
 }
 
 /**

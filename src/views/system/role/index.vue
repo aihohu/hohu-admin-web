@@ -1,6 +1,7 @@
 <script setup lang="tsx">
 import { reactive } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
+import { useBoolean } from '@sa/hooks';
 import { enableStatusRecord } from '@/constants/business';
 import { fetchBatchDeleteRole, fetchDeleteRole, fetchGetRoleList } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
@@ -8,8 +9,10 @@ import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hoo
 import { $t } from '@/locales';
 import RoleOperateDrawer from './modules/role-operate-drawer.vue';
 import RoleSearch from './modules/role-search.vue';
+import MenuAuthModal from './modules/menu-auth-modal.vue';
 
 const appStore = useAppStore();
+const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
 
 const searchParams: Api.SystemManage.RoleSearchParams = reactive({
   current: 1,
@@ -80,9 +83,14 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       key: 'operate',
       title: $t('common.operate'),
       align: 'center',
-      width: 130,
+      width: 260,
       render: row => (
         <div class="flex-center gap-8px">
+          <NButton type="info" ghost size="small" onClick={() => openMenuAuthModal()}>
+            {$t('page.system.role.menuAuth')}
+          </NButton>
+          <MenuAuthModal v-model:visible={menuAuthVisible.value} roleId={row.roleId} />
+
           <NButton type="primary" ghost size="small" onClick={() => edit(row.roleId)}>
             {$t('common.edit')}
           </NButton>

@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { jsonClone } from '@sa/utils';
-import { useBoolean } from '@sa/hooks';
+// import { useBoolean } from '@sa/hooks';
 import { enableStatusOptions } from '@/constants/business';
 import { fetchSaveRole, fetchUpdateRole } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
-import MenuAuthModal from './menu-auth-modal.vue';
-import ButtonAuthModal from './button-auth-modal.vue';
+// import MenuAuthModal from './menu-auth-modal.vue';
 
 defineOptions({
   name: 'RoleOperateDrawer'
@@ -34,8 +33,7 @@ const visible = defineModel<boolean>('visible', {
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
 const { defaultRequiredRule } = useFormRules();
-const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
-const { bool: buttonAuthVisible, setTrue: openButtonAuthModal } = useBoolean();
+// const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
 
 const title = computed(() => {
   const titles: Record<NaiveUI.TableOperateType, string> = {
@@ -66,9 +64,9 @@ const rules: Record<RuleKey, App.Global.FormRule> = {
   status: defaultRequiredRule
 };
 
-const roleId = computed(() => props.rowData?.id || -1);
+// const roleId = computed(() => props.rowData?.roleId || '-1');
 
-const isEdit = computed(() => props.operateType === 'edit');
+// const isEdit = computed(() => props.operateType === 'edit');
 
 function handleInitModel() {
   model.value = createDefaultModel();
@@ -130,12 +128,12 @@ watch(visible, () => {
           <NInput v-model:value="model.roleDesc" :placeholder="$t('page.system.role.form.roleDesc')" />
         </NFormItem>
       </NForm>
-      <NSpace v-if="isEdit">
+      <!--
+ <NSpace v-if="isEdit">
         <NButton @click="openMenuAuthModal">{{ $t('page.system.role.menuAuth') }}</NButton>
         <MenuAuthModal v-model:visible="menuAuthVisible" :role-id="roleId" />
-        <NButton @click="openButtonAuthModal">{{ $t('page.system.role.buttonAuth') }}</NButton>
-        <ButtonAuthModal v-model:visible="buttonAuthVisible" :role-id="roleId" />
-      </NSpace>
+      </NSpace> 
+-->
       <template #footer>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>

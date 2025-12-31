@@ -154,6 +154,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
 
     const staticRoute = createStaticRoutes();
 
+    // To avoid requesting static routes, comment out the following code and enable `addConstantRoutes(staticRoute.constantRoutes)`.
     if (authRouteMode.value === 'static') {
       addConstantRoutes(staticRoute.constantRoutes);
     } else {

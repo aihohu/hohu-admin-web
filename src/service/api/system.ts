@@ -9,6 +9,13 @@ export function fetchGetRoleList(params?: Api.SystemManage.RoleSearchParams) {
   });
 }
 
+export function fetchGetRoleMenuList(roleId: string) {
+  return request<string[]>({
+    url: `/system/role/menus/${roleId}`,
+    method: 'get'
+  });
+}
+
 export function fetchSaveRole(data: Api.SystemManage.CreateRoleParams) {
   return request<App.Service.Response<any>>({
     url: '/system/role/add',
@@ -20,6 +27,14 @@ export function fetchSaveRole(data: Api.SystemManage.CreateRoleParams) {
 export function fetchUpdateRole(roleId: string, data: Api.SystemManage.CreateRoleParams) {
   return request<App.Service.Response<any>>({
     url: `/system/role/${roleId}`,
+    method: 'put',
+    data
+  });
+}
+
+export function fetchUpdateRoleMenu(roleId: string, data: string[]) {
+  return request<App.Service.Response<any>>({
+    url: `/system/role/menu/${roleId}`,
     method: 'put',
     data
   });
@@ -95,7 +110,7 @@ export function fetchBatchDeleteUser(data: string[]) {
 /** get menu list */
 export function fetchGetMenuList() {
   return request<Api.SystemManage.MenuList>({
-    url: '/system/menu/list',
+    url: '/system/menu/tree-list',
     method: 'get'
   });
 }
@@ -103,7 +118,7 @@ export function fetchGetMenuList() {
 /** get all pages */
 export function fetchGetAllPages() {
   return request<string[]>({
-    url: '/system/getAllPages',
+    url: '/system/menu/getAllPages',
     method: 'get'
   });
 }
@@ -111,7 +126,38 @@ export function fetchGetAllPages() {
 /** get menu tree */
 export function fetchGetMenuTree() {
   return request<Api.SystemManage.MenuTree[]>({
-    url: '/system/getMenuTree',
+    url: '/system/menu/tree-option',
     method: 'get'
+  });
+}
+
+export function fetchSaveMenu(data: Api.SystemManage.CreateMenuParams) {
+  return request<App.Service.Response<any>>({
+    url: '/system/menu/add',
+    method: 'post',
+    data
+  });
+}
+
+export function fetchUpdateMenu(menuId: string, data: Api.SystemManage.CreateMenuParams) {
+  return request<App.Service.Response<any>>({
+    url: `/system/menu/${menuId}`,
+    method: 'put',
+    data
+  });
+}
+
+export function fetchDeleteMenu(menuId: string) {
+  return request({
+    url: `/system/menu/${menuId}`,
+    method: 'delete'
+  });
+}
+
+export function fetchBatchDeleteMenu(data: string[]) {
+  return request({
+    url: `/system/menu/batch-delete`,
+    method: 'post',
+    data
   });
 }

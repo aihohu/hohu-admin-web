@@ -78,10 +78,11 @@ declare namespace Api {
     /**
      * menu type
      *
-     * - "1": directory
-     * - "2": menu
+     * - "m": Menu Directory
+     * - "c": Component/Menu
+     * - "f": Function/Button
      */
-    type MenuType = '1' | '2';
+    type MenuType = 'M' | 'C';
 
     type MenuButton = {
       /**
@@ -117,8 +118,9 @@ declare namespace Api {
     >;
 
     type Menu = Common.CommonRecord<{
+      menuId: string;
       /** parent menu id */
-      parentId: number;
+      parentId: string;
       /** menu type */
       menuType: MenuType;
       /** menu name */
@@ -149,5 +151,27 @@ declare namespace Api {
       pId: number;
       children?: MenuTree[];
     };
+
+    type CreateMenuParams = Pick<
+      Api.SystemManage.Menu,
+      | 'menuType'
+      | 'menuName'
+      | 'routeName'
+      | 'routePath'
+      | 'component'
+      | 'order'
+      | 'i18nKey'
+      | 'icon'
+      | 'iconType'
+      | 'status'
+      | 'parentId'
+      | 'keepAlive'
+      | 'constant'
+      | 'href'
+      | 'hideInMenu'
+      | 'activeMenu'
+      | 'multiTab'
+      | 'fixedIndexInTab'
+    >;
   }
 }
