@@ -693,6 +693,11 @@ declare namespace App {
       };
       datatable: {
         itemCount: string;
+        fixed: {
+          left: string;
+          right: string;
+          unFixed: string;
+        };
       };
     };
 
