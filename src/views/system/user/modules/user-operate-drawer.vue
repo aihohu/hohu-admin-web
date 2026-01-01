@@ -85,15 +85,8 @@ async function getRoleOptions() {
       value: item.roleCode
     }));
 
-    // the mock data does not have the roleCode, so fill it
-    // if the real request, remove the following code
-    const userRoleOptions = model.value.roles.map(item => ({
-      label: item,
-      value: item
-    }));
-    // end
-
-    roleOptions.value = [...userRoleOptions, ...options];
+    roleOptions.value = options;
+    console.log(roleOptions.value);
   }
 }
 
