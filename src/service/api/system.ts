@@ -32,7 +32,7 @@ export function fetchUpdateRole(roleId: string, data: Api.SystemManage.CreateRol
   });
 }
 
-export function fetchUpdateRoleMenu(roleId: string, data: string[]) {
+export function fetchUpdateRoleMenu(roleId: string, data: Array<string | number>) {
   return request<App.Service.Response<any>>({
     url: `/system/role/menu/${roleId}`,
     method: 'put',

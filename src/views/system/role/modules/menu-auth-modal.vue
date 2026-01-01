@@ -24,6 +24,8 @@ function closeModal() {
 
 const title = computed(() => $t('common.edit') + $t('page.system.role.menuAuth'));
 
+const showSpin = shallowRef<boolean>(false);
+
 const home = shallowRef('');
 
 async function getHome() {
@@ -66,27 +68,34 @@ async function getTree() {
 }
 
 const checks = shallowRef<string[]>([]);
+const indeterminateKeys = shallowRef<string[]>([]);
 
 async function getChecks() {
   const { error, data } = await fetchGetRoleMenuList(props.roleId);
   if (!error) {
     checks.value = data;
   }
+  showSpin.value = false;
 }
 
 async function handleSubmit() {
-  const { error } = await fetchUpdateRoleMenu(props.roleId, checks.value);
+  const allCheckedKeys = [...checks.value, ...indeterminateKeys.value];
+
+  const { error } = await fetchUpdateRoleMenu(props.roleId, allCheckedKeys);
   if (!error) {
     window.$message?.success?.($t('common.modifySuccess'));
     closeModal();
   }
 }
 
-function init() {
+async function init() {
+  showSpin.value = true;
+  checks.value = [];
+  indeterminateKeys.value = [];
   getHome();
   getPages();
-  getTree();
-  getChecks();
+  await getTree();
+  await getChecks();
 }
 
 watch(visible, val => {
@@ -98,23 +107,30 @@ watch(visible, val => {
 
 <template>
   <NModal v-model:show="visible" :title="title" preset="card" class="w-480px">
-    <!--
+    <NSpace vertical>
+      <NSpin :show="showSpin">
+        <!--
  <div class="flex-y-center gap-16px pb-12px">
       <div>{{ $t('page.system.menu.home') }}</div>
       <NSelect :value="home" :options="pageSelectOptions" size="small" class="w-160px" @update:value="updateHome" />
     </div> 
 -->
 
-    <NTree
-      v-model:checked-keys="checks"
-      :data="tree"
-      key-field="id"
-      checkable
-      expand-on-click
-      virtual-scroll
-      block-line
-      class="h-280px"
-    />
+        <NTree
+          v-model:checked-keys="checks"
+          :data="tree"
+          key-field="id"
+          checkable
+          cascade
+          show-line
+          expand-on-click
+          virtual-scroll
+          block-line
+          class="h-280px"
+        />
+      </NSpin>
+    </NSpace>
+
     <template #footer>
       <NSpace justify="end">
         <NButton size="small" class="mt-16px" @click="closeModal">

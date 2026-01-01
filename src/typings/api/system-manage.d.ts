@@ -146,9 +146,9 @@ declare namespace Api {
     type MenuList = Common.PaginatingQueryRecord<Menu>;
 
     type MenuTree = {
-      id: number;
+      id: string;
       label: string;
-      pId: number;
+      pId: string;
       children?: MenuTree[];
     };
 

@@ -86,7 +86,6 @@ async function getRoleOptions() {
     }));
 
     roleOptions.value = options;
-    console.log(roleOptions.value);
   }
 }
 

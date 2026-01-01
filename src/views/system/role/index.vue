@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
+import { reactive, shallowRef } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { enableStatusRecord } from '@/constants/business';
@@ -13,6 +13,8 @@ import MenuAuthModal from './modules/menu-auth-modal.vue';
 
 const appStore = useAppStore();
 const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
+
+const currentRoleId = shallowRef<string>('');
 
 const searchParams: Api.SystemManage.RoleSearchParams = reactive({
   current: 1,
@@ -86,11 +88,9 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       width: 260,
       render: row => (
         <div class="flex-center gap-8px">
-          <NButton type="info" ghost size="small" onClick={() => openMenuAuthModal()}>
+          <NButton type="info" ghost size="small" onClick={() => onMenuAuthClick(row.roleId)}>
             {$t('page.system.role.menuAuth')}
           </NButton>
-          <MenuAuthModal v-model:visible={menuAuthVisible.value} roleId={row.roleId} />
-
           <NButton type="primary" ghost size="small" onClick={() => edit(row.roleId)}>
             {$t('common.edit')}
           </NButton>
@@ -139,6 +139,11 @@ async function handleDelete(id: string) {
 function edit(id: string) {
   handleEdit(id);
 }
+
+function onMenuAuthClick(id: string) {
+  currentRoleId.value = id;
+  openMenuAuthModal();
+}
 </script>
 
 <template>
@@ -175,6 +180,8 @@ function edit(id: string) {
         @submitted="getDataByPage"
       />
     </NCard>
+
+    <MenuAuthModal v-model:visible="menuAuthVisible" :role-id="currentRoleId" />
   </div>
 </template>
 
