@@ -1,15 +1,10 @@
 # hohu-admin-web
 
-
 ## 简介
 
 基于FastAPI，SQLAlchemy，Vue3 &amp; Naiveui 的前后端分离权限管理系统
 
-
-
 ## 使用
-
-
 
 **环境准备**
 
@@ -25,15 +20,11 @@
 git clone https://github.com/aihohu/hohu-admin-web.git
 ```
 
-
-
 **安装依赖**
 
 ```
 pnpm i
 ```
-
-
 
 > 由于本项目采用了 pnpm monorepo 的管理方式，因此请不要使用 npm 或 yarn 来安装依赖。
 
@@ -42,8 +33,6 @@ pnpm i
 ```
 pnpm dev
 ```
-
-
 
 **构建项目**
 
