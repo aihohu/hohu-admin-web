@@ -439,10 +439,10 @@ watch(
               <template #action="{ index, create, remove }">
                 <NSpace class="ml-12px">
                   <NButton size="medium" @click="() => create(index)">
-                    <icon-ic:round-plus class="text-icon" />
+                    <IconIcRoundPlus class="text-icon" />
                   </NButton>
                   <NButton size="medium" @click="() => remove(index)">
-                    <icon-ic-round-remove class="text-icon" />
+                    <IconIcRoundRemove class="text-icon" />
                   </NButton>
                 </NSpace>
               </template>
@@ -467,10 +467,10 @@ watch(
               <template #action="{ index, create, remove }">
                 <NSpace class="ml-12px">
                   <NButton size="medium" @click="() => create(index)">
-                    <icon-ic:round-plus class="text-icon" />
+                    <IconIcRoundPlus class="text-icon" />
                   </NButton>
                   <NButton size="medium" @click="() => remove(index)">
-                    <icon-ic-round-remove class="text-icon" />
+                    <IconIcRoundRemove class="text-icon" />
                   </NButton>
                 </NSpace>
               </template>

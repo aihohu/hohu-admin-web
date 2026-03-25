@@ -161,3 +161,111 @@ export function fetchBatchDeleteMenu(data: string[]) {
     data
   });
 }
+
+/** get dict type list */
+export function fetchGetDictTypeList(params?: Api.SystemManage.DictTypeSearchParams) {
+  return request<Api.SystemManage.DictTypeList>({
+    url: '/system/dict-type/list',
+    method: 'get',
+    params
+  });
+}
+
+/**
+ * get all dict types
+ *
+ * these dict types are all enabled
+ */
+export function fetchGetAllDictTypes() {
+  return request<Api.SystemManage.DictTypeSimple[]>({
+    url: '/system/dict-type/all',
+    method: 'get'
+  });
+}
+
+/** save dict type */
+export function fetchSaveDictType(data: Api.SystemManage.DictTypeCreateParams) {
+  return request<App.Service.Response<any>>({
+    url: '/system/dict-type/add',
+    method: 'post',
+    data
+  });
+}
+
+/** update dict type */
+export function fetchUpdateDictType(typeId: number, data: Api.SystemManage.DictTypeCreateParams) {
+  return request<App.Service.Response<any>>({
+    url: `/system/dict-type/${typeId}`,
+    method: 'put',
+    data
+  });
+}
+
+/** delete dict type */
+export function fetchDeleteDictType(typeId: number) {
+  return request({
+    url: `/system/dict-type/${typeId}`,
+    method: 'delete'
+  });
+}
+
+/** batch delete dict type */
+export function fetchBatchDeleteDictType(data: string[]) {
+  return request({
+    url: '/system/dict-type/batch-delete',
+    method: 'post',
+    data
+  });
+}
+
+/** get dict data list */
+export function fetchGetDictDataList(params?: Api.SystemManage.DictDataSearchParams) {
+  return request<Api.SystemManage.DictDataList>({
+    url: '/system/dict-data/list',
+    method: 'get',
+    params
+  });
+}
+
+/** get dict data by dict type */
+export function fetchGetDictDataByType(dictType: string) {
+  return request<Api.SystemManage.DictData[]>({
+    url: `/system/dict-data/type/${dictType}`,
+    method: 'get'
+  });
+}
+
+/** save dict data */
+export function fetchSaveDictData(data: Api.SystemManage.DictDataCreateParams) {
+  return request<App.Service.Response<any>>({
+    url: '/system/dict-data/add',
+    method: 'post',
+    data
+  });
+}
+
+/** update dict data */
+export function fetchUpdateDictData(dataId: number, data: Api.SystemManage.DictDataCreateParams) {
+  return request<App.Service.Response<any>>({
+    url: `/system/dict-data/${dataId}`,
+    method: 'put',
+    data
+  });
+}
+
+/** delete dict data */
+export function fetchDeleteDictData(dataId: number) {
+  return request({
+    url: `/system/dict-data/${dataId}`,
+    method: 'delete'
+  });
+}
+
+/** batch delete dict data */
+export function fetchBatchDeleteDictData(data: number[]) {
+  return request({
+    url: '/system/dict-data/batch-delete',
+    method: 'post',
+    data
+  });
+}

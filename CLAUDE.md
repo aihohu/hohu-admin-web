@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **HoHu Admin Web** is a modern Vue 3-based admin dashboard frontend, designed to work with the FastAPI backend at `http://127.0.0.1:8000`. It follows a monorepo architecture with workspace packages for better code organization and maintainability.
 
 **Key Technologies:**
+
 - Vue 3.5.26 (Composition API, `<script setup>`)
 - Vite 7.3.0 (build tool, dev server)
 - TypeScript 5.9.3 (type safety)
@@ -18,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ECharts 6.0.0 (data visualization)
 
 **Backend Integration:**
+
 - FastAPI backend at `http://127.0.0.1:8000`
 - API documentation: http://127.0.0.1:8000/docs
 - Response format: `{code: number, msg: string, data: any}` (success code: `0000`)
@@ -27,6 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Environment Setup
+
 ```bash
 # Install dependencies (requires pnpm >= 10.5.0, Node >= 20.19.0)
 pnpm install
@@ -36,6 +39,7 @@ pnpm install -F=@sa/axios
 ```
 
 ### Running the Application
+
 ```bash
 # Development mode (test environment, connects to http://127.0.0.1:8000)
 pnpm dev
@@ -48,6 +52,7 @@ pnpm preview
 ```
 
 ### Building
+
 ```bash
 # Production build
 pnpm build
@@ -57,6 +62,7 @@ pnpm build:test
 ```
 
 ### Code Quality
+
 ```bash
 # ESLint check and fix
 pnpm lint
@@ -66,6 +72,7 @@ pnpm typecheck
 ```
 
 ### Development Tools
+
 ```bash
 # Generate route types from pages
 pnpm gen-route
@@ -144,6 +151,7 @@ hohu-admin-web/
 ### Component Development
 
 **File-based Components with `<script setup>`:**
+
 ```vue
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
@@ -184,6 +192,7 @@ onMounted(() => {
 ### API Service Integration
 
 **Using the HTTP request wrapper:**
+
 ```typescript
 // src/service/api/system.ts
 import { request } from '@/service/request';
@@ -225,6 +234,7 @@ export function deleteUser(userId: number) {
 ```
 
 **Response handling:**
+
 ```typescript
 // All responses are automatically transformed
 const response = await fetchUserList({ current: 1, size: 10 });
@@ -234,6 +244,7 @@ const response = await fetchUserList({ current: 1, size: 10 });
 ### State Management with Pinia
 
 **Store module structure:**
+
 ```typescript
 // src/store/modules/example/index.ts
 import { defineStore } from 'pinia';
@@ -265,6 +276,7 @@ export const useExampleStore = defineStore('example', () => {
 ```
 
 **Using store in components:**
+
 ```vue
 <script setup lang="ts">
 import { useExampleStore } from '@/store/modules/example';
@@ -282,11 +294,13 @@ await exampleStore.fetchItems();
 ### Routing with @elegant-router
 
 **Automatic route generation:**
+
 - Routes are generated from the `src/views` directory structure
 - File path: `src/views/system/user/index.vue` → Route: `/system/user`
 - Use `pnpm gen-route` to regenerate route types after adding new pages
 
 **Route meta information:**
+
 ```typescript
 // src/router/elegant/routes.ts (auto-generated)
 export default [
@@ -307,18 +321,18 @@ export default [
 ### Styling with UnoCSS
 
 **Utility-first CSS:**
+
 ```vue
 <template>
   <div class="flex items-center justify-between p-4 bg-white rounded-lg shadow">
     <h1 class="text-xl font-bold text-gray-800">Title</h1>
-    <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-      Button
-    </button>
+    <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Button</button>
   </div>
 </template>
 ```
 
 **Custom theme configuration:**
+
 ```typescript
 // src/theme/vars.ts
 export const themeVars = {
@@ -334,6 +348,7 @@ export const themeVars = {
 ### i18n Integration
 
 **Adding translations:**
+
 ```typescript
 // src/locales/langs/zh-cn.ts
 export default {
@@ -363,6 +378,7 @@ export default {
 ```
 
 **Using translations in components:**
+
 ```vue
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
@@ -378,6 +394,7 @@ const { t } = useI18n();
 ### Custom Hooks
 
 **Business-specific hooks:**
+
 ```typescript
 // src/hooks/business/example.ts
 import { ref } from 'vue';
@@ -408,6 +425,7 @@ export function useExample() {
 ### API Response Format
 
 **Standard response structure:**
+
 ```typescript
 {
   code: number,      // 0000 = success, others = error
@@ -417,6 +435,7 @@ export function useExample() {
 ```
 
 **Success response:**
+
 ```json
 {
   "code": 0000,
@@ -430,6 +449,7 @@ export function useExample() {
 ```
 
 **Error response:**
+
 ```json
 {
   "code": 1001,
@@ -441,6 +461,7 @@ export function useExample() {
 ### Authentication
 
 **Login flow:**
+
 ```typescript
 // src/service/api/auth.ts
 export interface LoginRequest {
@@ -463,6 +484,7 @@ export function login(data: LoginRequest) {
 ```
 
 **Token management:**
+
 ```typescript
 // src/store/modules/auth/index.ts
 import { useAuthStore } from '@/store/modules/auth';
@@ -485,18 +507,19 @@ const userInfo = authStore.userInfo;
 ### Type Definitions
 
 **API namespace structure:**
+
 ```typescript
 // src/typings/api/
 declare namespace Api {
   namespace System {
     interface User {
-      userId: string;         // Snowflake ID as string
+      userId: string; // Snowflake ID as string
       userName: string;
       nickname: string;
       userEmail: string;
       userPhone: string;
-      userGender: '0' | '1' | '2';  // 0-unknown, 1-male, 2-female
-      status: '1' | '2';              // 1-enabled, 2-disabled
+      userGender: '0' | '1' | '2'; // 0-unknown, 1-male, 2-female
+      status: '1' | '2'; // 1-enabled, 2-disabled
       createTime: string;
       updateTime: string;
     }
@@ -520,7 +543,7 @@ declare namespace Api {
       userGender: string;
       status: string;
       password: string;
-      roles: string[];  // Role codes, not IDs
+      roles: string[]; // Role codes, not IDs
     }
   }
 
@@ -538,12 +561,13 @@ declare namespace Api {
 ### Common Patterns
 
 **Pagination handling:**
+
 ```typescript
 // Query parameters
 const query = ref({
   current: 1,
   size: 10,
-  userName: ''  // Optional filter
+  userName: '' // Optional filter
 });
 
 // Response structure
@@ -559,6 +583,7 @@ const { data, loading } = await fetchUserList(query.value);
 ```
 
 **Error handling:**
+
 ```typescript
 try {
   await createUser(userData);
@@ -575,6 +600,7 @@ try {
 ### Environment Variables
 
 **.env.test (Development):**
+
 ```bash
 # Backend API base URL
 VITE_SERVICE_BASE_URL=http://127.0.0.1:8000
@@ -596,6 +622,7 @@ VITE_HTTP_PROXY=N
 ```
 
 **.env.prod (Production):**
+
 ```bash
 VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 # ... other production-specific variables
@@ -604,6 +631,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ### Vite Configuration
 
 **Build settings:**
+
 ```typescript
 // vite.config.ts
 {
@@ -635,12 +663,14 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ### Adding a New Page
 
 1. **Create the page component:**
+
    ```bash
    mkdir -p src/views/example/module
    touch src/views/example/module/index.vue
    ```
 
 2. **Add route meta (optional):**
+
    ```typescript
    // In the component's script setup
    defineOptions({
@@ -661,6 +691,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ### Adding a New API Endpoint
 
 1. **Define types in `src/typings/api/`:**
+
    ```typescript
    declare namespace Api {
      namespace Example {
@@ -682,6 +713,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
    ```
 
 2. **Create API service in `src/service/api/`:**
+
    ```typescript
    import { request } from '@/service/request';
 
@@ -703,6 +735,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
    ```
 
 3. **Use in components:**
+
    ```vue
    <script setup lang="ts">
    import { fetchExampleList } from '@/service/api/example';
@@ -717,6 +750,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ### Adding a New Store Module
 
 1. **Create store in `src/store/modules/`:**
+
    ```typescript
    // src/store/modules/example/index.ts
    import { defineStore } from 'pinia';
@@ -745,6 +779,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ## Best Practices
 
 ### Code Organization
+
 - **Component structure**: Use `<script setup>` with TypeScript
 - **API services**: Separate API calls from business logic
 - **State management**: Use Pinia stores for shared state
@@ -752,18 +787,21 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 - **File naming**: Use kebab-case for files, PascalCase for components
 
 ### Performance
+
 - **Lazy loading**: Routes are lazy-loaded by default
 - **Code splitting**: Use dynamic imports for large libraries
 - **Image optimization**: Use WebP format where possible
 - **Bundle analysis**: Check bundle size before deployment
 
 ### Accessibility
+
 - **Semantic HTML**: Use proper HTML5 semantic elements
 - **ARIA attributes**: Add ARIA labels for screen readers
 - **Keyboard navigation**: Ensure all interactive elements are keyboard accessible
 - **Color contrast**: Meet WCAG AA standards (4.5:1)
 
 ### Security
+
 - **XSS prevention**: Vue automatically escapes content in templates
 - **CSRF protection**: Tokens are sent in Authorization header
 - **Input validation**: Validate all user inputs
@@ -811,6 +849,7 @@ git diff --exit-code  # Ensure files are committed
 ### Common Issues
 
 **1. Port already in use:**
+
 ```bash
 # Kill process using port 9527
 lsof -ti:9527 | xargs kill -9
@@ -819,6 +858,7 @@ lsof -ti:9527 | xargs kill -9
 ```
 
 **2. API connection failed:**
+
 ```bash
 # Check if backend is running
 curl http://127.0.0.1:8000/docs
@@ -828,6 +868,7 @@ cat .env.test | grep VITE_SERVICE_BASE_URL
 ```
 
 **3. Type errors:**
+
 ```bash
 # Regenerate route types
 pnpm gen-route
@@ -837,6 +878,7 @@ pnpm gen-route
 ```
 
 **4. Build fails:**
+
 ```bash
 # Clear cache and reinstall
 rm -rf node_modules dist .vite

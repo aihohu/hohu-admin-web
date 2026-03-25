@@ -230,7 +230,9 @@ const local: App.I18n.Schema = {
     system: '系统管理',
     system_user: '用户管理',
     system_role: '角色管理',
-    system_menu: '菜单管理'
+    system_menu: '菜单管理',
+    system_dict: '字典管理',
+    system_dict_data: '字典数据'
   },
   page: {
     login: {
@@ -419,6 +421,43 @@ const local: App.I18n.Schema = {
           iconify: 'iconify图标',
           local: '本地图标'
         }
+      },
+      dict: {
+        title: '字典类型列表',
+        dictTypeName: '字典名称',
+        dictTypeCode: '字典类型',
+        dictType: '字典类型',
+        status: '状态',
+        remark: '备注',
+        typeForm: {
+          dictTypeName: '请输入字典名称',
+          dictTypeCode: '请输入字典类型',
+          status: '请选择状态',
+          remark: '请输入备注'
+        },
+        addDictType: '新增字典类型',
+        editDictType: '编辑字典类型',
+        viewDictData: '查看字典数据',
+        dictDataTitle: '字典数据列表',
+        dictLabel: '字典标签',
+        dictValue: '字典键值',
+        dictSort: '字典排序',
+        cssClass: '样式属性',
+        listClass: '表格回显样式',
+        isDefault: '是否默认',
+        dataForm: {
+          dictType: '请选择字典类型',
+          dictLabel: '请输入字典标签',
+          dictValue: '请输入字典键值',
+          dictSort: '请输入字典排序',
+          cssClass: '请输入样式属性',
+          listClass: '请输入表格回显样式',
+          isDefault: '请选择是否默认',
+          status: '请选择状态'
+        },
+        addDictData: '新增字典数据',
+        editDictData: '编辑字典数据',
+        backToDictType: '返回字典类型'
       }
     }
   },

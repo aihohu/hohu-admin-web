@@ -85,6 +85,26 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
+        name: 'system_dict',
+        path: '/system/dict',
+        component: 'view.system_dict',
+        meta: {
+          title: 'system_dict',
+          i18nKey: 'route.system_dict'
+        },
+        children: [
+          {
+            name: 'system_dict_data',
+            path: '/system/dict/data',
+            component: 'view.system_dict_data',
+            meta: {
+              title: 'system_dict_data',
+              i18nKey: 'route.system_dict_data'
+            }
+          }
+        ]
+      },
+      {
         name: 'system_menu',
         path: '/system/menu',
         component: 'view.system_menu',

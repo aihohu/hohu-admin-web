@@ -24,7 +24,6 @@ declare module 'vue' {
     IconAntDesignSettingOutlined: typeof import('~icons/ant-design/setting-outlined')['default']
     IconGridiconsFullscreen: typeof import('~icons/gridicons/fullscreen')['default']
     IconGridiconsFullscreenExit: typeof import('~icons/gridicons/fullscreen-exit')['default']
-    'IconIc:roundPlus': typeof import('~icons/ic/round-plus')['default']
     IconIcRoundDelete: typeof import('~icons/ic/round-delete')['default']
     IconIcRoundPlus: typeof import('~icons/ic/round-plus')['default']
     IconIcRoundRefresh: typeof import('~icons/ic/round-refresh')['default']

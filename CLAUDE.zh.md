@@ -7,6 +7,7 @@
 **HoHu Admin Web** 是一个现代化的 Vue 3 管理后台前端，设计用于对接 FastAPI 后端（地址：`http://127.0.0.1:8000`）。项目采用 Monorepo 架构，使用 workspace 包管理，以更好地组织和维护代码。
 
 **核心技术:**
+
 - Vue 3.5.26（组合式 API、`<script setup>`）
 - Vite 7.3.0（构建工具、开发服务器）
 - TypeScript 5.9.3（类型安全）
@@ -18,6 +19,7 @@
 - ECharts 6.0.0（数据可视化）
 
 **后端集成:**
+
 - FastAPI 后端地址：`http://127.0.0.1:8000`
 - API 文档：http://127.0.0.1:8000/docs
 - 响应格式：`{code: number, msg: string, data: any}`（成功代码：`0000`）
@@ -27,6 +29,7 @@
 ## 开发命令
 
 ### 环境搭建
+
 ```bash
 # 安装依赖（需要 pnpm >= 10.5.0，Node >= 20.19.0）
 pnpm install
@@ -36,6 +39,7 @@ pnpm install -F=@sa/axios
 ```
 
 ### 运行应用
+
 ```bash
 # 开发模式（测试环境，连接到 http://127.0.0.1:8000）
 pnpm dev
@@ -48,6 +52,7 @@ pnpm preview
 ```
 
 ### 构建项目
+
 ```bash
 # 生产构建
 pnpm build
@@ -57,6 +62,7 @@ pnpm build:test
 ```
 
 ### 代码质量
+
 ```bash
 # ESLint 检查并修复
 pnpm lint
@@ -66,6 +72,7 @@ pnpm typecheck
 ```
 
 ### 开发工具
+
 ```bash
 # 从页面生成路由类型
 pnpm gen-route
@@ -144,6 +151,7 @@ hohu-admin-web/
 ### 组件开发
 
 **使用 `<script setup>` 的组件：**
+
 ```vue
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
@@ -184,6 +192,7 @@ onMounted(() => {
 ### API 服务集成
 
 **使用 HTTP 请求封装：**
+
 ```typescript
 // src/service/api/system.ts
 import { request } from '@/service/request';
@@ -225,6 +234,7 @@ export function deleteUser(userId: number) {
 ```
 
 **响应处理：**
+
 ```typescript
 // 所有响应会自动转换
 const response = await fetchUserList({ current: 1, size: 10 });
@@ -234,6 +244,7 @@ const response = await fetchUserList({ current: 1, size: 10 });
 ### Pinia 状态管理
 
 **Store 模块结构：**
+
 ```typescript
 // src/store/modules/example/index.ts
 import { defineStore } from 'pinia';
@@ -265,6 +276,7 @@ export const useExampleStore = defineStore('example', () => {
 ```
 
 **在组件中使用 store：**
+
 ```vue
 <script setup lang="ts">
 import { useExampleStore } from '@/store/modules/example';
@@ -282,11 +294,13 @@ await exampleStore.fetchItems();
 ### 使用 @elegant-router 路由
 
 **自动路由生成：**
+
 - 路由从 `src/views` 目录结构自动生成
 - 文件路径：`src/views/system/user/index.vue` → 路由：`/system/user`
 - 添加新页面后使用 `pnpm gen-route` 重新生成路由类型
 
 **路由元信息：**
+
 ```typescript
 // src/router/elegant/routes.ts (自动生成)
 export default [
@@ -307,18 +321,18 @@ export default [
 ### 使用 UnoCSS 样式
 
 **实用优先的 CSS：**
+
 ```vue
 <template>
   <div class="flex items-center justify-between p-4 bg-white rounded-lg shadow">
     <h1 class="text-xl font-bold text-gray-800">标题</h1>
-    <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-      按钮
-    </button>
+    <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">按钮</button>
   </div>
 </template>
 ```
 
 **自定义主题配置：**
+
 ```typescript
 // src/theme/vars.ts
 export const themeVars = {
@@ -334,6 +348,7 @@ export const themeVars = {
 ### 国际化集成
 
 **添加翻译：**
+
 ```typescript
 // src/locales/langs/zh-cn.ts
 export default {
@@ -363,6 +378,7 @@ export default {
 ```
 
 **在组件中使用翻译：**
+
 ```vue
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
@@ -378,6 +394,7 @@ const { t } = useI18n();
 ### 自定义 Hooks
 
 **业务相关 hooks：**
+
 ```typescript
 // src/hooks/business/example.ts
 import { ref } from 'vue';
@@ -408,6 +425,7 @@ export function useExample() {
 ### API 响应格式
 
 **标准响应结构：**
+
 ```typescript
 {
   code: number,      // 0000 = 成功，其他 = 错误
@@ -417,6 +435,7 @@ export function useExample() {
 ```
 
 **成功响应：**
+
 ```json
 {
   "code": 0000,
@@ -430,6 +449,7 @@ export function useExample() {
 ```
 
 **错误响应：**
+
 ```json
 {
   "code": 1001,
@@ -441,6 +461,7 @@ export function useExample() {
 ### 认证
 
 **登录流程：**
+
 ```typescript
 // src/service/api/auth.ts
 export interface LoginRequest {
@@ -463,6 +484,7 @@ export function login(data: LoginRequest) {
 ```
 
 **Token 管理：**
+
 ```typescript
 // src/store/modules/auth/index.ts
 import { useAuthStore } from '@/store/modules/auth';
@@ -485,18 +507,19 @@ const userInfo = authStore.userInfo;
 ### 类型定义
 
 **API 命名空间结构：**
+
 ```typescript
 // src/typings/api/
 declare namespace Api {
   namespace System {
     interface User {
-      userId: string;         // Snowflake ID（字符串形式）
+      userId: string; // Snowflake ID（字符串形式）
       userName: string;
       nickname: string;
       userEmail: string;
       userPhone: string;
-      userGender: '0' | '1' | '2';  // 0-未知，1-男，2-女
-      status: '1' | '2';              // 1-启用，2-禁用
+      userGender: '0' | '1' | '2'; // 0-未知，1-男，2-女
+      status: '1' | '2'; // 1-启用，2-禁用
       createTime: string;
       updateTime: string;
     }
@@ -520,7 +543,7 @@ declare namespace Api {
       userGender: string;
       status: string;
       password: string;
-      roles: string[];  // 角色代码，不是 ID
+      roles: string[]; // 角色代码，不是 ID
     }
   }
 
@@ -538,12 +561,13 @@ declare namespace Api {
 ### 常用模式
 
 **分页处理：**
+
 ```typescript
 // 查询参数
 const query = ref({
   current: 1,
   size: 10,
-  userName: ''  // 可选筛选条件
+  userName: '' // 可选筛选条件
 });
 
 // 响应结构
@@ -559,6 +583,7 @@ const { data, loading } = await fetchUserList(query.value);
 ```
 
 **错误处理：**
+
 ```typescript
 try {
   await createUser(userData);
@@ -575,6 +600,7 @@ try {
 ### 环境变量
 
 **.env.test（开发环境）：**
+
 ```bash
 # 后端 API 基础 URL
 VITE_SERVICE_BASE_URL=http://127.0.0.1:8000
@@ -596,6 +622,7 @@ VITE_HTTP_PROXY=N
 ```
 
 **.env.prod（生产环境）：**
+
 ```bash
 VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 # ... 其他生产环境特定变量
@@ -604,6 +631,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ### Vite 配置
 
 **构建设置：**
+
 ```typescript
 // vite.config.ts
 {
@@ -635,12 +663,14 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ### 添加新页面
 
 1. **创建页面组件：**
+
    ```bash
    mkdir -p src/views/example/module
    touch src/views/example/module/index.vue
    ```
 
 2. **添加路由元信息（可选）：**
+
    ```typescript
    // 在组件的 script setup 中
    defineOptions({
@@ -661,6 +691,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ### 添加新 API 端点
 
 1. **在 `src/typings/api/` 中定义类型：**
+
    ```typescript
    declare namespace Api {
      namespace Example {
@@ -682,6 +713,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
    ```
 
 2. **在 `src/service/api/` 中创建 API 服务：**
+
    ```typescript
    import { request } from '@/service/request';
 
@@ -703,6 +735,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
    ```
 
 3. **在组件中使用：**
+
    ```vue
    <script setup lang="ts">
    import { fetchExampleList } from '@/service/api/example';
@@ -717,6 +750,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ### 添加新 Store 模块
 
 1. **在 `src/store/modules/` 中创建 store：**
+
    ```typescript
    // src/store/modules/example/index.ts
    import { defineStore } from 'pinia';
@@ -745,6 +779,7 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ## 最佳实践
 
 ### 代码组织
+
 - **组件结构**：使用带有 TypeScript 的 `<script setup>`
 - **API 服务**：将 API 调用与业务逻辑分离
 - **状态管理**：使用 Pinia store 管理共享状态
@@ -752,18 +787,21 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 - **文件命名**：文件使用 kebab-case，组件使用 PascalCase
 
 ### 性能优化
+
 - **懒加载**：路由默认懒加载
 - **代码分割**：对大型库使用动态导入
 - **图片优化**：尽可能使用 WebP 格式
 - **包分析**：部署前检查包大小
 
 ### 可访问性
+
 - **语义化 HTML**：使用正确的 HTML5 语义元素
 - **ARIA 属性**：为屏幕阅读器添加 ARIA 标签
 - **键盘导航**：确保所有交互元素可通过键盘访问
 - **颜色对比度**：满足 WCAG AA 标准（4.5:1）
 
 ### 安全性
+
 - **XSS 防护**：Vue 自动转义模板中的内容
 - **CSRF 防护**：Token 通过 Authorization 请求头发送
 - **输入验证**：验证所有用户输入
@@ -811,6 +849,7 @@ git diff --exit-code  # 确保文件已提交
 ### 常见问题
 
 **1. 端口已被占用：**
+
 ```bash
 # 终止使用端口 9527 的进程
 lsof -ti:9527 | xargs kill -9
@@ -819,6 +858,7 @@ lsof -ti:9527 | xargs kill -9
 ```
 
 **2. API 连接失败：**
+
 ```bash
 # 检查后端是否运行
 curl http://127.0.0.1:8000/docs
@@ -828,6 +868,7 @@ cat .env.test | grep VITE_SERVICE_BASE_URL
 ```
 
 **3. 类型错误：**
+
 ```bash
 # 重新生成路由类型
 pnpm gen-route
@@ -837,6 +878,7 @@ pnpm gen-route
 ```
 
 **4. 构建失败：**
+
 ```bash
 # 清除缓存并重新安装
 rm -rf node_modules dist .vite

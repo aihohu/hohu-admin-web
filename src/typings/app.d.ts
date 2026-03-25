@@ -669,6 +669,44 @@ declare namespace App {
               local: string;
             };
           };
+          dict: {
+            title: string;
+            dictTypeName: string;
+            dictTypeCode: string;
+            dictType: string;
+            status: string;
+            remark: string;
+            typeForm: {
+              dictTypeName: string;
+              dictTypeCode: string;
+              status: string;
+              remark: string;
+            };
+            addDictType: string;
+            editDictType: string;
+            viewDictData: string;
+            dictDataTitle: string;
+            dictLabel: string;
+            dictValue: string;
+            dictSort: string;
+            cssClass: string;
+            listClass: string;
+            isDefault: string;
+            dictType: string;
+            dataForm: {
+              dictType: string;
+              dictLabel: string;
+              dictValue: string;
+              dictSort: string;
+              cssClass: string;
+              listClass: string;
+              isDefault: string;
+              status: string;
+            };
+            addDictData: string;
+            editDictData: string;
+            backToDictType: string;
+          };
         };
       };
       form: {

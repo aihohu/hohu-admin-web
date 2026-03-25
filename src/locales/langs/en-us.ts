@@ -234,7 +234,9 @@ const local: App.I18n.Schema = {
     system: 'System Manage',
     system_user: 'User Manage',
     system_role: 'Role Manage',
-    system_menu: 'Menu Manage'
+    system_menu: 'Menu Manage',
+    system_dict: 'Dict Manage',
+    system_dict_data: 'Dictionary Data'
   },
   page: {
     login: {
@@ -424,6 +426,43 @@ const local: App.I18n.Schema = {
           iconify: 'Iconify Icon',
           local: 'Local Icon'
         }
+      },
+      dict: {
+        title: 'Dictionary Type List',
+        dictTypeName: 'Dictionary Name',
+        dictTypeCode: 'Dictionary Type',
+        dictType: 'Dictionary Type',
+        status: 'Status',
+        remark: 'Remark',
+        typeForm: {
+          dictTypeName: 'Please enter dictionary name',
+          dictTypeCode: 'Please enter dictionary type',
+          status: 'Please select status',
+          remark: 'Please enter remark'
+        },
+        addDictType: 'Add Dictionary Type',
+        editDictType: 'Edit Dictionary Type',
+        viewDictData: 'View Dictionary Data',
+        dictDataTitle: 'Dictionary Data List',
+        dictLabel: 'Dictionary Label',
+        dictValue: 'Dictionary Value',
+        dictSort: 'Dictionary Sort',
+        cssClass: 'CSS Class',
+        listClass: 'List Class',
+        isDefault: 'Is Default',
+        dataForm: {
+          dictType: 'Please select dictionary type',
+          dictLabel: 'Please enter dictionary label',
+          dictValue: 'Please enter dictionary value',
+          dictSort: 'Please enter dictionary sort',
+          cssClass: 'Please enter CSS class',
+          listClass: 'Please enter list class',
+          isDefault: 'Please select is default',
+          status: 'Please select status'
+        },
+        addDictData: 'Add Dictionary Data',
+        editDictData: 'Edit Dictionary Data',
+        backToDictType: 'Back to Dictionary Type'
       }
     }
   },

@@ -7,6 +7,68 @@ declare namespace Api {
   namespace SystemManage {
     type CommonSearchParams = Pick<Common.PaginatingCommonParams, 'current' | 'size'>;
 
+    /** dict type */
+    type DictType = Common.CommonRecord<{
+      /** dict type id */
+      dictTypeId: number;
+      /** dict name */
+      dictName: string;
+      /** dict type code */
+      dictType: string;
+      /** status */
+      status: Api.Common.EnableStatus;
+      /** remark */
+      remark: string | null;
+    }>;
+
+    /** dict type search params */
+    type DictTypeSearchParams = CommonType.RecordNullable<
+      Pick<Api.SystemManage.DictType, 'dictName' | 'dictType' | 'status'> & CommonSearchParams
+    >;
+
+    /** dict type list */
+    type DictTypeList = Common.PaginatingQueryRecord<DictType>;
+
+    /** dict type simple output */
+    type DictTypeSimple = Pick<DictType, 'dictTypeId' | 'dictName' | 'dictType' | 'status'>;
+
+    /** dict type create params */
+    type DictTypeCreateParams = Pick<Api.SystemManage.DictType, 'dictName' | 'dictType' | 'status' | 'remark'>;
+
+    /** dict data */
+    type DictData = Common.CommonRecord<{
+      /** dict data id */
+      dictDataId: number;
+      /** dict type */
+      dictType: string;
+      /** dict label */
+      dictLabel: string;
+      /** dict value */
+      dictValue: string;
+      /** dict sort */
+      dictSort: number;
+      /** css class */
+      cssClass: string | null;
+      /** list class */
+      listClass: string | null;
+      /** is default */
+      isDefault: number | null;
+    }>;
+
+    /** dict data search params */
+    type DictDataSearchParams = CommonType.RecordNullable<
+      Pick<Api.SystemManage.DictData, 'dictType' | 'dictLabel' | 'dictValue' | 'status'> & CommonSearchParams
+    >;
+
+    /** dict data list */
+    type DictDataList = Common.PaginatingQueryRecord<DictData>;
+
+    /** dict data create params */
+    type DictDataCreateParams = Pick<
+      Api.SystemManage.DictData,
+      'dictType' | 'dictLabel' | 'dictValue' | 'dictSort' | 'cssClass' | 'listClass' | 'isDefault' | 'status'
+    >;
+
     /** role */
     type Role = Common.CommonRecord<{
       /** role id */
