@@ -25,6 +25,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Response format: `{code: number, msg: string, data: any}` (success code: `0000`)
 - Authentication: Bearer token in `Authorization` header
 - Snowflake IDs returned as strings to prevent BigInt precision loss
+- Dictionary data primary key: `dictCode` (not `dictDataId`)
+- Dictionary type primary key: `dictTypeId` (use `string` type to prevent precision loss)
 
 ## Development Commands
 
@@ -660,6 +662,99 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 
 ## Common Tasks
 
+### Adding a Dictionary Module
+
+1. **Create page component** (e.g., `src/views/system/dict/index.vue`)
+
+   ```bash
+   mkdir -p src/views/system/dict
+   touch src/views/system/dict/index.vue
+   ```
+
+2. **Add route meta** (optional):
+
+   ```typescript
+   defineOptions({
+     name: 'SystemDict',
+     meta: {
+       title: '字典管理',
+       i18nKey: 'route.system_dict',
+       icon: 'mdi:book-multiple'
+     }
+   });
+   ```
+
+3. **Regenerate route types**:
+
+   ```bash
+   pnpm gen-route
+   ```
+
+4. **Define types in `src/typings/api/`**:
+
+   ```typescript
+   declare namespace Api {
+     namespace SystemManage {
+       type DictType = Common.CommonRecord<{
+         dictTypeId: string; // Use string for Snowflake IDs
+         dictName: string;
+         dictType: string;
+         status: Api.Common.EnableStatus;
+         remark: string | null;
+       }>;
+
+       type DictData = Common.CommonRecord<{
+         dictCode: string; // Primary key (not dictDataId)
+         dictType: string;
+         dictLabel: string;
+         dictValue: string;
+         dictSort: number;
+         cssClass: string | null;
+         listClass: string | null;
+         isDefault: 'Y' | 'N'; // Yes/No values
+         status: Api.Common.EnableStatus;
+       }>;
+     }
+   }
+   ```
+
+5. **Create API service in `src/service/api/`**:
+
+   ```typescript
+   export function fetchGetDictTypeList(params?: Api.SystemManage.DictTypeSearchParams) {
+     return request<Api.SystemManage.DictTypeList>({
+       url: '/system/dict-type/list',
+       method: 'get',
+       params
+     });
+   }
+
+   export function fetchBatchDeleteDictType(data: string[]) {
+     // Use string[]
+     return request({
+       url: '/system/dict-type/batch-delete',
+       method: 'post',
+       data
+     });
+   }
+   ```
+
+6. **Use in components**:
+
+   ```vue
+   <script setup lang="tsx">
+   import { fetchBatchDeleteDictType } from '@/service/api';
+
+   async function handleBatchDelete() {
+     // ❌ Wrong: causes precision loss
+     const { error } = await fetchBatchDeleteDictType(checkedRowKeys.value.map(Number));
+
+     // ✅ Correct: preserves precision
+     const { error } = await fetchBatchDeleteDictType(checkedRowKeys.value);
+   }
+   </script>
+   ```
+
 ### Adding a New Page
 
 1. **Create the page component:**
@@ -786,6 +881,43 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 - **Type safety**: Always define types for API requests/responses
 - **File naming**: Use kebab-case for files, PascalCase for components
 
+### Dictionary Module Development
+
+- **Follow role module pattern**: Use role/index.vue as a reference for consistent code style
+- **Use ref over reactive**: Follow the pattern used in role-operate-drawer.vue for form models
+- **Use NTag for status display**: Use success/warning/error theme colors to indicate status
+- **Form validation**: Add minimum length validation where required (e.g., `min: 2` for dictName and dictType)
+- **Internationalization**: Always use `$t()` for all user-facing text, including validation messages
+
+### Performance
+
+- **Lazy loading**: Routes are lazy-loaded by default
+- **Code splitting**: Use dynamic imports for large libraries
+- **Image optimization**: Use WebP format where possible
+- **Bundle analysis**: Check bundle size before deployment
+
+### Accessibility
+
+- **Semantic HTML**: Use proper HTML5 semantic elements
+- **ARIA attributes**: Add ARIA labels for screen readers
+- **Keyboard navigation**: Ensure all interactive elements are keyboard accessible
+- **Color contrast**: Meet WCAG AA standards (4.5:1)
+
+### Security
+
+- **XSS prevention**: Vue automatically escapes content in templates
+- **CSRF protection**: Tokens are sent in Authorization header
+- **Input validation**: Validate all user inputs
+- **Sensitive data**: Never log passwords or tokens
+
+### Code Organization
+
+- **Component structure**: Use `<script setup>` with TypeScript
+- **API services**: Separate API calls from business logic
+- **State management**: Use Pinia stores for shared state
+- **Type safety**: Always define types for API requests/responses
+- **File naming**: Use kebab-case for files, PascalCase for components
+
 ### Performance
 
 - **Lazy loading**: Routes are lazy-loaded by default
@@ -810,13 +942,22 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ## Common Pitfalls
 
 1. **ID precision loss**: Snowflake IDs are returned as strings to prevent BigInt precision loss in JavaScript
-2. **Case conversion**: Backend uses `snake_case`, frontend uses `camelCase` - handled automatically by request/response interceptors
-3. **Token expiry**: Token refresh is handled automatically by the request interceptor
-4. **Type safety**: Always define TypeScript types for API contracts
-5. **Async operations**: Always use `await` for async operations and handle errors properly
-6. **Component naming**: Use multi-word component names to avoid conflicts with HTML elements
-7. **State mutation**: Only mutate state within the component that owns it; use props/events for parent-child communication
-8. **CSS isolation**: Use scoped styles or CSS modules to avoid style conflicts
+2. **Dictionary data primary key**: Use `dictCode` (not `dictDataId`) - this is the actual primary key used by the backend
+3. **Dictionary type primary key**: `dictTypeId` should be `string` type (not `number`) to prevent precision loss in batch operations
+4. **isDefault field values**: Dictionary data `isDefault` field uses `'Y'` | `'N'` (not `0` | `1`)
+5. **yesNoOptions**: Dictionary operations use yes/no values `'N'` | `'Y'` (not numeric values)
+6. **Route parameters**: Use `query` parameters for navigation when route doesn't support dynamic params (e.g., `/system/dict/data?dictType=xxx` instead of `/system/dict/data/:dictType`)
+7. **Validation messages**: Always use `$t()` for internationalization in form rules
+8. **Batch delete data types**: Always pass `string[]` for Snowflake IDs, never use `.map(Number)` which causes precision loss
+9. **Default values**: Set sensible defaults (e.g., `status: '1'` for enabled, `isDefault: 'N'` for not default)
+10. **ID precision loss**: Snowflake IDs are returned as strings to prevent BigInt precision loss in JavaScript
+11. **Case conversion**: Backend uses `snake_case`, frontend uses `camelCase` - handled automatically by request/response interceptors
+12. **Token expiry**: Token refresh is handled automatically by the request interceptor
+13. **Type safety**: Always define TypeScript types for API contracts
+14. **Async operations**: Always use `await` for async operations and handle errors properly
+15. **Component naming**: Use multi-word component names to avoid conflicts with HTML elements
+16. **State mutation**: Only mutate state within the component that owns it; use props/events for parent-child communication
+17. **CSS isolation**: Use scoped styles or CSS modules to avoid style conflicts
 
 ## Git Workflow
 

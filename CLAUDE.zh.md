@@ -25,6 +25,8 @@
 - 响应格式：`{code: number, msg: string, data: any}`（成功代码：`0000`）
 - 认证方式：Bearer Token（通过 `Authorization` 请求头）
 - Snowflake ID 以字符串形式返回，防止 JavaScript BigInt 精度丢失
+- **字典数据主键**：`dictCode`（不是 `dictDataId`）
+- **字典类型主键**：`dictTypeId` 应该是 `string` 类型（不是 `number`）以防止精度丢失
 
 ## 开发命令
 
@@ -660,6 +662,99 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 
 ## 常见任务
 
+### 添加字典模块
+
+1. **创建页面组件**（例如：`src/views/system/dict/index.vue`）
+
+   ```bash
+   mkdir -p src/views/system/dict
+   touch src/views/system/dict/index.vue
+   ```
+
+2. **添加路由元信息**（可选）：
+
+   ```typescript
+   defineOptions({
+     name: 'SystemDict',
+     meta: {
+       title: '字典管理',
+       i18nKey: 'route.system_dict',
+       icon: 'mdi:book-multiple'
+     }
+   });
+   ```
+
+3. **重新生成路由类型**：
+
+   ```bash
+   pnpm gen-route
+   ```
+
+4. **在 `src/typings/api/` 中定义类型**：
+
+   ```typescript
+   declare namespace Api {
+     namespace SystemManage {
+       type DictType = Common.CommonRecord<{
+         dictTypeId: string; // 使用 string 防止 Snowflake ID 精度丢失
+         dictName: string;
+         dictType: string;
+         status: Api.Common.EnableStatus;
+         remark: string | null;
+       }>;
+
+       type DictData = Common.CommonRecord<{
+         dictCode: string; // 主键（不是 dictDataId）
+         dictType: string;
+         dictLabel: string;
+         dictValue: string;
+         dictSort: number;
+         cssClass: string | null;
+         listClass: string | null;
+         isDefault: 'Y' | 'N'; // Yes/No 值
+         status: Api.Common.EnableStatus;
+       }>;
+     }
+   }
+   ```
+
+5. **在 `src/service/api/` 中创建 API 服务**：
+
+   ```typescript
+   export function fetchGetDictTypeList(params?: Api.SystemManage.DictTypeSearchParams) {
+     return request<Api.SystemManage.DictTypeList>({
+       url: '/system/dict-type/list',
+       method: 'get',
+       params
+     });
+   }
+
+   export function fetchBatchDeleteDictType(data: string[]) {
+     // 使用 string[]
+     return request({
+       url: '/system/dict-type/batch-delete',
+       method: 'post',
+       data
+     });
+   }
+   ```
+
+6. **在组件中使用**：
+
+   ```vue
+   <script setup lang="tsx">
+   import { fetchBatchDeleteDictType } from '@/service/api';
+
+   async function handleBatchDelete() {
+     // ❌ 错误：会导致精度丢失
+     const { error } = await fetchBatchDeleteDictType(checkedRowKeys.value.map(Number));
+
+     // ✅ 正确：保持精度
+     const { error } = await fetchBatchDeleteDictType(checkedRowKeys.value);
+   }
+   </script>
+   ```
+
 ### 添加新页面
 
 1. **创建页面组件：**
@@ -782,6 +877,43 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 
 - **组件结构**：使用带有 TypeScript 的 `<script setup>`
 - **API 服务**：将 API 调用与业务逻辑分离
+- **状态管理**：使用 Pinia stores 管理共享状态
+- **类型安全**：始终为 API 请求/响应定义类型
+- **文件命名**：文件使用 kebab-case，组件使用 PascalCase
+
+### 字典模块开发
+
+- **遵循 role 模块模式**：以 role/index.vue 作为参考，保持一致的代码风格
+- **使用 ref 而不是 reactive**：遵循 role-operate-drawer.vue 中的模式处理表单模型
+- **使用 NTag 显示状态**：使用 success/warning/error 主题颜色指示状态
+- **表单验证**：在需要的地方添加最小长度验证（如 dictName 和 dictType 的 `min: 2`）
+- **国际化**：始终使用 `$t()` 处理所有面向用户的文本，包括验证消息
+
+### 性能
+
+- **懒加载**：路由默认懒加载
+- **代码分割**：对大型库使用动态导入
+- **图片优化**：尽可能使用 WebP 格式
+- **包分析**：部署前检查包大小
+
+### 可访问性
+
+- **语义化 HTML**：使用正确的 HTML5 语义元素
+- **ARIA 属性**：为屏幕阅读器添加 ARIA 标签
+- **键盘导航**：确保所有交互元素可通过键盘访问
+- **颜色对比度**：满足 WCAG AA 标准（4.5:1）
+
+### 安全性
+
+- **XSS 防护**：Vue 自动转义模板中的内容
+- **CSRF 防护**：Token 通过 Authorization 请求头发送
+- **输入验证**：验证所有用户输入
+- **敏感数据**：永远不要记录密码或 token
+
+### 代码组织
+
+- **组件结构**：使用带有 TypeScript 的 `<script setup>`
+- **API 服务**：将 API 调用与业务逻辑分离
 - **状态管理**：使用 Pinia store 管理共享状态
 - **类型安全**：始终为 API 请求/响应定义类型
 - **文件命名**：文件使用 kebab-case，组件使用 PascalCase
@@ -810,13 +942,23 @@ VITE_SERVICE_BASE_URL=https://api.yourdomain.com
 ## 常见陷阱
 
 1. **ID 精度丢失**：Snowflake ID 以字符串形式返回，防止 JavaScript BigInt 精度丢失
-2. **大小写转换**：后端使用 `snake_case`，前端使用 `camelCase` - 由请求/响应拦截器自动处理
-3. **Token 过期**：Token 刷新由请求拦截器自动处理
-4. **类型安全**：始终为 API 契约定义 TypeScript 类型
-5. **异步操作**：始终对异步操作使用 `await` 并正确处理错误
-6. **组件命名**：使用多词组件名称以避免与 HTML 元素冲突
-7. **状态变更**：只在拥有状态的组件中变更状态；使用 props/events 进行父子通信
-8. **CSS 隔离**：使用 scoped 样式或 CSS modules 避免样式冲突
+2. **字典数据主键**：使用 `dictCode` 而不是 `dictDataId` —— 这是后端实际使用的主键
+3. **字典类型主键**：`dictTypeId` 应该是 `string` 类型（不是 `number`）以防止批量操作中的精度丢失
+4. **isDefault 字段值**：字典数据的 `isDefault` 字段使用 `'Y'` | `'N'`（不是 `0` | `1`）
+5. **yesNoOptions**：字典操作使用 yes/no 值 `'N'` | `'Y'`（不是数字值）
+6. **路由参数**：当路由不支持动态参数时使用 `query` 参数（如 `/system/dict/data?dictType=xxx` 而不是 `/system/dict/data/:dictType`）
+7. **验证消息**：在表单规则中始终使用 `$t()` 进行国际化
+8. **批量删除数据类型**：始终传递 `string[]` 给 Snowflake ID，永远不要使用 `.map(Number)` 这会导致精度丢失
+9. **默认值**：设置合理的默认值（如 `status: '1'` 表示启用，`isDefault: 'N'` 表示非默认）
+
+10. **ID 精度丢失**：Snowflake ID 以字符串形式返回，防止 JavaScript BigInt 精度丢失
+11. **大小写转换**：后端使用 `snake_case`，前端使用 `camelCase` - 由请求/响应拦截器自动处理
+12. **Token 过期**：Token 刷新由请求拦截器自动处理
+13. **类型安全**：始终为 API 契约定义 TypeScript 类型
+14. **异步操作**：始终对异步操作使用 `await` 并正确处理错误
+15. **组件命名**：使用多词组件名称以避免与 HTML 元素冲突
+16. **状态变更**：只在拥有状态的组件中变更状态；使用 props/events 进行父子通信
+17. **CSS 隔离**：使用 scoped 样式或 CSS modules 避免样式冲突
 
 ## Git 工作流
 
