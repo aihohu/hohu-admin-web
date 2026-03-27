@@ -9,7 +9,6 @@ import {
 } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
-import { useAuth } from '@/hooks/business/auth';
 import { useRouter } from 'vue-router';
 import { $t } from '@/locales';
 import DictTypeOperateDrawer from './modules/dict-type-operate-drawer.vue';
@@ -21,7 +20,6 @@ defineOptions({
 
 const router = useRouter();
 const appStore = useAppStore();
-const { hasAuth } = useAuth();
 
 const searchParams: Api.SystemManage.DictTypeSearchParams = reactive({
   current: 1,
@@ -48,8 +46,8 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       {
         key: 'index',
         title: $t('common.index'),
-        align: 'center',
         width: 64,
+        align: 'center',
         render: (_, index) => index + 1
       },
       {
@@ -87,7 +85,6 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       {
         key: 'remark',
         title: $t('page.system.dict.remark'),
-        align: 'center',
         minWidth: 200,
         ellipsis: {
           tooltip: true
@@ -97,29 +94,25 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         key: 'operate',
         title: $t('common.operate'),
         align: 'center',
-        width: 300,
+        width: 260,
         render: row => (
           <div class="flex-center gap-8px">
-            <NButton type="primary" ghost size="small" onClick={() => edit(row.dictTypeId)}>
-              {$t('common.edit')}
-            </NButton>
-
             <NButton type="info" ghost size="small" onClick={() => viewDictData(row)}>
               {$t('page.system.dict.viewDictData')}
             </NButton>
-
-            {hasAuth('system:dict:delete') && (
-              <NPopconfirm onPositiveClick={() => handleDelete(row.dictTypeId)}>
-                {{
-                  default: () => $t('common.confirmDelete'),
-                  trigger: () => (
-                    <NButton type="error" ghost size="small">
-                      {$t('common.delete')}
-                    </NButton>
-                  )
-                }}
-              </NPopconfirm>
-            )}
+            <NButton type="primary" ghost size="small" onClick={() => edit(row.dictTypeId)}>
+              {$t('common.edit')}
+            </NButton>
+            <NPopconfirm onPositiveClick={() => handleDelete(row.dictTypeId)}>
+              {{
+                default: () => $t('common.confirmDelete'),
+                trigger: () => (
+                  <NButton type="error" ghost size="small">
+                    {$t('common.delete')}
+                  </NButton>
+                )
+              }}
+            </NPopconfirm>
           </div>
         )
       }
@@ -138,7 +131,7 @@ const {
 } = useTableOperate(data, 'dictTypeId', getData);
 
 async function handleBatchDelete() {
-  const { error } = await fetchBatchDeleteDictType(checkedRowKeys.value);
+  const { error } = await fetchBatchDeleteDictType(checkedRowKeys.value.map(Number));
   if (!error) {
     onBatchDeleted();
   }

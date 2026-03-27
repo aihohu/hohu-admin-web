@@ -9,7 +9,6 @@ import {
 } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
-import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
 import { useRoute } from 'vue-router';
 import DictDataOperateDrawer from '../modules/dict-data-operate-drawer.vue';
@@ -21,7 +20,6 @@ defineOptions({
 
 const route = useRoute();
 const appStore = useAppStore();
-const { hasAuth } = useAuth();
 
 const dictType = computed(() => route.params.dictType as string);
 
@@ -51,8 +49,8 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       {
         key: 'index',
         title: $t('common.index'),
-        align: 'center',
         width: 64,
+        align: 'center',
         render: (_, index) => index + 1
       },
       {
@@ -97,25 +95,22 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         key: 'operate',
         title: $t('common.operate'),
         align: 'center',
-        width: 130,
+        width: 160,
         render: row => (
           <div class="flex-center gap-8px">
             <NButton type="primary" ghost size="small" onClick={() => edit(row.dictDataId)}>
               {$t('common.edit')}
             </NButton>
-
-            {hasAuth('system:dict:delete') && (
-              <NPopconfirm onPositiveClick={() => handleDelete(row.dictDataId)}>
-                {{
-                  default: () => $t('common.confirmDelete'),
-                  trigger: () => (
-                    <NButton type="error" ghost size="small">
-                      {$t('common.delete')}
-                    </NButton>
-                  )
-                }}
-              </NPopconfirm>
-            )}
+            <NPopconfirm onPositiveClick={() => handleDelete(row.dictDataId)}>
+              {{
+                default: () => $t('common.confirmDelete'),
+                trigger: () => (
+                  <NButton type="error" ghost size="small">
+                    {$t('common.delete')}
+                  </NButton>
+                )
+              }}
+            </NPopconfirm>
           </div>
         )
       }
@@ -134,7 +129,7 @@ const {
 } = useTableOperate(data, 'dictDataId', getData);
 
 async function handleBatchDelete() {
-  const { error } = await fetchBatchDeleteDictData(checkedRowKeys.value as unknown as number[]);
+  const { error } = await fetchBatchDeleteDictData(checkedRowKeys.value.map(Number));
   if (!error) {
     onBatchDeleted();
   }
@@ -149,10 +144,6 @@ async function handleDelete(id: number) {
 
 function edit(id: number) {
   handleEdit(id);
-}
-
-function goBack() {
-  window.$message?.info($t('page.system.dict.backToDictType'));
 }
 
 onMounted(() => {
@@ -171,19 +162,14 @@ onMounted(() => {
       class="card-wrapper sm:flex-1-hidden"
     >
       <template #header-extra>
-        <NSpace :size="12">
-          <NButton size="small" @click="goBack">
-            {{ $t('page.system.dict.backToDictType') }}
-          </NButton>
-          <TableHeaderOperation
-            v-model:columns="columnChecks"
-            :disabled-delete="checkedRowKeys.length === 0"
-            :loading="loading"
-            @add="handleAdd"
-            @delete="handleBatchDelete"
-            @refresh="getData"
-          />
-        </NSpace>
+        <TableHeaderOperation
+          v-model:columns="columnChecks"
+          :disabled-delete="checkedRowKeys.length === 0"
+          :loading="loading"
+          @add="handleAdd"
+          @delete="handleBatchDelete"
+          @refresh="getData"
+        />
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"

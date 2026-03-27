@@ -1,33 +1,33 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue';
-import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { computed, ref, watch } from 'vue';
+import { jsonClone } from '@sa/utils';
 import { enableStatusOptions } from '@/constants/business';
-import { translateOptions } from '@/utils/common';
-import { $t } from '@/locales';
 import { fetchSaveDictType, fetchUpdateDictType } from '@/service/api';
+import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { $t } from '@/locales';
 
 defineOptions({
   name: 'DictTypeOperateDrawer'
 });
 
 interface Props {
-  /** @type of operation */
+  /** type of operation */
   operateType: NaiveUI.TableOperateType;
-  /** @edit row data */
+  /** edit row data */
   rowData?: Api.SystemManage.DictType | null;
 }
+
+const props = defineProps<Props>();
 
 interface Emits {
   (e: 'submitted'): void;
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  rowData: null
-});
-
 const emit = defineEmits<Emits>();
 
-const visible = defineModel<boolean>('visible', { default: false });
+const visible = defineModel<boolean>('visible', {
+  default: false
+});
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
 const { defaultRequiredRule } = useFormRules();
@@ -40,60 +40,63 @@ const title = computed(() => {
   return titles[props.operateType];
 });
 
-const model = reactive<Api.SystemManage.DictTypeCreateParams>({
-  dictName: '',
-  dictType: '',
-  status: '1',
-  remark: null
-});
+type Model = Pick<Api.SystemManage.DictType, 'dictName' | 'dictType' | 'status' | 'remark'>;
 
-const rules = computed(() => ({
+const model = ref(createDefaultModel());
+
+function createDefaultModel(): Model {
+  return {
+    dictName: '',
+    dictType: '',
+    status: '1',
+    remark: ''
+  };
+}
+
+type RuleKey = Exclude<keyof Model, 'remark'>;
+
+const rules: Record<RuleKey, App.Global.FormRule> = {
   dictName: defaultRequiredRule,
   dictType: defaultRequiredRule,
   status: defaultRequiredRule
-}));
+};
 
-const statusOptions = translateOptions(enableStatusOptions);
+function handleInitModel() {
+  model.value = createDefaultModel();
 
-function handleUpdateModelWhenEdit() {
   if (props.operateType === 'edit' && props.rowData) {
-    Object.assign(model, {
-      dictName: props.rowData.dictName,
-      dictType: props.rowData.dictType,
-      status: props.rowData.status,
-      remark: props.rowData.remark
-    });
+    Object.assign(model.value, jsonClone(props.rowData));
   }
+}
+
+function closeDrawer() {
+  visible.value = false;
 }
 
 async function handleSubmit() {
   await validate();
-  const { error } =
-    props.operateType === 'add'
-      ? await fetchSaveDictType(model)
-      : await fetchUpdateDictType(props.rowData!.dictTypeId, model);
 
+  let res;
+  if (props.operateType === 'edit' && props.rowData) {
+    res = await fetchUpdateDictType(props.rowData.dictTypeId, model.value);
+  } else {
+    res = await fetchSaveDictType(model.value);
+  }
+  const { error, response } = res;
   if (!error) {
-    window.$message?.success(props.operateType === 'add' ? $t('common.addSuccess') : $t('common.modifySuccess'));
+    const successMsg =
+      response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
+    window.$message?.success(successMsg);
+    closeDrawer();
     emit('submitted');
-    visible.value = false;
+  } else {
+    window.$message?.error(response.data.msg);
   }
 }
 
-watch(visible, val => {
-  if (val) {
-    if (props.operateType === 'add') {
-      // 新增模式，重置表单
-      Object.assign(model, {
-        dictName: '',
-        dictType: '',
-        status: '1',
-        remark: null
-      });
-    } else {
-      // 编辑模式，回显数据
-      handleUpdateModelWhenEdit();
-    }
+watch(visible, () => {
+  if (visible.value) {
+    handleInitModel();
     restoreValidation();
   }
 });
@@ -102,11 +105,10 @@ watch(visible, val => {
 <template>
   <NDrawer v-model:show="visible" display-directive="show" :width="360">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
-      <NForm ref="formRef" :model="model" :rules="rules" label-placement="left" :label-width="100">
+      <NForm ref="formRef" :model="model" :rules="rules">
         <NFormItem :label="$t('page.system.dict.dictTypeName')" path="dictName">
           <NInput v-model:value="model.dictName" :placeholder="$t('page.system.dict.typeForm.dictTypeName')" />
         </NFormItem>
-
         <NFormItem :label="$t('page.system.dict.dictTypeCode')" path="dictType">
           <NInput
             v-model:value="model.dictType"
@@ -114,15 +116,11 @@ watch(visible, val => {
             :disabled="operateType === 'edit'"
           />
         </NFormItem>
-
-        <NFormItem :label="$t('page.system.user.userStatus')" path="status">
-          <NSelect
-            v-model:value="model.status"
-            :placeholder="$t('page.system.dict.typeForm.status')"
-            :options="statusOptions"
-          />
+        <NFormItem :label="$t('page.system.dict.status')" path="status">
+          <NRadioGroup v-model:value="model.status">
+            <NRadio v-for="item in enableStatusOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
+          </NRadioGroup>
         </NFormItem>
-
         <NFormItem :label="$t('page.system.dict.remark')" path="remark">
           <NInput
             v-model:value="model.remark"
@@ -135,10 +133,9 @@ watch(visible, val => {
           />
         </NFormItem>
       </NForm>
-
       <template #footer>
-        <NSpace :size="12">
-          <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
+        <NSpace :size="16">
+          <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
           <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
         </NSpace>
       </template>

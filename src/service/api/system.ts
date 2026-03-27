@@ -210,7 +210,7 @@ export function fetchDeleteDictType(typeId: number) {
 }
 
 /** batch delete dict type */
-export function fetchBatchDeleteDictType(data: string[]) {
+export function fetchBatchDeleteDictType(data: number[]) {
   return request({
     url: '/system/dict-type/batch-delete',
     method: 'post',

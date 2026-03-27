@@ -10,7 +10,6 @@ defineOptions({
 });
 
 interface Emits {
-  (e: 'reset'): void;
   (e: 'search'): void;
 }
 
@@ -24,12 +23,7 @@ function resetModel() {
   Object.assign(model.value, defaultModel);
 }
 
-function handleReset() {
-  resetModel();
-  emit('reset');
-}
-
-function handleSearch() {
+function search() {
   emit('search');
 }
 </script>
@@ -58,7 +52,7 @@ function handleSearch() {
               <NInput v-model:value="model.dictType" clearable />
             </NFormItemGi>
 
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.user.userStatus')" path="status" class="pr-24px">
+            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.dict.status')" path="status" class="pr-24px">
               <NSelect
                 v-model:value="model.status"
                 :placeholder="$t('page.system.dict.typeForm.status')"
@@ -67,15 +61,15 @@ function handleSearch() {
               />
             </NFormItemGi>
 
-            <NFormItemGi span="24 m:12" class="pr-24px">
+            <NFormItemGi span="24 s:12 m:6">
               <NSpace class="w-full" justify="end">
-                <NButton @click="handleReset">
+                <NButton @click="resetModel">
                   <template #icon>
                     <icon-ic-round-refresh class="text-icon" />
                   </template>
                   {{ $t('common.reset') }}
                 </NButton>
-                <NButton type="primary" ghost @click="handleSearch">
+                <NButton type="primary" ghost @click="search">
                   <template #icon>
                     <icon-ic-round-search class="text-icon" />
                   </template>

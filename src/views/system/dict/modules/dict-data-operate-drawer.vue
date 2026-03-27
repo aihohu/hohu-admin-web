@@ -1,36 +1,35 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue';
-import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { computed, ref, watch } from 'vue';
+import { jsonClone } from '@sa/utils';
 import { enableStatusOptions, yesNoOptions } from '@/constants/business';
-import { translateOptions } from '@/utils/common';
-import { $t } from '@/locales';
 import { fetchSaveDictData, fetchUpdateDictData } from '@/service/api';
+import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { $t } from '@/locales';
 
 defineOptions({
   name: 'DictDataOperateDrawer'
 });
 
 interface Props {
-  /** @type of operation */
+  /** type of operation */
   operateType: NaiveUI.TableOperateType;
-  /** @edit row data */
+  /** edit row data */
   rowData?: Api.SystemManage.DictData | null;
-  /** @dictionary type */
+  /** dictionary type */
   dictType?: string;
 }
+
+const props = defineProps<Props>();
 
 interface Emits {
   (e: 'submitted'): void;
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  rowData: null,
-  dictType: ''
-});
-
 const emit = defineEmits<Emits>();
 
-const visible = defineModel<boolean>('visible', { default: false });
+const visible = defineModel<boolean>('visible', {
+  default: false
+});
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
 const { defaultRequiredRule } = useFormRules();
@@ -43,75 +42,73 @@ const title = computed(() => {
   return titles[props.operateType];
 });
 
-const model = reactive<Api.SystemManage.DictDataCreateParams>({
-  dictType: props.dictType,
-  dictLabel: '',
-  dictValue: '',
-  dictSort: 0,
-  cssClass: null,
-  listClass: null,
-  isDefault: null,
-  status: '1'
-});
+type Model = Pick<
+  Api.SystemManage.DictData,
+  'dictType' | 'dictLabel' | 'dictValue' | 'dictSort' | 'cssClass' | 'listClass' | 'isDefault' | 'status'
+>;
 
-const rules = computed(() => ({
+const model = ref(createDefaultModel());
+
+function createDefaultModel(): Model {
+  return {
+    dictType: props.dictType || '',
+    dictLabel: '',
+    dictValue: '',
+    dictSort: 0,
+    cssClass: '',
+    listClass: '',
+    isDefault: 0,
+    status: null
+  };
+}
+
+type RuleKey = Exclude<keyof Model, 'dictSort' | 'cssClass' | 'listClass' | 'isDefault'>;
+
+const rules: Record<RuleKey, App.Global.FormRule> = {
   dictType: defaultRequiredRule,
   dictLabel: defaultRequiredRule,
-  dictValue: defaultRequiredRule
-}));
+  dictValue: defaultRequiredRule,
+  status: defaultRequiredRule
+};
 
-const statusOptions = translateOptions(enableStatusOptions);
-const defaultOptions = translateOptions(yesNoOptions);
+function handleInitModel() {
+  model.value = createDefaultModel();
 
-function handleUpdateModelWhenEdit() {
   if (props.operateType === 'edit' && props.rowData) {
-    Object.assign(model, {
-      dictType: props.rowData.dictType,
-      dictLabel: props.rowData.dictLabel,
-      dictValue: props.rowData.dictValue,
-      dictSort: props.rowData.dictSort,
-      cssClass: props.rowData.cssClass,
-      listClass: props.rowData.listClass,
-      isDefault: props.rowData.isDefault,
-      status: props.rowData.status
-    });
-  } else {
-    model.dictType = props.dictType;
+    Object.assign(model.value, jsonClone(props.rowData));
+  } else if (props.dictType) {
+    model.value.dictType = props.dictType;
   }
+}
+
+function closeDrawer() {
+  visible.value = false;
 }
 
 async function handleSubmit() {
   await validate();
-  const { error } =
-    props.operateType === 'add'
-      ? await fetchSaveDictData(model)
-      : await fetchUpdateDictData(props.rowData!.dictDataId, model);
 
+  let res;
+  if (props.operateType === 'edit' && props.rowData) {
+    res = await fetchUpdateDictData(props.rowData.dictDataId, model.value);
+  } else {
+    res = await fetchSaveDictData(model.value);
+  }
+  const { error, response } = res;
   if (!error) {
-    window.$message?.success(props.operateType === 'add' ? $t('common.addSuccess') : $t('common.modifySuccess'));
+    const successMsg =
+      response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
+    window.$message?.success(successMsg);
+    closeDrawer();
     emit('submitted');
-    visible.value = false;
+  } else {
+    window.$message?.error(response.data.msg);
   }
 }
 
-watch(visible, val => {
-  if (val) {
-    if (props.operateType === 'add') {
-      // 新增模式，重置表单
-      Object.assign(model, {
-        dictType: props.dictType,
-        dictLabel: '',
-        dictValue: '',
-        dictSort: 0,
-        cssClass: null,
-        listClass: null,
-        isDefault: null,
-        status: '1'
-      });
-    } else {
-      // 编辑模式，回显数据
-      handleUpdateModelWhenEdit();
-    }
+watch(visible, () => {
+  if (visible.value) {
+    handleInitModel();
     restoreValidation();
   }
 });
@@ -120,7 +117,7 @@ watch(visible, val => {
 <template>
   <NDrawer v-model:show="visible" display-directive="show" :width="360">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
-      <NForm ref="formRef" :model="model" :rules="rules" label-placement="left" :label-width="100">
+      <NForm ref="formRef" :model="model" :rules="rules">
         <NFormItem :label="$t('page.system.dict.dictTypeCode')" path="dictType">
           <NInput
             v-model:value="model.dictType"
@@ -128,48 +125,35 @@ watch(visible, val => {
             :disabled="operateType === 'edit'"
           />
         </NFormItem>
-
         <NFormItem :label="$t('page.system.dict.dictLabel')" path="dictLabel">
           <NInput v-model:value="model.dictLabel" :placeholder="$t('page.system.dict.dataForm.dictLabel')" />
         </NFormItem>
-
         <NFormItem :label="$t('page.system.dict.dictValue')" path="dictValue">
           <NInput v-model:value="model.dictValue" :placeholder="$t('page.system.dict.dataForm.dictValue')" />
         </NFormItem>
-
         <NFormItem :label="$t('page.system.dict.dictSort')" path="dictSort">
           <NInputNumber v-model:value="model.dictSort" :min="0" class="w-full" />
         </NFormItem>
-
         <NFormItem :label="$t('page.system.dict.cssClass')" path="cssClass">
           <NInput v-model:value="model.cssClass" :placeholder="$t('page.system.dict.dataForm.cssClass')" />
         </NFormItem>
-
         <NFormItem :label="$t('page.system.dict.listClass')" path="listClass">
           <NInput v-model:value="model.listClass" :placeholder="$t('page.system.dict.dataForm.listClass')" />
         </NFormItem>
-
         <NFormItem :label="$t('page.system.dict.isDefault')" path="isDefault">
-          <NSelect
-            v-model:value="model.isDefault"
-            :placeholder="$t('page.system.dict.dataForm.isDefault')"
-            :options="defaultOptions"
-            clearable
-          />
+          <NRadioGroup v-model:value="model.isDefault">
+            <NRadio v-for="item in yesNoOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
+          </NRadioGroup>
         </NFormItem>
-
-        <NFormItem :label="$t('page.system.user.userStatus')" path="status">
-          <NSelect
-            v-model:value="model.status"
-            :placeholder="$t('page.system.dict.dataForm.status')"
-            :options="statusOptions"
-          />
+        <NFormItem :label="$t('page.system.dict.status')" path="status">
+          <NRadioGroup v-model:value="model.status">
+            <NRadio v-for="item in enableStatusOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
+          </NRadioGroup>
         </NFormItem>
       </NForm>
-
       <template #footer>
-        <NSpace :size="12">
-          <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
+        <NSpace :size="16">
+          <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
           <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
         </NSpace>
       </template>
