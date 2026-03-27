@@ -57,8 +57,8 @@ function createDefaultModel(): Model {
     dictSort: 0,
     cssClass: '',
     listClass: '',
-    isDefault: 0,
-    status: null
+    isDefault: 'N',
+    status: '1'
   };
 }
 
@@ -90,7 +90,7 @@ async function handleSubmit() {
 
   let res;
   if (props.operateType === 'edit' && props.rowData) {
-    res = await fetchUpdateDictData(props.rowData.dictDataId, model.value);
+    res = await fetchUpdateDictData(props.rowData.dictCode, model.value);
   } else {
     res = await fetchSaveDictData(model.value);
   }
@@ -134,12 +134,14 @@ watch(visible, () => {
         <NFormItem :label="$t('page.system.dict.dictSort')" path="dictSort">
           <NInputNumber v-model:value="model.dictSort" :min="0" class="w-full" />
         </NFormItem>
-        <NFormItem :label="$t('page.system.dict.cssClass')" path="cssClass">
+        <!--
+ <NFormItem :label="$t('page.system.dict.cssClass')" path="cssClass">
           <NInput v-model:value="model.cssClass" :placeholder="$t('page.system.dict.dataForm.cssClass')" />
         </NFormItem>
         <NFormItem :label="$t('page.system.dict.listClass')" path="listClass">
           <NInput v-model:value="model.listClass" :placeholder="$t('page.system.dict.dataForm.listClass')" />
-        </NFormItem>
+        </NFormItem> 
+-->
         <NFormItem :label="$t('page.system.dict.isDefault')" path="isDefault">
           <NRadioGroup v-model:value="model.isDefault">
             <NRadio v-for="item in yesNoOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />

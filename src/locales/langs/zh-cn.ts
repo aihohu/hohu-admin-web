@@ -457,7 +457,11 @@ const local: App.I18n.Schema = {
         },
         addDictData: '新增字典数据',
         editDictData: '编辑字典数据',
-        backToDictType: '返回字典类型'
+        backToDictType: '返回字典类型',
+        validation: {
+          dictNameMinLength: '字典名称至少需要2个字符',
+          dictTypeMinLength: '字典类型编码至少需要2个字符'
+        }
       }
     }
   },

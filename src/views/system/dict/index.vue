@@ -94,7 +94,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         key: 'operate',
         title: $t('common.operate'),
         align: 'center',
-        width: 260,
+        width: 300,
         render: row => (
           <div class="flex-center gap-8px">
             <NButton type="info" ghost size="small" onClick={() => viewDictData(row)}>
@@ -131,7 +131,7 @@ const {
 } = useTableOperate(data, 'dictTypeId', getData);
 
 async function handleBatchDelete() {
-  const { error } = await fetchBatchDeleteDictType(checkedRowKeys.value.map(Number));
+  const { error } = await fetchBatchDeleteDictType(checkedRowKeys.value);
   if (!error) {
     onBatchDeleted();
   }
@@ -151,7 +151,7 @@ function edit(id: number) {
 function viewDictData(row: Api.SystemManage.DictType) {
   router.push({
     name: 'system_dict_data',
-    params: { dictType: row.dictType }
+    query: { dictType: row.dictType }
   });
 }
 </script>

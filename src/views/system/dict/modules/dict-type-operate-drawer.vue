@@ -56,8 +56,18 @@ function createDefaultModel(): Model {
 type RuleKey = Exclude<keyof Model, 'remark'>;
 
 const rules: Record<RuleKey, App.Global.FormRule> = {
-  dictName: defaultRequiredRule,
-  dictType: defaultRequiredRule,
+  dictName: {
+    required: true,
+    min: 2,
+    message: () => $t('page.system.dict.validation.dictNameMinLength'),
+    trigger: ['blur', 'input']
+  },
+  dictType: {
+    required: true,
+    min: 2,
+    message: () => $t('page.system.dict.validation.dictTypeMinLength'),
+    trigger: ['blur', 'input']
+  },
   status: defaultRequiredRule
 };
 

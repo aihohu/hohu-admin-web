@@ -210,7 +210,7 @@ export function fetchDeleteDictType(typeId: number) {
 }
 
 /** batch delete dict type */
-export function fetchBatchDeleteDictType(data: number[]) {
+export function fetchBatchDeleteDictType(data: string[]) {
   return request({
     url: '/system/dict-type/batch-delete',
     method: 'post',
@@ -245,24 +245,24 @@ export function fetchSaveDictData(data: Api.SystemManage.DictDataCreateParams) {
 }
 
 /** update dict data */
-export function fetchUpdateDictData(dataId: number, data: Api.SystemManage.DictDataCreateParams) {
+export function fetchUpdateDictData(dictCode: string, data: Api.SystemManage.DictDataCreateParams) {
   return request<App.Service.Response<any>>({
-    url: `/system/dict-data/${dataId}`,
+    url: `/system/dict-data/${dictCode}`,
     method: 'put',
     data
   });
 }
 
 /** delete dict data */
-export function fetchDeleteDictData(dataId: number) {
+export function fetchDeleteDictData(dictCode: string) {
   return request({
-    url: `/system/dict-data/${dataId}`,
+    url: `/system/dict-data/${dictCode}`,
     method: 'delete'
   });
 }
 
 /** batch delete dict data */
-export function fetchBatchDeleteDictData(data: number[]) {
+export function fetchBatchDeleteDictData(data: string[]) {
   return request({
     url: '/system/dict-data/batch-delete',
     method: 'post',

@@ -692,7 +692,6 @@ declare namespace App {
             cssClass: string;
             listClass: string;
             isDefault: string;
-            dictType: string;
             dataForm: {
               dictType: string;
               dictLabel: string;
@@ -706,6 +705,10 @@ declare namespace App {
             addDictData: string;
             editDictData: string;
             backToDictType: string;
+            validation: {
+              dictNameMinLength: string;
+              dictTypeMinLength: string;
+            };
           };
         };
       };

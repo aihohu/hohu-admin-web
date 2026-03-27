@@ -21,7 +21,7 @@ defineOptions({
 const route = useRoute();
 const appStore = useAppStore();
 
-const dictType = computed(() => route.params.dictType as string);
+const dictType = computed(() => route.query.dictType as string);
 
 const searchParams: Api.SystemManage.DictDataSearchParams = reactive({
   current: 1,
@@ -72,6 +72,26 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         width: 100
       },
       {
+        key: 'isDefault',
+        title: $t('page.system.dict.isDefault'),
+        align: 'center',
+        width: 100,
+        render: row => {
+          if (row.isDefault === null || row.isDefault === undefined) {
+            return null;
+          }
+
+          const tagMap: Record<'Y' | 'N', NaiveUI.ThemeColor> = {
+            Y: 'success',
+            N: 'default'
+          };
+
+          const label = row.isDefault === 'Y' ? $t('common.yesOrNo.yes') : $t('common.yesOrNo.no');
+
+          return <NTag type={tagMap[row.isDefault]}>{label}</NTag>;
+        }
+      },
+      {
         key: 'status',
         title: $t('page.system.dict.status'),
         align: 'center',
@@ -98,10 +118,10 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         width: 160,
         render: row => (
           <div class="flex-center gap-8px">
-            <NButton type="primary" ghost size="small" onClick={() => edit(row.dictDataId)}>
+            <NButton type="primary" ghost size="small" onClick={() => edit(row.dictCode)}>
               {$t('common.edit')}
             </NButton>
-            <NPopconfirm onPositiveClick={() => handleDelete(row.dictDataId)}>
+            <NPopconfirm onPositiveClick={() => handleDelete(row.dictCode)}>
               {{
                 default: () => $t('common.confirmDelete'),
                 trigger: () => (
@@ -126,23 +146,23 @@ const {
   checkedRowKeys,
   onBatchDeleted,
   onDeleted
-} = useTableOperate(data, 'dictDataId', getData);
+} = useTableOperate(data, 'dictCode', getData);
 
 async function handleBatchDelete() {
-  const { error } = await fetchBatchDeleteDictData(checkedRowKeys.value.map(Number));
+  const { error } = await fetchBatchDeleteDictData(checkedRowKeys.value);
   if (!error) {
     onBatchDeleted();
   }
 }
 
-async function handleDelete(id: number) {
+async function handleDelete(id: string) {
   const { error } = await fetchDeleteDictData(id);
   if (!error) {
     onDeleted();
   }
 }
 
-function edit(id: number) {
+function edit(id: string) {
   handleEdit(id);
 }
 
@@ -180,7 +200,7 @@ onMounted(() => {
         :scroll-x="962"
         :loading="loading"
         remote
-        :row-key="row => row.dictDataId"
+        :row-key="row => row.dictCode"
         :pagination="mobilePagination"
         class="sm:h-full"
       />

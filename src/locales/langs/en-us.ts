@@ -462,7 +462,11 @@ const local: App.I18n.Schema = {
         },
         addDictData: 'Add Dictionary Data',
         editDictData: 'Edit Dictionary Data',
-        backToDictType: 'Back to Dictionary Type'
+        backToDictType: 'Back to Dictionary Type',
+        validation: {
+          dictNameMinLength: 'Dictionary name requires at least 2 characters',
+          dictTypeMinLength: 'Dictionary type code requires at least 2 characters'
+        }
       }
     }
   },

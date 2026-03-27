@@ -37,8 +37,8 @@ declare namespace Api {
 
     /** dict data */
     type DictData = Common.CommonRecord<{
-      /** dict data id */
-      dictDataId: number;
+      /** dict code (主键) */
+      dictCode: string;
       /** dict type */
       dictType: string;
       /** dict label */
@@ -52,7 +52,7 @@ declare namespace Api {
       /** list class */
       listClass: string | null;
       /** is default */
-      isDefault: number | null;
+      isDefault: 'Y' | 'N';
     }>;
 
     /** dict data search params */

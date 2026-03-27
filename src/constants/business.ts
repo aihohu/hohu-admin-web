@@ -30,8 +30,8 @@ export const menuIconTypeRecord: Record<Api.SystemManage.IconType, App.I18n.I18n
 export const menuIconTypeOptions = transformRecordToOption(menuIconTypeRecord);
 
 export const yesNoRecord: Record<string, App.I18n.I18nKey> = {
-  '0': 'common.yesOrNo.no',
-  '1': 'common.yesOrNo.yes'
+  N: 'common.yesOrNo.no',
+  Y: 'common.yesOrNo.yes'
 };
 
 export const yesNoOptions = transformRecordToOption(yesNoRecord);

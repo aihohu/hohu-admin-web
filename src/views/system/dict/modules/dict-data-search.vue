@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { toRaw, ref } from 'vue';
 import { jsonClone } from '@sa/utils';
-import { enableStatusOptions } from '@/constants/business';
-import { translateOptions } from '@/utils/common';
 import { fetchGetAllDictTypes } from '@/service/api';
 import { $t } from '@/locales';
 
@@ -66,11 +64,7 @@ loadDictTypes();
               <NInput v-model:value="model.dictValue" clearable />
             </NFormItemGi>
 
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.dict.status')" path="status" class="pr-24px">
-              <NSelect v-model:value="model.status" clearable :options="translateOptions(enableStatusOptions)" />
-            </NFormItemGi>
-
-            <NFormItemGi span="24 s:12 m:6">
+            <NFormItemGi span="24 s:12 m:6" class="pr-24px">
               <NSpace class="w-full" justify="end">
                 <NButton @click="resetModel">
                   <template #icon>
