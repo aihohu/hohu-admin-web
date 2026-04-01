@@ -269,3 +269,55 @@ export function fetchBatchDeleteDictData(data: string[]) {
     data
   });
 }
+
+/** get dept tree */
+export function fetchGetDeptTree(params?: Api.SystemManage.DeptSearchParams) {
+  return request<Api.SystemManage.DeptTree[]>({
+    url: '/system/dept/tree',
+    method: 'get',
+    params
+  });
+}
+
+/** get dept tree option */
+export function fetchGetDeptTreeOption() {
+  return request<Api.SystemManage.DeptTreeOption[]>({
+    url: '/system/dept/tree-option',
+    method: 'get'
+  });
+}
+
+/** save dept */
+export function fetchSaveDept(data: Api.SystemManage.DeptCreateParams) {
+  return request<App.Service.Response<any>>({
+    url: '/system/dept/add',
+    method: 'post',
+    data
+  });
+}
+
+/** update dept */
+export function fetchUpdateDept(deptId: string, data: Api.SystemManage.DeptCreateParams) {
+  return request<App.Service.Response<any>>({
+    url: `/system/dept/${deptId}`,
+    method: 'put',
+    data
+  });
+}
+
+/** delete dept */
+export function fetchDeleteDept(deptId: string) {
+  return request({
+    url: `/system/dept/${deptId}`,
+    method: 'delete'
+  });
+}
+
+/** batch delete dept */
+export function fetchBatchDeleteDept(data: string[]) {
+  return request({
+    url: '/system/dept/batch-delete',
+    method: 'post',
+    data
+  });
+}

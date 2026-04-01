@@ -710,6 +710,32 @@ declare namespace App {
               dictTypeMinLength: string;
             };
           };
+          dept: {
+            title: string;
+            deptName: string;
+            parentId: string;
+            orderNum: string;
+            leader: string;
+            phone: string;
+            email: string;
+            deptStatus: string;
+            createTime: string;
+            form: {
+              parentId: string;
+              deptName: string;
+              orderNum: string;
+              leader: string;
+              phone: string;
+              email: string;
+              deptStatus: string;
+            };
+            addDept: string;
+            addChildDept: string;
+            editDept: string;
+            validation: {
+              deptNameMinLength: string;
+            };
+          };
         };
       };
       form: {

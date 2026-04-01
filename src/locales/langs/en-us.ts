@@ -236,7 +236,8 @@ const local: App.I18n.Schema = {
     system_role: 'Role Manage',
     system_menu: 'Menu Manage',
     system_dict: 'Dict Manage',
-    system_dict_data: 'Dictionary Data'
+    system_dict_data: 'Dictionary Data',
+    system_dept: 'Dept Manage'
   },
   page: {
     login: {
@@ -466,6 +467,32 @@ const local: App.I18n.Schema = {
         validation: {
           dictNameMinLength: 'Dictionary name requires at least 2 characters',
           dictTypeMinLength: 'Dictionary type code requires at least 2 characters'
+        }
+      },
+      dept: {
+        title: 'Dept List',
+        deptName: 'Dept Name',
+        parentId: 'Parent Dept',
+        orderNum: 'Order',
+        leader: 'Leader',
+        phone: 'Phone',
+        email: 'Email',
+        deptStatus: 'Dept Status',
+        createTime: 'Create Time',
+        form: {
+          parentId: 'Please select parent dept',
+          deptName: 'Please enter dept name',
+          orderNum: 'Please enter order',
+          leader: 'Please enter leader',
+          phone: 'Please enter phone',
+          email: 'Please enter email',
+          deptStatus: 'Please select dept status'
+        },
+        addDept: 'Add Dept',
+        addChildDept: 'Add Child Dept',
+        editDept: 'Edit Dept',
+        validation: {
+          deptNameMinLength: 'Dept name requires at least 2 characters'
         }
       }
     }

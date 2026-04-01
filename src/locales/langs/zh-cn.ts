@@ -232,7 +232,8 @@ const local: App.I18n.Schema = {
     system_role: '角色管理',
     system_menu: '菜单管理',
     system_dict: '字典管理',
-    system_dict_data: '字典数据'
+    system_dict_data: '字典数据',
+    system_dept: '部门管理'
   },
   page: {
     login: {
@@ -461,6 +462,32 @@ const local: App.I18n.Schema = {
         validation: {
           dictNameMinLength: '字典名称至少需要2个字符',
           dictTypeMinLength: '字典类型编码至少需要2个字符'
+        }
+      },
+      dept: {
+        title: '部门列表',
+        deptName: '部门名称',
+        parentId: '上级部门',
+        orderNum: '排序',
+        leader: '负责人',
+        phone: '联系电话',
+        email: '邮箱',
+        deptStatus: '部门状态',
+        createTime: '创建时间',
+        form: {
+          parentId: '请选择上级部门',
+          deptName: '请输入部门名称',
+          orderNum: '请输入排序',
+          leader: '请输入负责人',
+          phone: '请输入联系电话',
+          email: '请输入邮箱',
+          deptStatus: '请选择部门状态'
+        },
+        addDept: '新增部门',
+        addChildDept: '新增子部门',
+        editDept: '编辑部门',
+        validation: {
+          deptNameMinLength: '部门名称至少需要2个字符'
         }
       }
     }

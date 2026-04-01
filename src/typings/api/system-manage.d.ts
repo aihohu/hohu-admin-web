@@ -235,5 +235,47 @@ declare namespace Api {
       | 'multiTab'
       | 'fixedIndexInTab'
     >;
+
+    /** dept */
+    type Dept = Common.CommonRecord<{
+      /** dept id */
+      deptId: string;
+      /** parent dept id */
+      parentId: string;
+      /** ancestors */
+      ancestors: string;
+      /** dept name */
+      deptName: string;
+      /** order num */
+      orderNum: number;
+      /** leader */
+      leader: string;
+      /** phone */
+      phone: string;
+      /** email */
+      email: string;
+    }>;
+
+    /** dept tree node */
+    type DeptTree = Dept & {
+      children: DeptTree[];
+    };
+
+    /** dept tree select option */
+    type DeptTreeOption = {
+      id: string;
+      label: string;
+      pId: string;
+      children?: DeptTreeOption[];
+    };
+
+    /** dept search params */
+    type DeptSearchParams = CommonType.RecordNullable<Pick<Api.SystemManage.Dept, 'deptName' | 'status' | 'leader'>>;
+
+    /** dept create params */
+    type DeptCreateParams = Pick<
+      Api.SystemManage.Dept,
+      'parentId' | 'deptName' | 'orderNum' | 'leader' | 'phone' | 'email' | 'status'
+    >;
   }
 }
