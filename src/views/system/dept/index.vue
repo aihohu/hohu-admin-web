@@ -161,16 +161,20 @@ function addChild(parentId: string) {
 }
 
 async function handleBatchDelete() {
-  const { error } = await fetchBatchDeleteDept(checkedRowKeys.value);
+  const { error, response } = await fetchBatchDeleteDept(checkedRowKeys.value);
   if (!error) {
     onBatchDeleted();
+  } else if (response?.data?.msg) {
+    window.$message?.error(response.data.msg);
   }
 }
 
 async function handleDelete(id: string) {
-  const { error } = await fetchDeleteDept(id);
+  const { error, response } = await fetchDeleteDept(id);
   if (!error) {
     onDeleted();
+  } else if (response?.data?.msg) {
+    window.$message?.error(response.data.msg);
   }
 }
 </script>
