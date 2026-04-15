@@ -8,7 +8,7 @@ WORKDIR /app
 ARG VITE_SERVICE_BASE_URL=/api
 ENV VITE_SERVICE_BASE_URL=${VITE_SERVICE_BASE_URL}
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/ ./packages/
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
