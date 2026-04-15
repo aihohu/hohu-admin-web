@@ -1,0 +1,24 @@
+services:
+  hohu-admin-web:
+    build:
+      context: .
+      args:
+        VITE_SERVICE_BASE_URL: /api
+    image: hohu-admin-web
+    container_name: hohu-admin-web
+    restart: unless-stopped
+    ports:
+      - '8080:80'
+    environment:
+      - API_URL=http://hohu-admin:8000/
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '3'
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s

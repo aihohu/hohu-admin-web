@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.github
+*.md
+.vscode
+.idea
+*.log
+.claude/
+docker-compose.yml
+Dockerfile
+nginx.conf.template
+*.tgz
+.editorconfig
+.gitattributes
