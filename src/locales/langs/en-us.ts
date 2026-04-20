@@ -237,7 +237,8 @@ const local: App.I18n.Schema = {
     system_menu: 'Menu Manage',
     system_dict: 'Dict Manage',
     system_dict_data: 'Dictionary Data',
-    system_dept: 'Dept Manage'
+    system_dept: 'Dept Manage',
+    system_file: 'File Manage'
   },
   page: {
     login: {
@@ -494,6 +495,23 @@ const local: App.I18n.Schema = {
         validation: {
           deptNameMinLength: 'Dept name requires at least 2 characters'
         }
+      },
+      file: {
+        title: 'File Management',
+        fileName: 'File Name',
+        fileType: 'Type',
+        fileSize: 'Size',
+        uploader: 'Uploader',
+        uploadTime: 'Upload Time',
+        copyLink: 'Copy Link',
+        confirmDelete: 'Are you sure you want to delete this file?',
+        linkCopied: 'Link copied',
+        uploadFile: 'Upload File',
+        fileList: 'File List',
+        fileNamePlaceholder: 'Enter file name',
+        fileTypePlaceholder: 'e.g. .jpg, .pdf',
+        uploadDraggerTip: 'Click or drag files to this area to upload',
+        uploadDraggerDesc: 'Support common formats: images, documents, archives, etc.'
       }
     }
   },

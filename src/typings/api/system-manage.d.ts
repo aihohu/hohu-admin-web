@@ -277,5 +277,41 @@ declare namespace Api {
       Api.SystemManage.Dept,
       'parentId' | 'deptName' | 'orderNum' | 'leader' | 'phone' | 'email' | 'status'
     >;
+
+    /** file record */
+    type FileRecord = {
+      /** file id */
+      fileId: string;
+      /** original filename */
+      originalName: string;
+      /** stored filename */
+      fileName: string;
+      /** relative path */
+      filePath: string;
+      /** access url */
+      fileUrl: string;
+      /** file size in bytes */
+      fileSize: number;
+      /** file extension */
+      fileExt: string;
+      /** mime type */
+      mimeType: string | null;
+      /** business type */
+      businessType: string | null;
+      /** business id */
+      businessId: string | null;
+      /** uploader */
+      createBy: string | null;
+      /** upload time */
+      createTime: string;
+    };
+
+    /** file search params */
+    type FileSearchParams = CommonType.RecordNullable<
+      Pick<Api.SystemManage.FileRecord, 'originalName' | 'businessType' | 'fileExt'> & CommonSearchParams
+    >;
+
+    /** file list */
+    type FileList = Common.PaginatingQueryRecord<FileRecord>;
   }
 }

@@ -736,6 +736,23 @@ declare namespace App {
               deptNameMinLength: string;
             };
           };
+          file: {
+            title: string;
+            fileName: string;
+            fileType: string;
+            fileSize: string;
+            uploader: string;
+            uploadTime: string;
+            copyLink: string;
+            confirmDelete: string;
+            linkCopied: string;
+            uploadFile: string;
+            fileList: string;
+            fileNamePlaceholder: string;
+            fileTypePlaceholder: string;
+            uploadDraggerTip: string;
+            uploadDraggerDesc: string;
+          };
         };
       };
       form: {

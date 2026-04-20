@@ -233,7 +233,8 @@ const local: App.I18n.Schema = {
     system_menu: '菜单管理',
     system_dict: '字典管理',
     system_dict_data: '字典数据',
-    system_dept: '部门管理'
+    system_dept: '部门管理',
+    system_file: '文件管理'
   },
   page: {
     login: {
@@ -489,6 +490,23 @@ const local: App.I18n.Schema = {
         validation: {
           deptNameMinLength: '部门名称至少需要2个字符'
         }
+      },
+      file: {
+        title: '文件管理',
+        fileName: '文件名',
+        fileType: '类型',
+        fileSize: '大小',
+        uploader: '上传者',
+        uploadTime: '上传时间',
+        copyLink: '复制链接',
+        confirmDelete: '确认删除该文件？',
+        linkCopied: '链接已复制',
+        uploadFile: '上传文件',
+        fileList: '文件列表',
+        fileNamePlaceholder: '请输入文件名',
+        fileTypePlaceholder: '如 .jpg, .pdf',
+        uploadDraggerTip: '点击或拖拽文件到此区域上传',
+        uploadDraggerDesc: '支持图片、文档、压缩包等常见文件格式'
       }
     }
   },

@@ -27,6 +27,7 @@ declare module "@elegant-router/types" {
     "system_dept": "/system/dept";
     "system_dict": "/system/dict";
     "system_dict_data": "/system/dict/data";
+    "system_file": "/system/file";
     "system_menu": "/system/menu";
     "system_role": "/system/role";
     "system_user": "/system/user";
@@ -93,6 +94,7 @@ declare module "@elegant-router/types" {
     | "system_dept"
     | "system_dict_data"
     | "system_dict"
+    | "system_file"
     | "system_menu"
     | "system_role"
     | "system_user"

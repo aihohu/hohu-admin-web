@@ -321,3 +321,63 @@ export function fetchBatchDeleteDept(data: string[]) {
     data
   });
 }
+
+/** upload file */
+export function fetchUploadFile(file: File, businessType?: string, businessId?: string) {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (businessType) {
+    formData.append('business_type', businessType);
+  }
+  if (businessId) {
+    formData.append('business_id', businessId);
+  }
+  return request<Api.SystemManage.FileRecord>({
+    url: '/system/file/upload',
+    method: 'post',
+    data: formData
+  });
+}
+
+/** batch upload files */
+export function fetchBatchUploadFiles(files: File[], businessType?: string, businessId?: string) {
+  const formData = new FormData();
+  files.forEach(f => formData.append('files', f));
+  if (businessType) {
+    formData.append('business_type', businessType);
+  }
+  if (businessId) {
+    formData.append('business_id', businessId);
+  }
+  return request<Api.SystemManage.FileRecord[]>({
+    url: '/system/file/batch-upload',
+    method: 'post',
+    data: formData
+  });
+}
+
+/** get file list */
+export function fetchGetFileList(params?: Api.SystemManage.FileSearchParams) {
+  return request<Api.SystemManage.FileList>({
+    url: '/system/file/list',
+    method: 'get',
+    params
+  });
+}
+
+/** delete file */
+export function fetchDeleteFile(fileId: string) {
+  return request({
+    url: `/system/file/${fileId}`,
+    method: 'delete'
+  });
+}
+
+/** batch delete file */
+export function fetchBatchDeleteFile(data: string[]) {
+  return request({
+    url: '/system/file/batch-delete',
+    method: 'post',
+    data
+  });
+}

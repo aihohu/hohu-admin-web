@@ -114,6 +114,15 @@ export const generatedRoutes: GeneratedRoute[] = [
         ]
       },
       {
+        name: 'system_file',
+        path: '/system/file',
+        component: 'view.system_file',
+        meta: {
+          title: 'system_file',
+          i18nKey: 'route.system_file'
+        }
+      },
+      {
         name: 'system_menu',
         path: '/system/menu',
         component: 'view.system_menu',
