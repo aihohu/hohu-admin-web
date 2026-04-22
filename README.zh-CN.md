@@ -1,6 +1,50 @@
-# hohu-admin-web
+# HoHu Admin Web
 
-基于 Vue 3、Vite、TypeScript、NaiveUI 和 UnoCSS 构建的现代化后台管理系统前端。属于 [HoHu](https://github.com/aihohu) 管理平台的一部分，配合 [FastAPI 后端](https://github.com/aihohu/hohu-admin) 使用。
+<p align="center">
+  <b>AI 驱动的现代化全栈管理平台 · Web 前端</b>
+</p>
+
+<p align="center">
+  <a href="https://show.hohu.org">在线演示</a> ·
+  <a href="https://github.com/aihohu/hohu-admin">后端仓库</a> ·
+  <a href="https://github.com/aihohu/hohu-admin-app">移动端</a> ·
+  <a href="https://hohu.org/guide/introduction.html">文档</a>
+</p>
+
+<p align="center">
+  <a href="./README.md">English</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="license" />
+  <img src="https://img.shields.io/badge/Vue-3.5-42b883.svg" alt="Vue" />
+  <img src="https://img.shields.io/badge/Vite-7.3-646cff.svg" alt="Vite" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6.svg" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/NaiveUI-2.44-36ad6a.svg" alt="NaiveUI" />
+  <img src="https://img.shields.io/badge/UnoCSS-66.6-333333.svg" alt="UnoCSS" />
+  <img src="https://img.shields.io/badge/Node.js->=20-339933.svg" alt="Node.js" />
+  <img src="https://img.shields.io/badge/pnpm->=10.5-F69220.svg" alt="pnpm" />
+</p>
+
+---
+
+## 简介
+
+HoHu Admin 是一个 AI 驱动的现代化全栈管理平台。本仓库为 **Web 管理后台前端**，基于 Vue 3、Vite、TypeScript、NaiveUI 和 UnoCSS 构建的清新优雅的后台管理系统。
+
+面向 AI 优先开发：标准化的 Schema、显式类型标注、对 Prompt 友好的架构，让 AI 辅助编码事半功倍。
+
+## 特性
+
+- **RBAC 权限** — 动态路由 + 按钮级别权限控制
+- **国际化** — 内置中英文支持（Vue I18n）
+- **雪花 ID** — 所有主键使用 Snowflake 算法，序列化为字符串避免 BigInt 精度丢失
+- **自动命名转换** — 请求/响应拦截器自动处理 snake_case ↔ camelCase
+- **基于文件的路由** — @elegant-router 根据 `src/views` 目录自动生成路由
+- **UnoCSS** — 原子化 CSS 引擎，按需生成样式
+- **暗黑模式** — 内置主题切换
+- **Monorepo 工作区** — 共享包（@sa/axios、@sa/hooks、@sa/utils 等）
+- **Docker Compose 部署** — `hohu deploy` 一键部署
 
 ## 技术栈
 
@@ -16,107 +60,19 @@
 | 国际化    | Vue I18n                                  | 11.3 |
 | 图表      | ECharts                                   | 6.0  |
 
-## 环境要求
+## 地址
 
-- **Node.js** >= 20.19.0
-- **pnpm** >= 10.5.0
+| 资源   | URL                                        |
+| ------ | ------------------------------------------ |
+| 演示   | https://show.hohu.org (`admin` / `123456`) |
+| 官网   | https://hohu.org                           |
+| 后端   | https://github.com/aihohu/hohu-admin       |
+| 移动端 | https://github.com/aihohu/hohu-admin-app   |
+| 文档   | https://hohu.org/guide/introduction.html   |
 
-## 快速开始
+## 项目后端
 
-```bash
-# 克隆仓库
-git clone https://github.com/aihohu/hohu-admin-web.git
-cd hohu-admin-web
-
-# 安装依赖
-pnpm install
-
-# 启动开发服务器 (http://localhost:9527)
-pnpm dev
-```
-
-开发服务器默认将 API 请求代理到 `http://127.0.0.1:8000`，请确保后端已启动。
-
-## 常用命令
-
-| 命令              | 说明                        |
-| ----------------- | --------------------------- |
-| `pnpm dev`        | 启动开发服务器（测试环境）  |
-| `pnpm dev:prod`   | 启动开发服务器（生产环境）  |
-| `pnpm build`      | 生产构建                    |
-| `pnpm build:test` | 测试环境构建                |
-| `pnpm preview`    | 预览生产构建                |
-| `pnpm lint`       | 代码检查 (oxlint + eslint)  |
-| `pnpm typecheck`  | TypeScript 类型检查         |
-| `pnpm gen-route`  | 根据 src/views 重新生成路由 |
-| `pnpm commit`     | 规范化提交（英文）          |
-| `pnpm commit:zh`  | 规范化提交（中文）          |
-
-## 项目结构
-
-```
-hohu-admin-web/
-├── build/                    # Vite 构建配置和插件
-├── packages/                 # Monorepo 工作区包
-│   ├── @sa/axios/           # HTTP 请求封装
-│   ├── @sa/hooks/           # Vue 组合式函数
-│   ├── @sa/utils/           # 工具函数
-│   ├── @sa/color/           # 颜色工具
-│   ├── @sa/materials/       # 共享 UI 组件
-│   ├── @sa/scripts/         # 构建/开发脚本
-│   └── @sa/uno-preset/      # UnoCSS 预设
-├── src/
-│   ├── components/          # 全局 Vue 组件
-│   ├── constants/           # 应用常量
-│   ├── enum/                # 枚举定义
-│   ├── hooks/               # 自定义 hooks（业务 & 通用）
-│   ├── layouts/             # 布局组件
-│   ├── locales/             # 国际化翻译 (zh-cn, en-us)
-│   ├── router/              # 路由 (elegant-router + 守卫)
-│   ├── service/             # API 服务层
-│   │   ├── api/             # 接口定义
-│   │   └── request/         # HTTP 客户端配置
-│   ├── store/               # Pinia 状态管理 (auth, app, route, tab, theme)
-│   ├── styles/              # 全局样式 (CSS + SCSS)
-│   ├── theme/               # 主题配置
-│   ├── typings/             # TypeScript 类型定义
-│   │   └── api/             # API 响应/请求类型
-│   ├── utils/               # 工具函数
-│   └── views/               # 页面组件
-│       ├── _builtin/        # 登录、403、404、500、iframe
-│       ├── home/            # 仪表盘
-│       └── system/          # 系统管理
-├── .env.test                # 测试环境变量
-└── .env.prod                # 生产环境变量
-```
-
-## 开发指南
-
-### 新增页面
-
-1. 创建 `src/views/<模块>/index.vue`
-2. 运行 `pnpm gen-route` 注册路由
-3. 按需在 `src/locales/langs/` 中添加国际化 key
-
-### 新增 API 接口
-
-1. 在 `src/typings/api/` 定义类型
-2. 在 `src/service/api/` 创建服务函数
-3. 在组件中通过类型化的 `request` 封装调用
-
-### 路由
-
-路由由 [@elegant-router](https://github.com/soybean-js/elegant-router) 根据 `src/views` 目录结构自动生成。新增或重命名页面后执行 `pnpm gen-route`。
-
-### 状态管理
-
-Pinia store 位于 `src/store/modules/`，使用组合式 API 风格（`defineStore` + setup 函数）。
-
-### 样式
-
-全局使用 UnoCSS 原子化类名。全局 SCSS 变量通过 `@use "@/styles/scss/global.scss" as *;` 引入。
-
-## 后端对接
+本前端配合 **[hohu-admin](https://github.com/aihohu/hohu-admin)** 使用 — 基于 FastAPI + SQLAlchemy 2.0 async + PostgreSQL + Redis + Alembic 构建的后端。
 
 | 项目     | 值                                         |
 | -------- | ------------------------------------------ |
@@ -126,16 +82,34 @@ Pinia store 位于 `src/store/modules/`，使用组合式 API 风格（`defineSt
 | 认证方式 | `Authorization` 请求头携带 Bearer JWT      |
 | ID 格式  | Snowflake ID 序列化为**字符串**            |
 
-后端使用 `snake_case`，前端使用 `camelCase`，由请求/响应拦截器自动转换。
+## 安装依赖
 
-## Git 提交规范
+```bash
+# 克隆
+git clone https://github.com/aihohu/hohu-admin-web.git
+cd hohu-admin-web
 
-每次提交前会自动通过 `simple-git-hooks` 运行以下检查：
+# 安装依赖（需要 Node.js >= 20.19.0，pnpm >= 10.5.0）
+pnpm install
+```
 
-1. `pnpm typecheck`
-2. `pnpm lint`
-3. `pnpm fmt`
-4. `git diff --exit-code`（确保格式化后的文件已暂存）
+或使用 HoHu CLI：
+
+```bash
+uv tool install hohu
+hohu create my-project
+hohu init
+```
+
+## 运行
+
+```bash
+pnpm dev          # 开发服务器 http://localhost:9527（API 代理到 :8000）
+pnpm build        # 生产构建
+pnpm lint         # 代码检查（oxlint + eslint）
+pnpm typecheck    # TypeScript 类型检查
+pnpm gen-route    # 根据 src/views 重新生成路由
+```
 
 ## 许可证
 

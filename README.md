@@ -1,6 +1,50 @@
-# hohu-admin-web
+# HoHu Admin Web
 
-A modern admin dashboard built with Vue 3, Vite, TypeScript, NaiveUI, and UnoCSS. Part of the [HoHu](https://github.com/aihohu) admin platform, designed to work with the [FastAPI backend](https://github.com/aihohu/hohu-admin).
+<p align="center">
+  <b>AI-driven modern full-stack admin platform · Web Frontend</b>
+</p>
+
+<p align="center">
+  <a href="https://show.hohu.org">Demo</a> ·
+  <a href="https://github.com/aihohu/hohu-admin">Backend</a> ·
+  <a href="https://github.com/aihohu/hohu-admin-app">Mobile</a> ·
+  <a href="https://hohu.org/guide/introduction.html">Docs</a>
+</p>
+
+<p align="center">
+  <a href="./README.zh-CN.md">简体中文</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="license" />
+  <img src="https://img.shields.io/badge/Vue-3.5-42b883.svg" alt="Vue" />
+  <img src="https://img.shields.io/badge/Vite-7.3-646cff.svg" alt="Vite" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6.svg" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/NaiveUI-2.44-36ad6a.svg" alt="NaiveUI" />
+  <img src="https://img.shields.io/badge/UnoCSS-66.6-333333.svg" alt="UnoCSS" />
+  <img src="https://img.shields.io/badge/Node.js->=20-339933.svg" alt="Node.js" />
+  <img src="https://img.shields.io/badge/pnpm->=10.5-F69220.svg" alt="pnpm" />
+</p>
+
+---
+
+## Introduction
+
+HoHu Admin is an AI-driven modern full-stack admin platform. This repository contains the **web frontend** — a fresh and elegant admin dashboard built with Vue 3, Vite, TypeScript, NaiveUI, and UnoCSS.
+
+Designed for AI-first development: standardized schemas, explicit type hints, and prompt-friendly architecture make it easy to build features with AI-assisted coding tools.
+
+## Features
+
+- **RBAC Permissions** — Dynamic routing + button-level access control
+- **i18n** — Built-in Chinese & English support via Vue I18n
+- **Snowflake IDs** — All primary keys use Snowflake, serialized as strings to avoid BigInt precision loss
+- **Auto snake_case ↔ camelCase** — Request/response interceptors handle naming conversion transparently
+- **File-based Routing** — Routes auto-generated from `src/views` directory via @elegant-router
+- **UnoCSS** — Atomic CSS engine for fast, on-demand styling
+- **Dark Mode** — Theme switching built in
+- **Monorepo Workspace** — Shared packages (@sa/axios, @sa/hooks, @sa/utils, etc.)
+- **Docker Compose Deployment** — One-command deploy with `hohu deploy`
 
 ## Tech Stack
 
@@ -16,107 +60,19 @@ A modern admin dashboard built with Vue 3, Vite, TypeScript, NaiveUI, and UnoCSS
 | i18n       | Vue I18n                                  | 11.3    |
 | Charts     | ECharts                                   | 6.0     |
 
-## Prerequisites
+## Links
 
-- **Node.js** >= 20.19.0
-- **pnpm** >= 10.5.0
+| Resource   | URL                                        |
+| ---------- | ------------------------------------------ |
+| Demo       | https://show.hohu.org (`admin` / `123456`) |
+| Website    | https://hohu.org                           |
+| Backend    | https://github.com/aihohu/hohu-admin       |
+| Mobile App | https://github.com/aihohu/hohu-admin-app   |
+| Docs       | https://hohu.org/guide/introduction.html   |
 
-## Quick Start
+## Backend
 
-```bash
-# Clone the repository
-git clone https://github.com/aihohu/hohu-admin-web.git
-cd hohu-admin-web
-
-# Install dependencies
-pnpm install
-
-# Start dev server (http://localhost:9527)
-pnpm dev
-```
-
-The dev server proxies API requests to `http://127.0.0.1:8000` by default. Make sure the backend is running.
-
-## Scripts
-
-| Command           | Description                        |
-| ----------------- | ---------------------------------- |
-| `pnpm dev`        | Start dev server (test env)        |
-| `pnpm dev:prod`   | Start dev server (prod env)        |
-| `pnpm build`      | Production build                   |
-| `pnpm build:test` | Test env build                     |
-| `pnpm preview`    | Preview production build           |
-| `pnpm lint`       | Lint with oxlint + eslint          |
-| `pnpm typecheck`  | TypeScript type check              |
-| `pnpm gen-route`  | Regenerate routes from `src/views` |
-| `pnpm commit`     | Conventional commit (English)      |
-| `pnpm commit:zh`  | Conventional commit (Chinese)      |
-
-## Project Structure
-
-```
-hohu-admin-web/
-├── build/                    # Vite build config & plugins
-├── packages/                 # Monorepo workspace packages
-│   ├── @sa/axios/           # HTTP request wrapper
-│   ├── @sa/hooks/           # Vue composition hooks
-│   ├── @sa/utils/           # Utility functions
-│   ├── @sa/color/           # Color utilities
-│   ├── @sa/materials/       # Shared UI components
-│   ├── @sa/scripts/         # Build/dev scripts
-│   └── @sa/uno-preset/      # UnoCSS preset
-├── src/
-│   ├── components/          # Global Vue components
-│   ├── constants/           # App constants
-│   ├── enum/                # Enum definitions
-│   ├── hooks/               # Custom hooks (business & common)
-│   ├── layouts/             # Layout components
-│   ├── locales/             # i18n translations (zh-cn, en-us)
-│   ├── router/              # Routing (elegant-router + guards)
-│   ├── service/             # API service layer
-│   │   ├── api/             # Endpoint definitions
-│   │   └── request/         # HTTP client config
-│   ├── store/               # Pinia stores (auth, app, route, tab, theme)
-│   ├── styles/              # Global styles (CSS + SCSS)
-│   ├── theme/               # Theme configuration
-│   ├── typings/             # TypeScript type definitions
-│   │   └── api/             # API response/request types
-│   ├── utils/               # Utility functions
-│   └── views/               # Page components
-│       ├── _builtin/        # Login, 403, 404, 500, iframe
-│       ├── home/            # Dashboard
-│       └── system/          # System management
-├── .env.test                # Test environment variables
-└── .env.prod                # Production environment variables
-```
-
-## Development Guide
-
-### Adding a New Page
-
-1. Create `src/views/<module>/index.vue`
-2. Run `pnpm gen-route` to register the route
-3. Optionally add i18n keys in `src/locales/langs/`
-
-### Adding an API Endpoint
-
-1. Define types in `src/typings/api/`
-2. Create service function in `src/service/api/`
-3. Use in components via the typed `request` wrapper
-
-### Routing
-
-Routes are auto-generated from `src/views` directory structure by [@elegant-router](https://github.com/soybean-js/elegant-router). After adding or renaming pages, run `pnpm gen-route`.
-
-### State Management
-
-Pinia stores live in `src/store/modules/`. Use the composition API style (`defineStore` with setup function).
-
-### Styling
-
-UnoCSS utility classes are used throughout. Global SCSS variables are available via `@use "@/styles/scss/global.scss" as *;`.
-
-## Backend Integration
+This frontend is designed to work with **[hohu-admin](https://github.com/aihohu/hohu-admin)** — a FastAPI backend powered by SQLAlchemy 2.0 async, PostgreSQL, Redis, and Alembic.
 
 | Item            | Value                                      |
 | --------------- | ------------------------------------------ |
@@ -126,16 +82,34 @@ UnoCSS utility classes are used throughout. Global SCSS variables are available 
 | Auth            | Bearer JWT in `Authorization` header       |
 | IDs             | Snowflake IDs serialized as **strings**    |
 
-The backend uses `snake_case`; the frontend uses `camelCase`. Conversion is handled automatically by request/response interceptors.
+## Install
 
-## Pre-commit Hooks
+```bash
+# Clone
+git clone https://github.com/aihohu/hohu-admin-web.git
+cd hohu-admin-web
 
-Git hooks (via `simple-git-hooks`) run automatically before each commit:
+# Install dependencies (requires Node.js >= 20.19.0, pnpm >= 10.5.0)
+pnpm install
+```
 
-1. `pnpm typecheck`
-2. `pnpm lint`
-3. `pnpm fmt`
-4. `git diff --exit-code` (ensures formatted files are staged)
+Or use the HoHu CLI:
+
+```bash
+uv tool install hohu
+hohu create my-project
+hohu init
+```
+
+## Run
+
+```bash
+pnpm dev          # Dev server at http://localhost:9527 (proxies API to :8000)
+pnpm build        # Production build
+pnpm lint         # Lint (oxlint + eslint)
+pnpm typecheck    # TypeScript check
+pnpm gen-route    # Regenerate routes from src/views
+```
 
 ## License
 
