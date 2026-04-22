@@ -238,7 +238,9 @@ const local: App.I18n.Schema = {
     system_dict: 'Dict Manage',
     system_dict_data: 'Dictionary Data',
     system_dept: 'Dept Manage',
-    system_file: 'File Manage'
+    system_file: 'File Manage',
+    system_job: 'Scheduled Job',
+    'system_job-log': 'Job Log'
   },
   page: {
     login: {
@@ -469,6 +471,76 @@ const local: App.I18n.Schema = {
           dictNameMinLength: 'Dictionary name requires at least 2 characters',
           dictTypeMinLength: 'Dictionary type code requires at least 2 characters'
         }
+      },
+      job: {
+        title: 'Scheduled Job List',
+        jobName: 'Job Name',
+        jobKey: 'Job Key',
+        cronExpression: 'Schedule',
+        triggerType: 'Trigger Type',
+        triggerTypeCron: 'Cron Expression',
+        triggerTypeInterval: 'Fixed Interval',
+        interval: 'Interval',
+        intervalValue: 'Interval Value',
+        intervalUnit: 'Interval Unit',
+        unitSeconds: 'Seconds',
+        unitMinutes: 'Minutes',
+        unitHours: 'Hours',
+        unitDays: 'Days',
+        presetEveryMinute: 'Every Minute',
+        presetEveryHour: 'Every Hour',
+        presetEveryDay: 'Every Day',
+        presetEveryWeek: 'Every Week',
+        presetEveryMonth: 'Every Month',
+        presetEveryYear: 'Every Year',
+        descEveryMinute: 'Runs every minute',
+        descEveryHour: 'Runs every hour',
+        descEveryDay: 'Runs daily at 00:00',
+        descEveryWeek: 'Runs weekly on Monday at 00:00',
+        jobArgs: 'Job Args',
+        status: 'Status',
+        concurrent: 'Concurrent',
+        remark: 'Remark',
+        concurrentAllow: 'Allow',
+        concurrentForbid: 'Forbid',
+        form: {
+          jobName: 'Enter job name',
+          jobKey: 'Select job key',
+          cronExpression: 'Enter cron expression',
+          jobArgs: 'Enter job args JSON',
+          status: 'Select status',
+          concurrent: 'Select concurrent strategy',
+          remark: 'Enter remark',
+          intervalValue: 'Enter interval value',
+          intervalUnit: 'Select unit'
+        },
+        addJob: 'Add Job',
+        editJob: 'Edit Job',
+        runNow: 'Run Now',
+        enableJob: 'Enable',
+        disableJob: 'Disable',
+        runConfirm: 'Confirm to run this job immediately?',
+        enableConfirm: 'Confirm to enable this job?',
+        disableConfirm: 'Confirm to disable this job?',
+        validation: {
+          cronInvalid: 'Invalid cron expression'
+        }
+      },
+      jobLog: {
+        title: 'Job Log List',
+        jobName: 'Job Name',
+        jobKey: 'Job Key',
+        status: 'Status',
+        errorMsg: 'Error Message',
+        startTime: 'Start Time',
+        endTime: 'End Time',
+        duration: 'Duration(ms)',
+        statusSuccess: 'Success',
+        statusFailed: 'Failed',
+        statusRunning: 'Running',
+        clean: 'Clean Logs',
+        cleanConfirm: 'Confirm to clean logs older than 30 days?',
+        cleanSuccess: 'Logs cleaned successfully'
       },
       dept: {
         title: 'Dept List',

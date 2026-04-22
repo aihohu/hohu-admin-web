@@ -28,6 +28,8 @@ declare module "@elegant-router/types" {
     "system_dict": "/system/dict";
     "system_dict_data": "/system/dict/data";
     "system_file": "/system/file";
+    "system_job": "/system/job";
+    "system_job-log": "/system/job-log";
     "system_menu": "/system/menu";
     "system_role": "/system/role";
     "system_user": "/system/user";
@@ -95,6 +97,8 @@ declare module "@elegant-router/types" {
     | "system_dict_data"
     | "system_dict"
     | "system_file"
+    | "system_job-log"
+    | "system_job"
     | "system_menu"
     | "system_role"
     | "system_user"

@@ -313,5 +313,84 @@ declare namespace Api {
 
     /** file list */
     type FileList = Common.PaginatingQueryRecord<FileRecord>;
+
+    /** job status */
+    type JobStatus = Api.Common.EnableStatus;
+
+    /** job log status */
+    type JobLogStatus = '1' | '2' | '3';
+
+    /** job concurrent strategy */
+    type JobConcurrent = '1' | '2';
+
+    /** scheduled job */
+    type Job = {
+      jobId: string;
+      jobName: string;
+      jobKey: string;
+      cronExpression: string | null;
+      triggerType: 'cron' | 'interval';
+      intervalValue: number | null;
+      intervalUnit: 'seconds' | 'minutes' | 'hours' | 'days' | null;
+      jobArgs: string | null;
+      status: JobStatus;
+      concurrent: JobConcurrent;
+      remark: string | null;
+      createBy: string | null;
+      createTime: string;
+      updateBy: string | null;
+      updateTime: string;
+    };
+
+    /** job search params */
+    type JobSearchParams = CommonType.RecordNullable<Pick<Job, 'jobName' | 'jobKey' | 'status'> & CommonSearchParams>;
+
+    /** job list */
+    type JobList = Common.PaginatingQueryRecord<Job>;
+
+    /** job create params */
+    type JobCreateParams = Pick<
+      Job,
+      | 'jobName'
+      | 'jobKey'
+      | 'cronExpression'
+      | 'triggerType'
+      | 'intervalValue'
+      | 'intervalUnit'
+      | 'jobArgs'
+      | 'status'
+      | 'concurrent'
+      | 'remark'
+    >;
+
+    /** registered task */
+    type RegisteredTask = {
+      key: string;
+      name: string;
+    };
+
+    /** job log */
+    type JobLog = {
+      jobLogId: string;
+      jobId: string;
+      jobName: string;
+      jobKey: string;
+      status: JobLogStatus;
+      errorMsg: string | null;
+      startTime: string;
+      endTime: string | null;
+      duration: number | null;
+    };
+
+    /** job log search params */
+    type JobLogSearchParams = CommonType.RecordNullable<
+      Pick<JobLog, 'jobId' | 'jobKey' | 'status'> & {
+        startTime: string | null;
+        endTime: string | null;
+      } & CommonSearchParams
+    >;
+
+    /** job log list */
+    type JobLogList = Common.PaginatingQueryRecord<JobLog>;
   }
 }

@@ -123,6 +123,24 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       },
       {
+        name: 'system_job',
+        path: '/system/job',
+        component: 'view.system_job',
+        meta: {
+          title: 'system_job',
+          i18nKey: 'route.system_job'
+        }
+      },
+      {
+        name: 'system_job-log',
+        path: '/system/job-log',
+        component: 'view.system_job-log',
+        meta: {
+          title: 'system_job-log',
+          i18nKey: 'route.system_job-log'
+        }
+      },
+      {
         name: 'system_menu',
         path: '/system/menu',
         component: 'view.system_menu',

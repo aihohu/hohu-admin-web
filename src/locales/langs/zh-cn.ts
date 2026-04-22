@@ -234,7 +234,9 @@ const local: App.I18n.Schema = {
     system_dict: '字典管理',
     system_dict_data: '字典数据',
     system_dept: '部门管理',
-    system_file: '文件管理'
+    system_file: '文件管理',
+    system_job: '定时任务',
+    'system_job-log': '任务日志'
   },
   page: {
     login: {
@@ -464,6 +466,76 @@ const local: App.I18n.Schema = {
           dictNameMinLength: '字典名称至少需要2个字符',
           dictTypeMinLength: '字典类型编码至少需要2个字符'
         }
+      },
+      job: {
+        title: '定时任务列表',
+        jobName: '任务名称',
+        jobKey: '任务标识',
+        cronExpression: '调度表达式',
+        triggerType: '调度类型',
+        triggerTypeCron: 'Cron 表达式',
+        triggerTypeInterval: '固定间隔',
+        interval: '执行间隔',
+        intervalValue: '间隔值',
+        intervalUnit: '间隔单位',
+        unitSeconds: '秒',
+        unitMinutes: '分钟',
+        unitHours: '小时',
+        unitDays: '天',
+        presetEveryMinute: '每分钟',
+        presetEveryHour: '每小时',
+        presetEveryDay: '每天',
+        presetEveryWeek: '每周',
+        presetEveryMonth: '每月',
+        presetEveryYear: '每年',
+        descEveryMinute: '每分钟执行一次',
+        descEveryHour: '每小时执行一次',
+        descEveryDay: '每天 00:00 执行',
+        descEveryWeek: '每周一 00:00 执行',
+        jobArgs: '任务参数',
+        status: '状态',
+        concurrent: '并发策略',
+        remark: '备注',
+        concurrentAllow: '允许',
+        concurrentForbid: '禁止',
+        form: {
+          jobName: '请输入任务名称',
+          jobKey: '请选择任务标识',
+          cronExpression: '请输入cron表达式',
+          jobArgs: '请输入任务参数JSON',
+          status: '请选择状态',
+          concurrent: '请选择并发策略',
+          remark: '请输入备注',
+          intervalValue: '请输入间隔值',
+          intervalUnit: '请选择单位'
+        },
+        addJob: '新增定时任务',
+        editJob: '编辑定时任务',
+        runNow: '立即执行',
+        enableJob: '启用',
+        disableJob: '停用',
+        runConfirm: '确认立即执行该任务？',
+        enableConfirm: '确认启用该任务？',
+        disableConfirm: '确认停用该任务？',
+        validation: {
+          cronInvalid: 'cron表达式格式不正确'
+        }
+      },
+      jobLog: {
+        title: '任务日志列表',
+        jobName: '任务名称',
+        jobKey: '任务标识',
+        status: '执行状态',
+        errorMsg: '异常信息',
+        startTime: '开始时间',
+        endTime: '结束时间',
+        duration: '耗时(ms)',
+        statusSuccess: '成功',
+        statusFailed: '失败',
+        statusRunning: '执行中',
+        clean: '清理日志',
+        cleanConfirm: '确认清理30天前的日志？',
+        cleanSuccess: '日志清理成功'
       },
       dept: {
         title: '部门列表',

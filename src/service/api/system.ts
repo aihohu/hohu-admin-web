@@ -381,3 +381,99 @@ export function fetchBatchDeleteFile(data: string[]) {
     data
   });
 }
+
+/** get job list */
+export function fetchGetJobList(params?: Api.SystemManage.JobSearchParams) {
+  return request<Api.SystemManage.JobList>({
+    url: '/system/job/list',
+    method: 'get',
+    params
+  });
+}
+
+/** get registered tasks */
+export function fetchGetRegisteredTasks() {
+  return request<Api.SystemManage.RegisteredTask[]>({
+    url: '/system/job/registered',
+    method: 'get'
+  });
+}
+
+/** save job */
+export function fetchSaveJob(data: Api.SystemManage.JobCreateParams) {
+  return request<App.Service.Response<any>>({
+    url: '/system/job/add',
+    method: 'post',
+    data
+  });
+}
+
+/** update job */
+export function fetchUpdateJob(data: Api.SystemManage.JobCreateParams & { jobId: string }) {
+  return request<App.Service.Response<any>>({
+    url: '/system/job/update',
+    method: 'put',
+    data
+  });
+}
+
+/** update job status */
+export function fetchUpdateJobStatus(jobId: string, status: string) {
+  return request<App.Service.Response<any>>({
+    url: '/system/job/status',
+    method: 'put',
+    params: { jobId, status }
+  });
+}
+
+/** delete job */
+export function fetchDeleteJob(jobId: string) {
+  return request({
+    url: `/system/job/${jobId}`,
+    method: 'delete'
+  });
+}
+
+/** batch delete job */
+export function fetchBatchDeleteJob(data: string[]) {
+  return request({
+    url: '/system/job/batch-delete',
+    method: 'post',
+    data
+  });
+}
+
+/** run job now */
+export function fetchRunJobNow(jobId: string) {
+  return request<App.Service.Response<any>>({
+    url: `/system/job/run/${jobId}`,
+    method: 'post'
+  });
+}
+
+/** get job log list */
+export function fetchGetJobLogList(params?: Api.SystemManage.JobLogSearchParams) {
+  return request<Api.SystemManage.JobLogList>({
+    url: '/system/job-log/list',
+    method: 'get',
+    params
+  });
+}
+
+/** clean job log */
+export function fetchCleanJobLog(days: number) {
+  return request<App.Service.Response<any>>({
+    url: '/system/job-log/clean',
+    method: 'delete',
+    params: { days }
+  });
+}
+
+/** batch delete job log */
+export function fetchBatchDeleteJobLog(data: string[]) {
+  return request({
+    url: '/system/job-log/batch-delete',
+    method: 'post',
+    data
+  });
+}
