@@ -8,13 +8,17 @@ export function getContentType(config: InternalAxiosRequestConfig) {
 }
 
 /**
- * check if http status is success
+ * check if http status should be treated as a valid response
+ *
+ * Accepts 2xx, 304, and 4xx (backend returns standard {code, msg, data} JSON for business errors).
+ * Only 5xx (server errors) and network failures go to the error interceptor.
  *
  * @param status
  */
 export function isHttpSuccess(status: number) {
   const isSuccessCode = status >= 200 && status < 300;
-  return isSuccessCode || status === 304;
+  const isBusinessError = status >= 400 && status < 500;
+  return isSuccessCode || status === 304 || isBusinessError;
 }
 
 /**

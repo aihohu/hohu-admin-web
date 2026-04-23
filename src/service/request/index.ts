@@ -79,8 +79,14 @@ export const request = createFlatRequest(
       }
 
       // when the backend response code is in `modalLogoutCodes`, it means the user will be logged out by displaying a modal
+      // only show the dialog when the user is logged in (has a token), otherwise it's a login failure — just show a toast
       const modalLogoutCodes = import.meta.env.VITE_SERVICE_MODAL_LOGOUT_CODES?.split(',') || [];
-      if (modalLogoutCodes.includes(responseCode) && !request.state.errMsgStack?.includes(response.data.msg)) {
+      const isLoggedIn = !!localStg.get('token');
+      if (
+        isLoggedIn &&
+        modalLogoutCodes.includes(responseCode) &&
+        !request.state.errMsgStack?.includes(response.data.msg)
+      ) {
         request.state.errMsgStack = [...(request.state.errMsgStack || []), response.data.msg];
 
         // prevent the user from refreshing the page
@@ -124,15 +130,19 @@ export const request = createFlatRequest(
       let message = error.message;
       let backendErrorCode = '';
 
-      // get backend error message and code
-      if (error.code === BACKEND_ERROR_CODE) {
+      // get backend error message and code (works for both BACKEND_ERROR and HTTP errors like 5xx)
+      if (error.response?.data?.msg) {
+        message = error.response.data.msg;
+        backendErrorCode = String(error.response.data.code || '');
+      } else if (error.code === BACKEND_ERROR_CODE) {
         message = error.response?.data?.msg || message;
         backendErrorCode = String(error.response?.data?.code || '');
       }
 
-      // the error message is displayed in the modal
+      // the error message is displayed in the modal (only suppress when the dialog was actually shown)
       const modalLogoutCodes = import.meta.env.VITE_SERVICE_MODAL_LOGOUT_CODES?.split(',') || [];
-      if (modalLogoutCodes.includes(backendErrorCode)) {
+      const isLoggedIn = !!localStg.get('token');
+      if (isLoggedIn && modalLogoutCodes.includes(backendErrorCode)) {
         return;
       }
 

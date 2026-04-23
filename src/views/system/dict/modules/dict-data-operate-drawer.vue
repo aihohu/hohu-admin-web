@@ -101,8 +101,6 @@ async function handleSubmit() {
     window.$message?.success(successMsg);
     closeDrawer();
     emit('submitted');
-  } else {
-    window.$message?.error(response.data.msg);
   }
 }
 
