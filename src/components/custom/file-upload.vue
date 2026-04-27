@@ -22,6 +22,8 @@ interface Props {
   listType?: 'text' | 'image' | 'image-card';
   /** 是否禁用 */
   disabled?: boolean;
+  /** 编辑回显时的 fileId -> fileUrl 映射，用于图片预览 */
+  fileUrls?: Record<string, string>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -32,7 +34,8 @@ const props = withDefaults(defineProps<Props>(), {
   multiple: false,
   max: undefined,
   listType: 'text',
-  disabled: false
+  disabled: false,
+  fileUrls: undefined
 });
 
 interface FileUploadResult {
@@ -92,23 +95,35 @@ function handleRemove({ file }: { file: UploadFileInfo }) {
 // 外部 value 变化时同步 fileList（用于编辑回显）
 watch(
   () => props.value,
-  () => {
-    if (!props.value || (Array.isArray(props.value) && props.value.length === 0)) {
+  newVal => {
+    if (!newVal || (Array.isArray(newVal) && newVal.length === 0)) {
       fileList.value = [];
       fileIdMap.clear();
       return;
     }
-    // 只在 fileList 为空时初始化（避免覆盖正在上传的状态）
-    if (fileList.value.length > 0) return;
 
-    const ids = Array.isArray(props.value) ? props.value : [props.value];
-    fileList.value = ids.map(id => ({
+    const newIds = Array.isArray(newVal) ? newVal : [newVal];
+
+    // 上传中时不覆盖，避免打断
+    const hasUploading = fileList.value.some(f => f.status !== 'finished');
+    if (hasUploading) return;
+
+    // 已经一致则跳过（比较 fileId，而非 URL）
+    const currentIds = fileList.value
+      .filter(f => f.status === 'finished' && fileIdMap.has(f.id))
+      .map(f => fileIdMap.get(f.id)!);
+    const matches = currentIds.length === newIds.length && currentIds.every((id, i) => newIds[i] === id);
+    if (matches) return;
+
+    // 值变了，重新初始化
+    fileList.value = newIds.map(id => ({
       id: `echo-${id}`,
       name: id,
       status: 'finished' as const,
-      url: id
+      url: props.fileUrls?.[id] ?? id
     }));
-    ids.forEach(id => fileIdMap.set(`echo-${id}`, id));
+    fileIdMap.clear();
+    newIds.forEach(id => fileIdMap.set(`echo-${id}`, id));
   },
   { immediate: true }
 );
