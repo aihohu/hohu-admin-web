@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { jsonClone } from '@sa/utils';
-// import { useBoolean } from '@sa/hooks';
 import { enableStatusOptions } from '@/constants/business';
-import { fetchSaveRole, fetchUpdateRole } from '@/service/api';
+import { fetchGetDeptTree, fetchSaveRole, fetchUpdateRole } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
-// import MenuAuthModal from './menu-auth-modal.vue';
 
 defineOptions({
   name: 'RoleOperateDrawer'
@@ -33,7 +31,6 @@ const visible = defineModel<boolean>('visible', {
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
 const { defaultRequiredRule } = useFormRules();
-// const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
 
 const title = computed(() => {
   const titles: Record<NaiveUI.TableOperateType, string> = {
@@ -43,7 +40,17 @@ const title = computed(() => {
   return titles[props.operateType];
 });
 
-type Model = Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'roleDesc' | 'status'>;
+const dataScopeOptions = [
+  { label: '全部数据', value: '1' },
+  { label: '自定义数据', value: '2' },
+  { label: '本部门数据', value: '3' },
+  { label: '本部门及以下', value: '4' },
+  { label: '仅本人', value: '5' }
+];
+
+type Model = Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'roleDesc' | 'dataScope' | 'status'> & {
+  deptIds: string[];
+};
 
 const model = ref(createDefaultModel());
 
@@ -52,11 +59,13 @@ function createDefaultModel(): Model {
     roleName: '',
     roleCode: '',
     roleDesc: '',
-    status: null
+    dataScope: '1',
+    status: null,
+    deptIds: []
   };
 }
 
-type RuleKey = Exclude<keyof Model, 'roleDesc'>;
+type RuleKey = Extract<keyof Model, 'roleName' | 'roleCode' | 'status'>;
 
 const rules: Record<RuleKey, App.Global.FormRule> = {
   roleName: defaultRequiredRule,
@@ -64,15 +73,27 @@ const rules: Record<RuleKey, App.Global.FormRule> = {
   status: defaultRequiredRule
 };
 
-// const roleId = computed(() => props.rowData?.roleId || '-1');
+const showDeptTree = computed(() => model.value.dataScope === '2');
 
-// const isEdit = computed(() => props.operateType === 'edit');
+const deptTreeData = ref<Api.SystemManage.DeptTree[]>([]);
+
+async function loadDeptTree() {
+  const { data } = await fetchGetDeptTree();
+  if (data) {
+    deptTreeData.value = data;
+  }
+}
 
 function handleInitModel() {
   model.value = createDefaultModel();
 
   if (props.operateType === 'edit' && props.rowData) {
-    Object.assign(model.value, jsonClone(props.rowData));
+    const cloned = jsonClone(props.rowData);
+    Object.assign(model.value, {
+      ...cloned,
+      dataScope: cloned.dataScope || '1',
+      deptIds: cloned.deptIds || []
+    });
   }
 }
 
@@ -83,11 +104,16 @@ function closeDrawer() {
 async function handleSubmit() {
   await validate();
 
+  const submitData = { ...model.value };
+  if (submitData.dataScope !== '2') {
+    delete (submitData as any).deptIds;
+  }
+
   let res;
   if (props.operateType === 'edit' && props.rowData) {
-    res = await fetchUpdateRole(props.rowData.roleId, model.value);
+    res = await fetchUpdateRole(props.rowData.roleId, submitData);
   } else {
-    res = await fetchSaveRole(model.value);
+    res = await fetchSaveRole(submitData);
   }
   const { error, response } = res;
   if (!error) {
@@ -103,6 +129,7 @@ watch(visible, () => {
   if (visible.value) {
     handleInitModel();
     restoreValidation();
+    loadDeptTree();
   }
 });
 </script>
@@ -122,16 +149,26 @@ watch(visible, () => {
             <NRadio v-for="item in enableStatusOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
           </NRadioGroup>
         </NFormItem>
+        <NFormItem label="数据权限" path="dataScope">
+          <NSelect v-model:value="model.dataScope" :options="dataScopeOptions" />
+        </NFormItem>
+        <NFormItem v-if="showDeptTree" label="选择部门">
+          <NTree
+            v-model:checked-keys="model.deptIds"
+            :data="deptTreeData"
+            key-field="id"
+            label-field="label"
+            checkable
+            cascade
+            selectable
+            block-line
+            style="width: 100%"
+          />
+        </NFormItem>
         <NFormItem :label="$t('page.system.role.roleDesc')" path="roleDesc">
           <NInput v-model:value="model.roleDesc" :placeholder="$t('page.system.role.form.roleDesc')" />
         </NFormItem>
       </NForm>
-      <!--
- <NSpace v-if="isEdit">
-        <NButton @click="openMenuAuthModal">{{ $t('page.system.role.menuAuth') }}</NButton>
-        <MenuAuthModal v-model:visible="menuAuthVisible" :role-id="roleId" />
-      </NSpace> 
--->
       <template #footer>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
