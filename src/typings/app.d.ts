@@ -824,6 +824,61 @@ declare namespace App {
             cleanSuccess: string;
           };
         };
+        ai: {
+          chat: {
+            title: string;
+            newChat: string;
+            searchPlaceholder: string;
+            noConversation: string;
+            deleteTitle: string;
+            deleteContent: string;
+            welcomeTitle: string;
+            welcomeDesc: string;
+            inputPlaceholder: string;
+            inputHint: string;
+            thinking: string;
+            noModel: string;
+            copy: string;
+            copied: string;
+            regenerate: string;
+            editPlaceholder: string;
+            editTip: string;
+            quickCode: string;
+            quickTranslate: string;
+            quickAnalyze: string;
+            quickArticle: string;
+            quickCodePrompt: string;
+            quickTranslatePrompt: string;
+            quickAnalyzePrompt: string;
+            quickArticlePrompt: string;
+          };
+          provider: {
+            title: string;
+            name: string;
+            code: string;
+            apiKey: string;
+            baseUrl: string;
+            models: string;
+            status: string;
+            addProvider: string;
+            editProvider: string;
+            form: {
+              code: string;
+              name: string;
+              apiKey: string;
+              apiKeyEdit: string;
+              baseUrl: string;
+              model: string;
+            };
+            addModel: string;
+            testConnectivity: string;
+            testSuccess: string;
+            testFailed: string;
+            testNoModel: string;
+            testNoCode: string;
+            modelTestSuccess: string;
+          };
+        };
       };
       form: {
         required: string;
@@ -854,6 +909,15 @@ declare namespace App {
           right: string;
           unFixed: string;
         };
+      };
+      errorCode: {
+        AI_PROVIDER_NOT_FOUND: string;
+        AI_CONVERSATION_NOT_FOUND: string;
+        AI_MODEL_NOT_CONFIGURED: string;
+        AI_PROVIDER_DUPLICATE: string;
+        AI_TEST_NO_MODEL: string;
+        AI_TEST_NO_API_KEY: string;
+        AI_TEST_FAILED: string;
       };
     };
 
@@ -914,6 +978,8 @@ declare namespace App {
       msg: string;
       /** The backend service response data */
       data: T;
+      /** Machine-readable error code for i18n mapping (optional, only in error responses) */
+      errorCode?: string;
     };
 
     /** The demo backend service response data */

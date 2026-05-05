@@ -236,7 +236,10 @@ const local: App.I18n.Schema = {
     system_dept: '部门管理',
     system_file: '文件管理',
     system_job: '定时任务',
-    'system_job-log': '任务日志'
+    'system_job-log': '任务日志',
+    ai: 'AI 助手',
+    ai_chat: 'AI 对话',
+    ai_provider: '模型管理'
   },
   page: {
     login: {
@@ -580,6 +583,61 @@ const local: App.I18n.Schema = {
         uploadDraggerTip: '点击或拖拽文件到此区域上传',
         uploadDraggerDesc: '支持图片、文档、压缩包等常见文件格式'
       }
+    },
+    ai: {
+      chat: {
+        title: 'AI 对话',
+        newChat: '新对话',
+        searchPlaceholder: '搜索对话...',
+        noConversation: '暂无对话',
+        deleteTitle: '删除对话',
+        deleteContent: '确定要删除这个对话吗？删除后不可恢复。',
+        welcomeTitle: '有什么可以帮你的？',
+        welcomeDesc: '我是你的 AI 助手，可以回答问题、写代码、翻译文本、分析数据等',
+        inputPlaceholder: '给 AI 助手发消息...',
+        inputHint: 'AI 可能产生不准确的内容，请注意甄别',
+        thinking: '思考中...',
+        noModel: '暂无可用模型，请在模型管理中配置',
+        copy: '复制',
+        copied: '已复制',
+        regenerate: '重新生成',
+        editPlaceholder: '编辑消息...',
+        editTip: 'Enter 提交 · Esc 取消',
+        quickCode: '帮我写一段代码',
+        quickTranslate: '翻译一段文字',
+        quickAnalyze: '帮我分析一个问题',
+        quickArticle: '帮我写一篇文章',
+        quickCodePrompt: '帮我写一段代码：',
+        quickTranslatePrompt: '帮我翻译以下内容：',
+        quickAnalyzePrompt: '帮我分析以下问题：',
+        quickArticlePrompt: '帮我写一篇关于'
+      },
+      provider: {
+        title: '模型管理',
+        name: '名称',
+        code: '编码',
+        apiKey: 'API Key',
+        baseUrl: 'Base URL',
+        models: '可用模型',
+        status: '状态',
+        addProvider: '添加模型配置',
+        editProvider: '编辑模型配置',
+        form: {
+          code: '如 openai、deepseek、anthropic',
+          name: '如 OpenAI、DeepSeek',
+          apiKey: 'sk-...',
+          apiKeyEdit: '留空则不修改',
+          baseUrl: '留空使用默认地址',
+          model: '如 gpt-4o、doubao-pro-32k'
+        },
+        addModel: '添加模型',
+        testConnectivity: '测试连通性',
+        testSuccess: '连通性测试成功',
+        testFailed: '连通性测试失败',
+        testNoModel: '请先输入模型名称',
+        testNoCode: '请先填写提供商编码',
+        modelTestSuccess: '模型 {name} 连通性测试成功'
+      }
     }
   },
   form: {
@@ -637,6 +695,15 @@ const local: App.I18n.Schema = {
       right: '右固定',
       unFixed: '取消固定'
     }
+  },
+  errorCode: {
+    AI_PROVIDER_NOT_FOUND: 'AI 提供商不存在',
+    AI_CONVERSATION_NOT_FOUND: 'AI 会话不存在',
+    AI_MODEL_NOT_CONFIGURED: 'AI 模型未配置，请先在模型管理中添加配置',
+    AI_PROVIDER_DUPLICATE: '提供商标识已存在',
+    AI_TEST_NO_MODEL: '未配置可用模型',
+    AI_TEST_NO_API_KEY: '缺少 API Key，请填写或选择已保存的提供商',
+    AI_TEST_FAILED: '连通性测试失败'
   }
 };
 

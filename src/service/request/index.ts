@@ -139,6 +139,17 @@ export const request = createFlatRequest(
         backendErrorCode = String(error.response?.data?.code || '');
       }
 
+      // if backend returns errorCode, use i18n mapping
+      const errorCode = error.response?.data?.errorCode;
+      if (errorCode) {
+        const i18nKey = `errorCode.${errorCode}`;
+        // @ts-expect-error dynamic i18n key from backend errorCode
+        const i18nMsg = $t(i18nKey);
+        if (i18nMsg !== i18nKey) {
+          message = i18nMsg;
+        }
+      }
+
       // the error message is displayed in the modal (only suppress when the dialog was actually shown)
       const modalLogoutCodes = import.meta.env.VITE_SERVICE_MODAL_LOGOUT_CODES?.split(',') || [];
       const isLoggedIn = !!localStg.get('token');

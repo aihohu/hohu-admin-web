@@ -40,6 +40,35 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'ai',
+    path: '/ai',
+    component: 'layout.base',
+    meta: {
+      title: 'ai',
+      i18nKey: 'route.ai'
+    },
+    children: [
+      {
+        name: 'ai_chat',
+        path: '/ai/chat',
+        component: 'view.ai_chat',
+        meta: {
+          title: 'ai_chat',
+          i18nKey: 'route.ai_chat'
+        }
+      },
+      {
+        name: 'ai_provider',
+        path: '/ai/provider',
+        component: 'view.ai_provider',
+        meta: {
+          title: 'ai_provider',
+          i18nKey: 'route.ai_provider'
+        }
+      }
+    ]
+  },
+  {
     name: 'home',
     path: '/home',
     component: 'layout.base$view.home',

@@ -240,7 +240,10 @@ const local: App.I18n.Schema = {
     system_dept: 'Dept Manage',
     system_file: 'File Manage',
     system_job: 'Scheduled Job',
-    'system_job-log': 'Job Log'
+    'system_job-log': 'Job Log',
+    ai: 'AI Assistant',
+    ai_chat: 'AI Chat',
+    ai_provider: 'Model Manage'
   },
   page: {
     login: {
@@ -585,6 +588,61 @@ const local: App.I18n.Schema = {
         uploadDraggerTip: 'Click or drag files to this area to upload',
         uploadDraggerDesc: 'Support common formats: images, documents, archives, etc.'
       }
+    },
+    ai: {
+      chat: {
+        title: 'AI Chat',
+        newChat: 'New Chat',
+        searchPlaceholder: 'Search conversations...',
+        noConversation: 'No conversations',
+        deleteTitle: 'Delete Chat',
+        deleteContent: 'Are you sure you want to delete this chat? This action cannot be undone.',
+        welcomeTitle: 'How can I help you?',
+        welcomeDesc: 'I am your AI assistant, I can answer questions, write code, translate text, analyze data, etc.',
+        inputPlaceholder: 'Message AI assistant...',
+        inputHint: 'AI may produce inaccurate content, please verify carefully',
+        thinking: 'Thinking...',
+        noModel: 'No models available, please configure in model management',
+        copy: 'Copy',
+        copied: 'Copied',
+        regenerate: 'Regenerate',
+        editPlaceholder: 'Edit message...',
+        editTip: 'Enter to submit · Esc to cancel',
+        quickCode: 'Write code for me',
+        quickTranslate: 'Translate text',
+        quickAnalyze: 'Analyze a problem',
+        quickArticle: 'Write an article',
+        quickCodePrompt: 'Write code for me: ',
+        quickTranslatePrompt: 'Translate the following: ',
+        quickAnalyzePrompt: 'Analyze this problem: ',
+        quickArticlePrompt: 'Write an article about '
+      },
+      provider: {
+        title: 'Model Management',
+        name: 'Name',
+        code: 'Code',
+        apiKey: 'API Key',
+        baseUrl: 'Base URL',
+        models: 'Available Models',
+        status: 'Status',
+        addProvider: 'Add Model Config',
+        editProvider: 'Edit Model Config',
+        form: {
+          code: 'e.g. openai, deepseek, anthropic',
+          name: 'e.g. OpenAI, DeepSeek',
+          apiKey: 'sk-...',
+          apiKeyEdit: 'Leave empty to keep current',
+          baseUrl: 'Leave empty for default',
+          model: 'e.g. gpt-4o, doubao-pro-32k'
+        },
+        addModel: 'Add Model',
+        testConnectivity: 'Test Connectivity',
+        testSuccess: 'Connectivity test successful',
+        testFailed: 'Connectivity test failed',
+        testNoModel: 'Please enter model name first',
+        testNoCode: 'Please enter provider code first',
+        modelTestSuccess: 'Model {name} connectivity test successful'
+      }
     }
   },
   form: {
@@ -642,6 +700,15 @@ const local: App.I18n.Schema = {
       right: 'Right Fixed',
       unFixed: 'Unfixed'
     }
+  },
+  errorCode: {
+    AI_PROVIDER_NOT_FOUND: 'AI provider not found',
+    AI_CONVERSATION_NOT_FOUND: 'AI conversation not found',
+    AI_MODEL_NOT_CONFIGURED: 'AI model not configured, please add in model management',
+    AI_PROVIDER_DUPLICATE: 'Provider code already exists',
+    AI_TEST_NO_MODEL: 'No model configured',
+    AI_TEST_NO_API_KEY: 'Missing API Key, please fill in or select a saved provider',
+    AI_TEST_FAILED: 'Connectivity test failed'
   }
 };
 
