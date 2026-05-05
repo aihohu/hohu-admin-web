@@ -357,6 +357,7 @@ declare namespace App {
         update: string;
         updateSuccess: string;
         saveSuccess: string;
+        clear: string;
         userCenter: string;
         yesOrNo: {
           yes: string;
@@ -667,6 +668,11 @@ declare namespace App {
             iconType: {
               iconify: string;
               local: string;
+            };
+            iconPicker: {
+              title: string;
+              search: string;
+              empty: string;
             };
           };
           dict: {

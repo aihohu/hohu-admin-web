@@ -6,6 +6,7 @@ import { fetchSaveMenu, fetchUpdateMenu } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { getLocalIcons } from '@/utils/icon';
 import { $t } from '@/locales';
+import IconPicker from '@/components/custom/icon-picker.vue';
 import SvgIcon from '@/components/custom/svg-icon.vue';
 import {
   getLayoutAndPage,
@@ -341,13 +342,7 @@ watch(
             </NRadioGroup>
           </NFormItemGi>
           <NFormItemGi span="24 m:12" :label="$t('page.system.menu.icon')" path="icon">
-            <template v-if="model.iconType === '1'">
-              <NInput v-model:value="model.icon" :placeholder="$t('page.system.menu.form.icon')" class="flex-1">
-                <template #suffix>
-                  <SvgIcon v-if="model.icon" :icon="model.icon" class="text-icon" />
-                </template>
-              </NInput>
-            </template>
+            <IconPicker v-if="model.iconType === '1'" v-model:value="model.icon" class="flex-1" />
             <template v-if="model.iconType === '2'">
               <NSelect
                 v-model:value="model.icon"

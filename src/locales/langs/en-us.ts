@@ -49,7 +49,8 @@ const local: App.I18n.Schema = {
       yes: 'Yes',
       no: 'No'
     },
-    saveSuccess: 'Save Success'
+    saveSuccess: 'Save Success',
+    clear: 'Clear'
   },
   request: {
     logout: 'Logout user after request failed',
@@ -432,6 +433,11 @@ const local: App.I18n.Schema = {
         iconType: {
           iconify: 'Iconify Icon',
           local: 'Local Icon'
+        },
+        iconPicker: {
+          title: 'Select Icon',
+          search: 'Search icons...',
+          empty: 'No icons found'
         }
       },
       dict: {

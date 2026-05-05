@@ -49,7 +49,8 @@ const local: App.I18n.Schema = {
       yes: '是',
       no: '否'
     },
-    saveSuccess: '保存成功'
+    saveSuccess: '保存成功',
+    clear: '清除'
   },
   request: {
     logout: '请求失败后登出用户',
@@ -427,6 +428,11 @@ const local: App.I18n.Schema = {
         iconType: {
           iconify: 'iconify图标',
           local: '本地图标'
+        },
+        iconPicker: {
+          title: '选择图标',
+          search: '搜索图标...',
+          empty: '未找到图标'
         }
       },
       dict: {
