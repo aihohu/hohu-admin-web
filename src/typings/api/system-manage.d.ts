@@ -240,6 +240,8 @@ declare namespace Api {
       | 'activeMenu'
       | 'multiTab'
       | 'fixedIndexInTab'
+      | 'query'
+      | 'buttons'
     >;
 
     /** dept */

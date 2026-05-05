@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import type { SelectOption } from 'naive-ui';
 import { enableStatusOptions, menuIconTypeOptions, menuTypeOptions } from '@/constants/business';
-import { fetchGetAllRoles, fetchSaveMenu, fetchUpdateMenu } from '@/service/api';
+import { fetchSaveMenu, fetchUpdateMenu } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { getLocalIcons } from '@/utils/icon';
 import { $t } from '@/locales';
@@ -164,29 +164,6 @@ const layoutOptions: CommonType.Option[] = [
   }
 ];
 
-/** the enabled role options */
-const roleOptions = ref<CommonType.Option<string>[]>([]);
-// const parentMenuOptions = ref<TreeSelectOption[]>([
-//   {
-//     label: '主目录',
-//     key: '0',
-//     children: []
-//   }
-// ]);
-
-async function getRoleOptions() {
-  const { error, data } = await fetchGetAllRoles();
-
-  if (!error) {
-    const options = data.map(item => ({
-      label: item.roleName,
-      value: item.roleCode
-    }));
-
-    roleOptions.value = [...options];
-  }
-}
-
 function handleInitModel() {
   model.value = createDefaultModel();
 
@@ -199,12 +176,23 @@ function handleInitModel() {
   }
 
   if (props.operateType === 'edit') {
-    const { component, ...rest } = props.rowData;
+    const {
+      menuType, menuName, routeName, routePath, component, order,
+      i18nKey, icon, iconType, status, parentId, keepAlive, constant,
+      href, hideInMenu, activeMenu, multiTab, fixedIndexInTab, query, buttons
+    } = props.rowData;
 
     const { layout, page } = getLayoutAndPage(component);
-    const { path, param } = getPathParamFromRoutePath(rest.routePath);
+    const { path, param } = getPathParamFromRoutePath(routePath);
 
-    Object.assign(model.value, rest, { layout, page, routePath: path, pathParam: param });
+    Object.assign(model.value, {
+      menuType, menuName, routeName, routePath: path, component,
+      order, i18nKey, icon, iconType, status, parentId, keepAlive,
+      constant, href, hideInMenu, activeMenu, multiTab, fixedIndexInTab,
+      query: query || [],
+      buttons: buttons || [],
+      layout, page, pathParam: param
+    });
   }
 
   if (!model.value.query) {
@@ -265,8 +253,6 @@ async function handleSubmit() {
   await validate();
 
   const params = getSubmitParams();
-
-  await validate();
   let res;
   if (props.operateType === 'edit' && props.rowData) {
     res = await fetchUpdateMenu(props.rowData.menuId, params);
@@ -288,15 +274,16 @@ watch(visible, () => {
   if (visible.value) {
     handleInitModel();
     restoreValidation();
-    getRoleOptions();
   }
 });
 
 watch(
   () => model.value.routeName,
   () => {
-    handleUpdateRoutePathByRouteName();
-    handleUpdateI18nKeyByRouteName();
+    if (props.operateType !== 'edit') {
+      handleUpdateRoutePathByRouteName();
+      handleUpdateI18nKeyByRouteName();
+    }
   }
 );
 </script>
