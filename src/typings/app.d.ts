@@ -918,6 +918,10 @@ declare namespace App {
       };
       errorCode: {
         UNAUTHORIZED: string;
+        INVALID_CREDENTIALS: string;
+        TOKEN_EXPIRED: string;
+        ACCOUNT_DISABLED: string;
+        UNSUPPORTED_LOGIN_TYPE: string;
         AI_PROVIDER_NOT_FOUND: string;
         AI_CONVERSATION_NOT_FOUND: string;
         AI_MODEL_NOT_CONFIGURED: string;

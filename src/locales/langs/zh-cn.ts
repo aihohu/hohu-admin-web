@@ -704,6 +704,10 @@ const local: App.I18n.Schema = {
   },
   errorCode: {
     UNAUTHORIZED: '登录已过期，请重新登录',
+    INVALID_CREDENTIALS: '用户名或密码错误',
+    TOKEN_EXPIRED: '登录已过期，请重新登录',
+    ACCOUNT_DISABLED: '账号已被禁用',
+    UNSUPPORTED_LOGIN_TYPE: '不支持的登录方式',
     AI_PROVIDER_NOT_FOUND: 'AI 提供商不存在',
     AI_CONVERSATION_NOT_FOUND: 'AI 会话不存在',
     AI_MODEL_NOT_CONFIGURED: 'AI 模型未配置，请先在模型管理中添加配置',
