@@ -917,6 +917,7 @@ declare namespace App {
         };
       };
       errorCode: {
+        UNAUTHORIZED: string;
         AI_PROVIDER_NOT_FOUND: string;
         AI_CONVERSATION_NOT_FOUND: string;
         AI_MODEL_NOT_CONFIGURED: string;

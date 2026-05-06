@@ -708,6 +708,7 @@ const local: App.I18n.Schema = {
     }
   },
   errorCode: {
+    UNAUTHORIZED: 'Session expired, please login again',
     AI_PROVIDER_NOT_FOUND: 'AI provider not found',
     AI_CONVERSATION_NOT_FOUND: 'AI conversation not found',
     AI_MODEL_NOT_CONFIGURED: 'AI model not configured, please add in model management',

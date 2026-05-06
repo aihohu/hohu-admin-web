@@ -703,6 +703,7 @@ const local: App.I18n.Schema = {
     }
   },
   errorCode: {
+    UNAUTHORIZED: '登录已过期，请重新登录',
     AI_PROVIDER_NOT_FOUND: 'AI 提供商不存在',
     AI_CONVERSATION_NOT_FOUND: 'AI 会话不存在',
     AI_MODEL_NOT_CONFIGURED: 'AI 模型未配置，请先在模型管理中添加配置',

@@ -58,7 +58,9 @@ export const request = createFlatRequest(
     },
     async onBackendFail(response, instance) {
       const authStore = useAuthStore();
-      const responseCode = String(response.data.code);
+      const responseCode = String(response.data?.code ?? '');
+      // 兜底：HTTP 状态码 401 也触发登出，不依赖响应体格式
+      const isUnauthorized = response.status === 401;
 
       function handleLogout() {
         authStore.resetStore();
@@ -68,12 +70,12 @@ export const request = createFlatRequest(
         handleLogout();
         window.removeEventListener('beforeunload', handleLogout);
 
-        request.state.errMsgStack = request.state.errMsgStack.filter(msg => msg !== response.data.msg);
+        request.state.errMsgStack = request.state.errMsgStack.filter(msg => msg !== response.data?.msg);
       }
 
       // when the backend response code is in `logoutCodes`, it means the user will be logged out and redirected to login page
       const logoutCodes = import.meta.env.VITE_SERVICE_LOGOUT_CODES?.split(',') || [];
-      if (logoutCodes.includes(responseCode)) {
+      if (logoutCodes.includes(responseCode) || isUnauthorized) {
         handleLogout();
         return null;
       }
