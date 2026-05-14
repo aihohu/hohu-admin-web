@@ -66,7 +66,7 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
       key: 'menuType',
       title: $t('page.system.menu.menuType'),
       align: 'center',
-      width: 80,
+      width: 120,
       render: row => {
         const tagMap: Record<Api.SystemManage.MenuType, NaiveUI.ThemeColor> = {
           M: 'default',
@@ -95,7 +95,7 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
       key: 'status',
       title: $t('page.system.menu.menuStatus'),
       align: 'center',
-      width: 80,
+      width: 120,
       render: row => {
         if (row.status === null) {
           return null;
@@ -115,7 +115,7 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
       key: 'hideInMenu',
       title: $t('page.system.menu.hideInMenu'),
       align: 'center',
-      width: 80,
+      width: 120,
       render: row => {
         const hide: CommonType.YesOrNo = row.hideInMenu ? 'Y' : 'N';
 
@@ -145,7 +145,7 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
       key: 'operate',
       title: $t('common.operate'),
       align: 'center',
-      width: 230,
+      width: 280,
       render: row => (
         <div class="flex-center justify-end gap-8px">
           {row.menuType === 'M' && (

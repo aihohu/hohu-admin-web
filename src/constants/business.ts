@@ -8,6 +8,7 @@ export const enableStatusRecord: Record<Api.Common.EnableStatus, App.I18n.I18nKe
 export const enableStatusOptions = transformRecordToOption(enableStatusRecord);
 
 export const userGenderRecord: Record<Api.SystemManage.UserGender, App.I18n.I18nKey> = {
+  '0': 'page.system.user.gender.unknown',
   '1': 'page.system.user.gender.male',
   '2': 'page.system.user.gender.female'
 };

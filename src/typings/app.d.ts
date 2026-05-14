@@ -529,6 +529,19 @@ declare namespace App {
             title: string;
           };
         };
+        profile: {
+          title: string;
+          baseInfo: string;
+          newPassword: string;
+          confirmPassword: string;
+          passwordMinLength: string;
+          oldPassword: string;
+          oldPasswordPlaceholder: string;
+          confirmPasswordPlaceholder: string;
+          registerTime: string;
+          confirmPwdMismatch: string;
+          passwordChangeSuccess: string;
+        };
         home: {
           branchDesc: string;
           greeting: string;
@@ -595,8 +608,12 @@ declare namespace App {
             addUser: string;
             editUser: string;
             gender: {
+              unknown: string;
               male: string;
               female: string;
+            };
+            resetPwd: {
+              title: string;
             };
           };
           menu: {
@@ -628,6 +645,14 @@ declare namespace App {
             button: string;
             buttonCode: string;
             buttonDesc: string;
+            presetButton: {
+              addAll: string;
+              list: string;
+              add: string;
+              edit: string;
+              delete: string;
+              batchDelete: string;
+            };
             menuStatus: string;
             form: {
               home: string;
@@ -929,6 +954,8 @@ declare namespace App {
         AI_TEST_NO_MODEL: string;
         AI_TEST_NO_API_KEY: string;
         AI_TEST_FAILED: string;
+        INVALID_PASSWORD_FORMAT: string;
+        INCORRECT_OLD_PASSWORD: string;
       };
     };
 

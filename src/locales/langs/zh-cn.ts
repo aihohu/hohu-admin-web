@@ -228,6 +228,7 @@ const local: App.I18n.Schema = {
     500: '服务器错误',
     'iframe-page': '外链页面',
     home: '首页',
+    profile: '个人中心',
     system: '系统管理',
     system_user: '用户管理',
     system_role: '角色管理',
@@ -288,6 +289,19 @@ const local: App.I18n.Schema = {
       bindWeChat: {
         title: '绑定微信'
       }
+    },
+    profile: {
+      title: '个人中心',
+      baseInfo: '基本信息',
+      newPassword: '新密码',
+      confirmPassword: '确认密码',
+      passwordMinLength: '密码长度不能少于6位',
+      oldPassword: '当前密码',
+      oldPasswordPlaceholder: '请输入当前密码',
+      confirmPasswordPlaceholder: '请再次输入新密码',
+      registerTime: '注册时间',
+      confirmPwdMismatch: '两次密码输入不一致',
+      passwordChangeSuccess: '密码修改成功'
     },
     home: {
       branchDesc: '欢迎使用HoHu，HoHu是基于FastAPI，SQLAlchemy，Vue3 & Naiveui 的前后端分离权限管理系统',
@@ -354,10 +368,14 @@ const local: App.I18n.Schema = {
         addUser: '新增用户',
         editUser: '编辑用户',
         gender: {
+          unknown: '未知',
           male: '男',
           female: '女'
         },
-        password: '密码'
+        password: '密码',
+        resetPwd: {
+          title: '重置密码'
+        }
       },
       menu: {
         home: '首页',
@@ -388,6 +406,14 @@ const local: App.I18n.Schema = {
         button: '按钮',
         buttonCode: '按钮编码',
         buttonDesc: '按钮描述',
+        presetButton: {
+          addAll: '一键添加',
+          list: '查询',
+          add: '新增',
+          edit: '修改',
+          delete: '删除',
+          batchDelete: '批量删除'
+        },
         menuStatus: '菜单状态',
         form: {
           home: '请选择首页',
@@ -658,7 +684,7 @@ const local: App.I18n.Schema = {
     },
     pwd: {
       required: '请输入密码',
-      invalid: '密码格式不正确，6-18位字符，包含字母、数字、下划线'
+      invalid: '密码必须为6-20位，且包含大写字母、小写字母和数字'
     },
     confirmPwd: {
       required: '请输入确认密码',
@@ -714,7 +740,9 @@ const local: App.I18n.Schema = {
     AI_PROVIDER_DUPLICATE: '提供商标识已存在',
     AI_TEST_NO_MODEL: '未配置可用模型',
     AI_TEST_NO_API_KEY: '缺少 API Key，请填写或选择已保存的提供商',
-    AI_TEST_FAILED: '连通性测试失败'
+    AI_TEST_FAILED: '连通性测试失败',
+    INVALID_PASSWORD_FORMAT: '密码必须为6-20位，且包含大写字母、小写字母和数字',
+    INCORRECT_OLD_PASSWORD: '当前密码不正确'
   }
 };
 

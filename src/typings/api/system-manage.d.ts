@@ -106,10 +106,11 @@ declare namespace Api {
     /**
      * user gender
      *
+     * - "0": "unknown"
      * - "1": "male"
      * - "2": "female"
      */
-    type UserGender = '1' | '2';
+    type UserGender = '0' | '1' | '2';
 
     /** user */
     type User = Common.CommonRecord<{
@@ -142,6 +143,19 @@ declare namespace Api {
 
     /** user list */
     type UserList = Common.PaginatingQueryRecord<User>;
+
+    /** user profile */
+    type UserProfile = {
+      userId: string;
+      userName: string;
+      nickname: string;
+      userGender: UserGender | null;
+      userPhone: string;
+      userEmail: string;
+      status: string;
+      roles: string[];
+      createTime: string;
+    };
 
     /**
      * menu type

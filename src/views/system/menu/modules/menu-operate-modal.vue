@@ -238,6 +238,35 @@ function handleCreateButton() {
   return buttonItem;
 }
 
+const crudPresets = [
+  { code: 'list', labelKey: 'page.system.menu.presetButton.list' as const, desc: '查询' },
+  { code: 'add', labelKey: 'page.system.menu.presetButton.add' as const, desc: '新增' },
+  { code: 'edit', labelKey: 'page.system.menu.presetButton.edit' as const, desc: '修改' },
+  { code: 'delete', labelKey: 'page.system.menu.presetButton.delete' as const, desc: '删除' },
+  { code: 'batch-delete', labelKey: 'page.system.menu.presetButton.batchDelete' as const, desc: '批量删除' }
+];
+
+function getPermissionPrefix(): string {
+  const routeName = model.value.routeName;
+  if (!routeName) return '';
+  return routeName.replace(/_/g, ':');
+}
+
+function handleAddPresetButton(preset: (typeof crudPresets)[number]) {
+  const prefix = getPermissionPrefix();
+  const code = prefix ? `${prefix}:${preset.code}` : preset.code;
+  const existingCodes = model.value.buttons.map(b => b.code);
+  if (!existingCodes.includes(code)) {
+    model.value.buttons.push({ code, desc: preset.desc });
+  }
+}
+
+function handleAddAllPresetButtons() {
+  for (const preset of crudPresets) {
+    handleAddPresetButton(preset);
+  }
+}
+
 function getSubmitParams() {
   const { layout, page, pathParam, ...params } = model.value;
 
@@ -429,32 +458,49 @@ watch(
             </NDynamicInput>
           </NFormItemGi>
           <NFormItemGi span="24" :label="$t('page.system.menu.button')">
-            <NDynamicInput v-model:value="model.buttons" :on-create="handleCreateButton">
-              <template #default="{ value }">
-                <div class="ml-8px flex-y-center flex-1 gap-12px">
-                  <NInput
-                    v-model:value="value.code"
-                    :placeholder="$t('page.system.menu.form.buttonCode')"
-                    class="flex-1"
-                  />
-                  <NInput
-                    v-model:value="value.desc"
-                    :placeholder="$t('page.system.menu.form.buttonDesc')"
-                    class="flex-1"
-                  />
-                </div>
-              </template>
-              <template #action="{ index, create, remove }">
-                <NSpace class="ml-12px">
-                  <NButton size="medium" @click="() => create(index)">
-                    <IconIcRoundPlus class="text-icon" />
-                  </NButton>
-                  <NButton size="medium" @click="() => remove(index)">
-                    <IconIcRoundRemove class="text-icon" />
-                  </NButton>
-                </NSpace>
-              </template>
-            </NDynamicInput>
+            <NSpace vertical class="w-full">
+              <NSpace :size="8" align="center">
+                <NButton size="small" type="primary" :disabled="!model.routeName" @click="handleAddAllPresetButtons">
+                  {{ $t('page.system.menu.presetButton.addAll') }}
+                </NButton>
+                <NDivider vertical />
+                <NButton
+                  v-for="item in crudPresets"
+                  :key="item.code"
+                  size="small"
+                  :disabled="!model.routeName"
+                  @click="handleAddPresetButton(item)"
+                >
+                  {{ $t(item.labelKey) }}
+                </NButton>
+              </NSpace>
+              <NDynamicInput v-model:value="model.buttons" :on-create="handleCreateButton">
+                <template #default="{ value }">
+                  <div class="ml-8px flex-y-center flex-1 gap-12px">
+                    <NInput
+                      v-model:value="value.code"
+                      :placeholder="$t('page.system.menu.form.buttonCode')"
+                      class="flex-1"
+                    />
+                    <NInput
+                      v-model:value="value.desc"
+                      :placeholder="$t('page.system.menu.form.buttonDesc')"
+                      class="flex-1"
+                    />
+                  </div>
+                </template>
+                <template #action="{ index, create, remove }">
+                  <NSpace class="ml-12px">
+                    <NButton size="medium" @click="() => create(index)">
+                      <IconIcRoundPlus class="text-icon" />
+                    </NButton>
+                    <NButton size="medium" @click="() => remove(index)">
+                      <IconIcRoundRemove class="text-icon" />
+                    </NButton>
+                  </NSpace>
+                </template>
+              </NDynamicInput>
+            </NSpace>
           </NFormItemGi>
         </NGrid>
       </NForm>

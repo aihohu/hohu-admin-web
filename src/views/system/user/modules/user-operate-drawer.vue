@@ -144,7 +144,7 @@ watch(visible, () => {
             v-model:value="model.password"
             type="password"
             show-password-on="mousedown"
-            :minlength="8"
+            :minlength="6"
             :placeholder="$t('page.system.user.form.password')"
           />
         </NFormItem>

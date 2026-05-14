@@ -8,6 +8,10 @@ export function useAuth() {
       return false;
     }
 
+    if (authStore.userInfo.buttons.includes('*')) {
+      return true;
+    }
+
     if (typeof codes === 'string') {
       return authStore.userInfo.buttons.includes(codes);
     }

@@ -1,8 +1,14 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord, userGenderRecord } from '@/constants/business';
-import { fetchBatchDeleteUser, fetchDeleteUser, fetchGetUserList } from '@/service/api';
+import { REG_PWD } from '@/constants/reg';
+import {
+  fetchBatchDeleteUser,
+  fetchDeleteUser,
+  fetchGetUserList,
+  fetchResetUserPassword
+} from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { useAuth } from '@/hooks/business/auth';
@@ -61,6 +67,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         }
 
         const tagMap: Record<Api.SystemManage.UserGender, NaiveUI.ThemeColor> = {
+          0: 'default',
           1: 'primary',
           2: 'error'
         };
@@ -112,12 +119,18 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       key: 'operate',
       title: $t('common.operate'),
       align: 'center',
-      width: 130,
+      width: 200,
       render: row => (
         <div class="flex-center gap-8px">
           <NButton type="primary" ghost size="small" onClick={() => edit(row.userId)}>
             {$t('common.edit')}
           </NButton>
+
+          {hasAuth('system:user:reset-password') && (
+            <NButton type="warning" ghost size="small" onClick={() => handleResetPassword(row.userId)}>
+              {$t('page.system.user.resetPwd.title')}
+            </NButton>
+          )}
 
           {hasAuth('system:user:delete') && (
             <NPopconfirm onPositiveClick={() => handleDelete(row.userId)}>
@@ -166,6 +179,33 @@ async function handleDelete(id: string) {
 function edit(id: string) {
   handleEdit(id);
 }
+
+const resetPwdVisible = ref(false);
+const resetPwdUserId = ref('');
+const resetPwdValue = ref('');
+const resetPwdLoading = ref(false);
+
+function handleResetPassword(userId: string) {
+  resetPwdUserId.value = userId;
+  resetPwdValue.value = '';
+  resetPwdVisible.value = true;
+}
+
+async function confirmResetPassword() {
+  if (!resetPwdValue.value || !REG_PWD.test(resetPwdValue.value)) {
+    window.$message?.warning($t('form.pwd.invalid'));
+    return false;
+  }
+  resetPwdLoading.value = true;
+  const { error } = await fetchResetUserPassword(resetPwdUserId.value, {
+    newPassword: resetPwdValue.value
+  });
+  resetPwdLoading.value = false;
+  if (!error) {
+    window.$message?.success($t('common.updateSuccess'));
+  }
+  return !error;
+}
 </script>
 
 <template>
@@ -188,7 +228,7 @@ function edit(id: string) {
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
-        :scroll-x="962"
+        :scroll-x="1032"
         :loading="loading"
         remote
         :row-key="row => row.userId"
@@ -202,6 +242,22 @@ function edit(id: string) {
         @submitted="getDataByPage"
       />
     </NCard>
+    <NModal
+      v-model:show="resetPwdVisible"
+      :title="$t('page.system.user.resetPwd.title')"
+      preset="dialog"
+      :positive-text="$t('common.confirm')"
+      :negative-text="$t('common.cancel')"
+      :loading="resetPwdLoading"
+      @positive-click="confirmResetPassword"
+    >
+      <NInput
+        v-model:value="resetPwdValue"
+        type="password"
+        show-password-on="click"
+        :placeholder="$t('page.system.user.form.password')"
+      />
+    </NModal>
   </div>
 </template>
 

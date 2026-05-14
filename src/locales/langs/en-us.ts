@@ -232,6 +232,7 @@ const local: App.I18n.Schema = {
     500: 'Server Error',
     'iframe-page': 'Iframe',
     home: 'Home',
+    profile: 'Profile',
     system: 'System Manage',
     system_user: 'User Manage',
     system_role: 'Role Manage',
@@ -292,6 +293,19 @@ const local: App.I18n.Schema = {
       bindWeChat: {
         title: 'Bind WeChat'
       }
+    },
+    profile: {
+      title: 'Profile',
+      baseInfo: 'Basic Info',
+      newPassword: 'New Password',
+      confirmPassword: 'Confirm Password',
+      passwordMinLength: 'Password must be at least 6 characters',
+      oldPassword: 'Current Password',
+      oldPasswordPlaceholder: 'Please enter current password',
+      confirmPasswordPlaceholder: 'Please enter new password again',
+      registerTime: 'Register Time',
+      confirmPwdMismatch: 'The two passwords are inconsistent',
+      passwordChangeSuccess: 'Password changed successfully'
     },
     home: {
       branchDesc:
@@ -359,10 +373,14 @@ const local: App.I18n.Schema = {
         addUser: 'Add User',
         editUser: 'Edit User',
         gender: {
+          unknown: 'Unknown',
           male: 'Male',
           female: 'Female'
         },
-        password: 'Password'
+        password: 'Password',
+        resetPwd: {
+          title: 'Reset Password'
+        }
       },
       menu: {
         home: 'Home',
@@ -393,6 +411,14 @@ const local: App.I18n.Schema = {
         button: 'Button',
         buttonCode: 'Button Code',
         buttonDesc: 'Button Desc',
+        presetButton: {
+          addAll: 'Add All',
+          list: 'List',
+          add: 'Add',
+          edit: 'Edit',
+          delete: 'Delete',
+          batchDelete: 'Batch Delete'
+        },
         menuStatus: 'Menu Status',
         form: {
           home: 'Please select home',
@@ -663,7 +689,7 @@ const local: App.I18n.Schema = {
     },
     pwd: {
       required: 'Please enter password',
-      invalid: '6-18 characters, including letters, numbers, and underscores'
+      invalid: 'Password must be 6-20 characters with uppercase, lowercase and digit'
     },
     confirmPwd: {
       required: 'Please enter password again',
@@ -719,7 +745,9 @@ const local: App.I18n.Schema = {
     AI_PROVIDER_DUPLICATE: 'Provider code already exists',
     AI_TEST_NO_MODEL: 'No model configured',
     AI_TEST_NO_API_KEY: 'Missing API Key, please fill in or select a saved provider',
-    AI_TEST_FAILED: 'Connectivity test failed'
+    AI_TEST_FAILED: 'Connectivity test failed',
+    INVALID_PASSWORD_FORMAT: 'Password must be 6-20 characters with uppercase, lowercase and digit',
+    INCORRECT_OLD_PASSWORD: 'Current password is incorrect'
   }
 };
 

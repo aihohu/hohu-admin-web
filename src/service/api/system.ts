@@ -107,6 +107,42 @@ export function fetchBatchDeleteUser(data: string[]) {
   });
 }
 
+export function fetchResetUserPassword(userId: string, data: { newPassword: string }) {
+  return request<App.Service.Response<any>>({
+    url: `/system/user/${userId}/reset-password`,
+    method: 'put',
+    data
+  });
+}
+
+export function fetchGetUserProfile() {
+  return request<Api.SystemManage.UserProfile>({
+    url: '/system/user/profile',
+    method: 'get'
+  });
+}
+
+export function fetchUpdateUserProfile(data: {
+  nickname?: string;
+  userGender?: Api.SystemManage.UserGender | null;
+  userPhone?: string | null;
+  userEmail?: string | null;
+}) {
+  return request<App.Service.Response<boolean>>({
+    url: '/system/user/profile',
+    method: 'put',
+    data
+  });
+}
+
+export function fetchChangePassword(data: { oldPassword: string; newPassword: string }) {
+  return request<App.Service.Response<boolean>>({
+    url: '/system/user/change-password',
+    method: 'put',
+    data
+  });
+}
+
 /** get menu list */
 export function fetchGetMenuList() {
   return request<Api.SystemManage.MenuList>({
