@@ -51,7 +51,7 @@ function createDefaultModel(): Api.SystemManage.CreateUserParams {
     userPhone: '',
     userEmail: '',
     roles: [],
-    status: null
+    status: '1'
   };
 }
 

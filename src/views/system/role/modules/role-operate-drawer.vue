@@ -57,10 +57,10 @@ const model = ref(createDefaultModel());
 function createDefaultModel(): Model {
   return {
     roleName: '',
-    roleCode: '',
+    roleCode: 'R_',
     roleDesc: '',
     dataScope: '1',
-    status: null,
+    status: '1',
     deptIds: []
   };
 }
