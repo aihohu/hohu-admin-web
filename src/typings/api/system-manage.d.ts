@@ -152,6 +152,7 @@ declare namespace Api {
       userGender: UserGender | null;
       userPhone: string;
       userEmail: string;
+      userAvatar: string;
       status: string;
       roles: string[];
       createTime: string;

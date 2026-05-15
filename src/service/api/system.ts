@@ -124,6 +124,7 @@ export function fetchGetUserProfile() {
 
 export function fetchUpdateUserProfile(data: {
   nickname?: string;
+  userAvatar?: string | null;
   userGender?: Api.SystemManage.UserGender | null;
   userPhone?: string | null;
   userEmail?: string | null;

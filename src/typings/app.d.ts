@@ -541,6 +541,9 @@ declare namespace App {
           registerTime: string;
           confirmPwdMismatch: string;
           passwordChangeSuccess: string;
+          changeAvatar: string;
+          presetAvatar: string;
+          uploadAvatar: string;
         };
         home: {
           branchDesc: string;

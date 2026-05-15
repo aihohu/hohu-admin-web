@@ -305,7 +305,10 @@ const local: App.I18n.Schema = {
       confirmPasswordPlaceholder: 'Please enter new password again',
       registerTime: 'Register Time',
       confirmPwdMismatch: 'The two passwords are inconsistent',
-      passwordChangeSuccess: 'Password changed successfully'
+      passwordChangeSuccess: 'Password changed successfully',
+      changeAvatar: 'Change Avatar',
+      presetAvatar: 'Choose a preset avatar',
+      uploadAvatar: 'Upload custom avatar'
     },
     home: {
       branchDesc:

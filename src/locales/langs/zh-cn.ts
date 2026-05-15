@@ -301,7 +301,10 @@ const local: App.I18n.Schema = {
       confirmPasswordPlaceholder: '请再次输入新密码',
       registerTime: '注册时间',
       confirmPwdMismatch: '两次密码输入不一致',
-      passwordChangeSuccess: '密码修改成功'
+      passwordChangeSuccess: '密码修改成功',
+      changeAvatar: '更换头像',
+      presetAvatar: '选择预设头像',
+      uploadAvatar: '上传自定义头像'
     },
     home: {
       branchDesc: '欢迎使用HoHu，HoHu是基于FastAPI，SQLAlchemy，Vue3 & Naiveui 的前后端分离权限管理系统',

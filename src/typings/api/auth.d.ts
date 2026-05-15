@@ -13,6 +13,7 @@ declare namespace Api {
     interface UserInfo {
       userId: string;
       userName: string;
+      userAvatar: string;
       roles: string[];
       buttons: string[];
     }
