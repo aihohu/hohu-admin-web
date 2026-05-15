@@ -22,6 +22,8 @@ server {
     # API reverse proxy
     # API_URL 必须以 / 结尾，例如 http://hohu-admin:8000/
     # 这样 /api/users 会被代理到 http://hohu-admin:8000/users（去掉 /api 前缀）
+    client_max_body_size 20m;
+
     location /api/ {
         proxy_pass ${API_URL};
         proxy_http_version 1.1;
