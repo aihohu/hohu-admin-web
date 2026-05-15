@@ -679,7 +679,7 @@ const local: App.I18n.Schema = {
     required: '不能为空',
     userName: {
       required: '请输入用户名',
-      invalid: '用户名必须为4-16位中文、字母、数字、下划线或减号'
+      invalid: '用户名必须为2-16位中文、字母、数字、下划线或减号'
     },
     phone: {
       required: '请输入手机号',
