@@ -73,6 +73,8 @@ const rules: Record<RuleKey, App.Global.FormRule[]> = {
   status: [defaultRequiredRule]
 };
 
+const loading = ref(false);
+
 /** the enabled role options */
 const roleOptions = ref<CommonType.Option<string>[]>([]);
 
@@ -103,20 +105,25 @@ function closeDrawer() {
 
 async function handleSubmit() {
   await validate();
-  let res;
-  if (props.operateType === 'edit' && props.rowData) {
-    res = await fetchUpdateUser(props.rowData.userId, model.value);
-  } else {
-    res = await fetchSaveUser(model.value);
-  }
+  loading.value = true;
+  try {
+    let res;
+    if (props.operateType === 'edit' && props.rowData) {
+      res = await fetchUpdateUser(props.rowData.userId, model.value);
+    } else {
+      res = await fetchSaveUser(model.value);
+    }
 
-  const { error, response } = res;
-  if (!error) {
-    const successMsg =
-      response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
-    window.$message?.success(successMsg);
-    closeDrawer();
-    emit('submitted');
+    const { error, response } = res;
+    if (!error) {
+      const successMsg =
+        response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
+      window.$message?.success(successMsg);
+      closeDrawer();
+      emit('submitted');
+    }
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -176,7 +183,7 @@ watch(visible, () => {
       <template #footer>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
-          <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
+          <NButton type="primary" :loading="loading" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
         </NSpace>
       </template>
     </NDrawerContent>

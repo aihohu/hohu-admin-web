@@ -73,6 +73,8 @@ const rules: Record<RuleKey, App.Global.FormRule> = {
   status: defaultRequiredRule
 };
 
+const loading = ref(false);
+
 const showDeptTree = computed(() => model.value.dataScope === '2');
 
 const deptTreeData = ref<Api.SystemManage.DeptTree[]>([]);
@@ -103,25 +105,29 @@ function closeDrawer() {
 
 async function handleSubmit() {
   await validate();
+  loading.value = true;
+  try {
+    const submitData = { ...model.value };
+    if (submitData.dataScope !== '2') {
+      delete (submitData as any).deptIds;
+    }
 
-  const submitData = { ...model.value };
-  if (submitData.dataScope !== '2') {
-    delete (submitData as any).deptIds;
-  }
-
-  let res;
-  if (props.operateType === 'edit' && props.rowData) {
-    res = await fetchUpdateRole(props.rowData.roleId, submitData);
-  } else {
-    res = await fetchSaveRole(submitData);
-  }
-  const { error, response } = res;
-  if (!error) {
-    const successMsg =
-      response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
-    window.$message?.success(successMsg);
-    closeDrawer();
-    emit('submitted');
+    let res;
+    if (props.operateType === 'edit' && props.rowData) {
+      res = await fetchUpdateRole(props.rowData.roleId, submitData);
+    } else {
+      res = await fetchSaveRole(submitData);
+    }
+    const { error, response } = res;
+    if (!error) {
+      const successMsg =
+        response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
+      window.$message?.success(successMsg);
+      closeDrawer();
+      emit('submitted');
+    }
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -172,7 +178,7 @@ watch(visible, () => {
       <template #footer>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
-          <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
+          <NButton type="primary" :loading="loading" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
         </NSpace>
       </template>
     </NDrawerContent>

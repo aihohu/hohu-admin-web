@@ -124,6 +124,8 @@ const rules: Record<RuleKey, App.Global.FormRule> = {
 
 const disabledMenuType = computed(() => props.operateType === 'edit');
 
+const loading = ref(false);
+
 const localIcons = getLocalIcons();
 const localIconOptions = localIcons.map<SelectOption>(item => ({
   label: () => (
@@ -281,22 +283,26 @@ function getSubmitParams() {
 
 async function handleSubmit() {
   await validate();
+  loading.value = true;
+  try {
+    const params = getSubmitParams();
+    let res;
+    if (props.operateType === 'edit' && props.rowData) {
+      res = await fetchUpdateMenu(props.rowData.menuId, params);
+    } else {
+      res = await fetchSaveMenu(params);
+    }
 
-  const params = getSubmitParams();
-  let res;
-  if (props.operateType === 'edit' && props.rowData) {
-    res = await fetchUpdateMenu(props.rowData.menuId, params);
-  } else {
-    res = await fetchSaveMenu(params);
-  }
-
-  const { error, response } = res;
-  if (!error) {
-    const successMsg =
-      response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
-    window.$message?.success(successMsg);
-    closeDrawer();
-    emit('submitted');
+    const { error, response } = res;
+    if (!error) {
+      const successMsg =
+        response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
+      window.$message?.success(successMsg);
+      closeDrawer();
+      emit('submitted');
+    }
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -508,7 +514,7 @@ watch(
     <template #footer>
       <NSpace justify="end" :size="16">
         <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
-        <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
+        <NButton type="primary" :loading="loading" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
       </NSpace>
     </template>
   </NModal>

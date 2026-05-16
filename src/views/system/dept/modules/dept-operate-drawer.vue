@@ -69,6 +69,8 @@ const rules: Record<RuleKey, App.Global.FormRule> = {
   status: defaultRequiredRule
 };
 
+const loading = ref(false);
+
 const treeOptions = ref<Api.SystemManage.DeptTreeOption[]>([]);
 
 const ROOT_OPTION: Api.SystemManage.DeptTreeOption = {
@@ -111,20 +113,24 @@ function closeDrawer() {
 
 async function handleSubmit() {
   await validate();
-
-  let res;
-  if (props.operateType === 'edit' && props.rowData) {
-    res = await fetchUpdateDept(props.rowData.deptId, model.value);
-  } else {
-    res = await fetchSaveDept(model.value);
-  }
-  const { error, response } = res;
-  if (!error) {
-    const successMsg =
-      response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
-    window.$message?.success(successMsg);
-    closeDrawer();
-    emit('submitted');
+  loading.value = true;
+  try {
+    let res;
+    if (props.operateType === 'edit' && props.rowData) {
+      res = await fetchUpdateDept(props.rowData.deptId, model.value);
+    } else {
+      res = await fetchSaveDept(model.value);
+    }
+    const { error, response } = res;
+    if (!error) {
+      const successMsg =
+        response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
+      window.$message?.success(successMsg);
+      closeDrawer();
+      emit('submitted');
+    }
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -179,7 +185,7 @@ watch(visible, () => {
       <template #footer>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
-          <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
+          <NButton type="primary" :loading="loading" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
         </NSpace>
       </template>
     </NDrawerContent>

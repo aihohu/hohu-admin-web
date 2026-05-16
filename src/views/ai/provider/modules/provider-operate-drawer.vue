@@ -42,6 +42,9 @@ const title = computed(() => {
 type Model = Api.Ai.ProviderCreateParams;
 
 const model = ref<Model>(createDefaultModel());
+
+const loading = ref(false);
+
 const modelsList = ref<string[]>([]);
 const testingIndex = ref<number | null>(null);
 
@@ -113,19 +116,24 @@ function closeDrawer() {
 
 async function handleSubmit() {
   await validate();
-  syncModelsToConfig();
+  loading.value = true;
+  try {
+    syncModelsToConfig();
 
-  let res;
-  if (props.operateType === 'edit' && props.rowData) {
-    res = await fetchUpdateProvider(props.rowData.providerId, model.value);
-  } else {
-    res = await fetchSaveProvider(model.value);
-  }
-  const { error } = res;
-  if (!error) {
-    window.$message?.success(props.operateType === 'edit' ? t('common.updateSuccess') : t('common.addSuccess'));
-    closeDrawer();
-    emit('submitted');
+    let res;
+    if (props.operateType === 'edit' && props.rowData) {
+      res = await fetchUpdateProvider(props.rowData.providerId, model.value);
+    } else {
+      res = await fetchSaveProvider(model.value);
+    }
+    const { error } = res;
+    if (!error) {
+      window.$message?.success(props.operateType === 'edit' ? t('common.updateSuccess') : t('common.addSuccess'));
+      closeDrawer();
+      emit('submitted');
+    }
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -227,7 +235,7 @@ watch(visible, () => {
       <template #footer>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ t('common.cancel') }}</NButton>
-          <NButton type="primary" @click="handleSubmit">{{ t('common.confirm') }}</NButton>
+          <NButton type="primary" :loading="loading" @click="handleSubmit">{{ t('common.confirm') }}</NButton>
         </NSpace>
       </template>
     </NDrawerContent>

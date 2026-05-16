@@ -40,6 +40,8 @@ type Model = Api.SystemManage.JobCreateParams;
 
 const model = ref(createDefaultModel());
 
+const loading = ref(false);
+
 function createDefaultModel(): Model {
   return {
     jobName: '',
@@ -143,20 +145,24 @@ function applyCronPreset(value: string) {
 
 async function handleSubmit() {
   await validate();
-
-  let res;
-  if (props.operateType === 'edit' && props.rowData) {
-    res = await fetchUpdateJob({ ...model.value, jobId: props.rowData.jobId });
-  } else {
-    res = await fetchSaveJob(model.value);
-  }
-  const { error, response } = res;
-  if (!error) {
-    const successMsg =
-      response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
-    window.$message?.success(successMsg);
-    closeDrawer();
-    emit('submitted');
+  loading.value = true;
+  try {
+    let res;
+    if (props.operateType === 'edit' && props.rowData) {
+      res = await fetchUpdateJob({ ...model.value, jobId: props.rowData.jobId });
+    } else {
+      res = await fetchSaveJob(model.value);
+    }
+    const { error, response } = res;
+    if (!error) {
+      const successMsg =
+        response?.data?.msg || $t(props.operateType === 'edit' ? 'common.updateSuccess' : 'common.saveSuccess');
+      window.$message?.success(successMsg);
+      closeDrawer();
+      emit('submitted');
+    }
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -264,7 +270,7 @@ watch(visible, () => {
       <template #footer>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
-          <NButton type="primary" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
+          <NButton type="primary" :loading="loading" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
         </NSpace>
       </template>
     </NDrawerContent>
