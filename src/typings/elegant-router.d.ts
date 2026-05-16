@@ -28,6 +28,7 @@ declare module "@elegant-router/types" {
     "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
     "profile": "/profile";
     "system": "/system";
+    "system_config": "/system/config";
     "system_dept": "/system/dept";
     "system_dict": "/system/dict";
     "system_dict_data": "/system/dict/data";
@@ -102,6 +103,7 @@ declare module "@elegant-router/types" {
     | "ai_chat"
     | "ai_provider"
     | "home"
+    | "system_config"
     | "system_dept"
     | "system_dict_data"
     | "system_dict"

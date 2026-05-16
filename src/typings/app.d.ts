@@ -481,7 +481,7 @@ declare namespace App {
           resetSuccessMsg: string;
         };
       };
-      route: Record<I18nRouteKey, string>;
+      route: Record<I18nRouteKey, string> & { [key: string]: string };
       page: {
         login: {
           common: {
@@ -856,6 +856,32 @@ declare namespace App {
             clean: string;
             cleanConfirm: string;
             cleanSuccess: string;
+          };
+          config: {
+            title: string;
+            configName: string;
+            configKey: string;
+            configValue: string;
+            configType: string;
+            configGroup: string;
+            configStatus: string;
+            isPublic: string;
+            remark: string;
+            form: {
+              configName: string;
+              configKey: string;
+              configValue: string;
+              configType: string;
+              configGroup: string;
+              configStatus: string;
+              isPublic: string;
+              remark: string;
+            };
+            addConfig: string;
+            editConfig: string;
+            typeText: string;
+            typeRichtext: string;
+            typeFile: string;
           };
         };
         ai: {

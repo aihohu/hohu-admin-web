@@ -239,6 +239,10 @@ const local: App.I18n.Schema = {
     system_file: '文件管理',
     system_job: '定时任务',
     'system_job-log': '任务日志',
+    system_config: '系统设置',
+    auth: '权限管理',
+    task: '任务中心',
+    'task_job-log': '任务日志',
     ai: 'AI 助手',
     ai_chat: 'AI 对话',
     ai_provider: '模型管理'
@@ -574,6 +578,32 @@ const local: App.I18n.Schema = {
         clean: '清理日志',
         cleanConfirm: '确认清理30天前的日志？',
         cleanSuccess: '日志清理成功'
+      },
+      config: {
+        title: '系统配置列表',
+        configName: '配置名称',
+        configKey: '配置键',
+        configValue: '配置值',
+        configType: '配置类型',
+        configGroup: '配置分组',
+        configStatus: '配置状态',
+        isPublic: '公开访问',
+        remark: '备注',
+        form: {
+          configName: '请输入配置名称',
+          configKey: '请输入配置键',
+          configValue: '请输入配置值',
+          configType: '请选择配置类型',
+          configGroup: '请输入配置分组',
+          configStatus: '请选择配置状态',
+          isPublic: '是否公开访问（无需登录即可获取）',
+          remark: '请输入备注'
+        },
+        addConfig: '新增配置',
+        editConfig: '编辑配置',
+        typeText: '字符串',
+        typeRichtext: '富文本',
+        typeFile: '文件'
       },
       dept: {
         title: '部门列表',

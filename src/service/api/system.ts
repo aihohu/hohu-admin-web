@@ -514,3 +514,47 @@ export function fetchBatchDeleteJobLog(data: string[]) {
     data
   });
 }
+
+/** get config list */
+export function fetchGetConfigList(params?: Api.SystemManage.ConfigSearchParams) {
+  return request<Api.SystemManage.ConfigList>({
+    url: '/system/config/list',
+    method: 'get',
+    params
+  });
+}
+
+/** save config */
+export function fetchSaveConfig(data: Api.SystemManage.ConfigCreateParams) {
+  return request<App.Service.Response<any>>({
+    url: '/system/config/add',
+    method: 'post',
+    data
+  });
+}
+
+/** update config */
+export function fetchUpdateConfig(configId: string, data: Api.SystemManage.ConfigCreateParams) {
+  return request<App.Service.Response<any>>({
+    url: `/system/config/${configId}`,
+    method: 'put',
+    data
+  });
+}
+
+/** delete config */
+export function fetchDeleteConfig(configId: string) {
+  return request({
+    url: `/system/config/${configId}`,
+    method: 'delete'
+  });
+}
+
+/** batch delete config */
+export function fetchBatchDeleteConfig(data: string[]) {
+  return request({
+    url: '/system/config/batch-delete',
+    method: 'post',
+    data
+  });
+}

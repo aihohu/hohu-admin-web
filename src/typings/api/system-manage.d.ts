@@ -415,5 +415,39 @@ declare namespace Api {
 
     /** job log list */
     type JobLogList = Common.PaginatingQueryRecord<JobLog>;
+
+    /** system config */
+    type Config = Common.CommonRecord<{
+      /** config id */
+      configId: string;
+      /** config name */
+      configName: string;
+      /** config key */
+      configKey: string;
+      /** config value */
+      configValue: string;
+      /** config type */
+      configType: string;
+      /** config group */
+      configGroup: string;
+      /** is public */
+      isPublic: boolean;
+      /** remark */
+      remark: string | null;
+    }>;
+
+    /** config search params */
+    type ConfigSearchParams = CommonType.RecordNullable<
+      Pick<Api.SystemManage.Config, 'configName' | 'configKey' | 'configGroup' | 'status'> & CommonSearchParams
+    >;
+
+    /** config list */
+    type ConfigList = Common.PaginatingQueryRecord<Config>;
+
+    /** config create params */
+    type ConfigCreateParams = Pick<
+      Api.SystemManage.Config,
+      'configName' | 'configKey' | 'configValue' | 'configType' | 'configGroup' | 'status' | 'isPublic' | 'remark'
+    >;
   }
 }

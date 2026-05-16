@@ -243,6 +243,10 @@ const local: App.I18n.Schema = {
     system_file: 'File Manage',
     system_job: 'Scheduled Job',
     'system_job-log': 'Job Log',
+    system_config: 'System Config',
+    auth: 'Permission',
+    task: 'Task Center',
+    'task_job-log': 'Job Log',
     ai: 'AI Assistant',
     ai_chat: 'AI Chat',
     ai_provider: 'Model Manage'
@@ -579,6 +583,32 @@ const local: App.I18n.Schema = {
         clean: 'Clean Logs',
         cleanConfirm: 'Confirm to clean logs older than 30 days?',
         cleanSuccess: 'Logs cleaned successfully'
+      },
+      config: {
+        title: 'System Config List',
+        configName: 'Config Name',
+        configKey: 'Config Key',
+        configValue: 'Config Value',
+        configType: 'Config Type',
+        configGroup: 'Config Group',
+        configStatus: 'Config Status',
+        isPublic: 'Public',
+        remark: 'Remark',
+        form: {
+          configName: 'Please enter config name',
+          configKey: 'Please enter config key',
+          configValue: 'Please enter config value',
+          configType: 'Please select config type',
+          configGroup: 'Please enter config group',
+          configStatus: 'Please select config status',
+          isPublic: 'Accessible without authentication',
+          remark: 'Please enter remark'
+        },
+        addConfig: 'Add Config',
+        editConfig: 'Edit Config',
+        typeText: 'Text',
+        typeRichtext: 'Rich Text',
+        typeFile: 'File'
       },
       dept: {
         title: 'Dept List',
