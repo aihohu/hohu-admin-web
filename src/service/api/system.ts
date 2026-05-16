@@ -558,3 +558,57 @@ export function fetchBatchDeleteConfig(data: string[]) {
     data
   });
 }
+
+/** get operation log list */
+export function fetchGetOperationLogList(params?: Api.SystemManage.OperationLogSearchParams) {
+  return request<Api.SystemManage.OperationLogList>({
+    url: '/system/operation-log/list',
+    method: 'get',
+    params
+  });
+}
+
+/** clean operation log */
+export function fetchCleanOperationLog(days: number) {
+  return request<App.Service.Response<any>>({
+    url: '/system/operation-log/clean',
+    method: 'delete',
+    params: { days }
+  });
+}
+
+/** batch delete operation log */
+export function fetchBatchDeleteOperationLog(data: string[]) {
+  return request({
+    url: '/system/operation-log/batch-delete',
+    method: 'post',
+    data
+  });
+}
+
+/** get login log list */
+export function fetchGetLoginLogList(params?: Api.SystemManage.LoginLogSearchParams) {
+  return request<Api.SystemManage.LoginLogList>({
+    url: '/system/login-log/list',
+    method: 'get',
+    params
+  });
+}
+
+/** clean login log */
+export function fetchCleanLoginLog(days: number) {
+  return request<App.Service.Response<any>>({
+    url: '/system/login-log/clean',
+    method: 'delete',
+    params: { days }
+  });
+}
+
+/** batch delete login log */
+export function fetchBatchDeleteLoginLog(data: string[]) {
+  return request({
+    url: '/system/login-log/batch-delete',
+    method: 'post',
+    data
+  });
+}

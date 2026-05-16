@@ -190,12 +190,30 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       },
       {
+        name: 'system_login-log',
+        path: '/system/login-log',
+        component: 'view.system_login-log',
+        meta: {
+          title: 'system_login-log',
+          i18nKey: 'route.system_login-log'
+        }
+      },
+      {
         name: 'system_menu',
         path: '/system/menu',
         component: 'view.system_menu',
         meta: {
           title: 'system_menu',
           i18nKey: 'route.system_menu'
+        }
+      },
+      {
+        name: 'system_operation-log',
+        path: '/system/operation-log',
+        component: 'view.system_operation-log',
+        meta: {
+          title: 'system_operation-log',
+          i18nKey: 'route.system_operation-log'
         }
       },
       {

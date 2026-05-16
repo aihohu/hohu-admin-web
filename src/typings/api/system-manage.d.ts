@@ -449,5 +449,59 @@ declare namespace Api {
       Api.SystemManage.Config,
       'configName' | 'configKey' | 'configValue' | 'configType' | 'configGroup' | 'status' | 'isPublic' | 'remark'
     >;
+
+    /** operation log */
+    type OperationLog = {
+      operationLogId: string;
+      userId: string;
+      username: string;
+      module: string;
+      action: string;
+      method: string;
+      path: string;
+      requestParams: string | null;
+      statusCode: number | null;
+      ip: string | null;
+      duration: number | null;
+      createTime: string;
+    };
+
+    /** operation log search params */
+    type OperationLogSearchParams = CommonType.RecordNullable<
+      Pick<OperationLog, 'module' | 'action' | 'username'> & {
+        statusCode: number | null;
+        startTime: string | null;
+        endTime: string | null;
+      } & CommonSearchParams
+    >;
+
+    /** operation log list */
+    type OperationLogList = Common.PaginatingQueryRecord<OperationLog>;
+
+    /** login log status */
+    type LoginLogStatus = '1' | '2' | '3';
+
+    /** login log */
+    type LoginLog = {
+      loginLogId: string;
+      userId: string | null;
+      username: string;
+      ip: string | null;
+      userAgent: string | null;
+      status: LoginLogStatus;
+      message: string | null;
+      loginTime: string;
+    };
+
+    /** login log search params */
+    type LoginLogSearchParams = CommonType.RecordNullable<
+      Pick<LoginLog, 'username' | 'status' | 'ip'> & {
+        startTime: string | null;
+        endTime: string | null;
+      } & CommonSearchParams
+    >;
+
+    /** login log list */
+    type LoginLogList = Common.PaginatingQueryRecord<LoginLog>;
   }
 }

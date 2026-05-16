@@ -857,6 +857,44 @@ declare namespace App {
             cleanConfirm: string;
             cleanSuccess: string;
           };
+          operationLog: {
+            title: string;
+            module: string;
+            moduleSystem: string;
+            moduleAuth: string;
+            moduleJob: string;
+            moduleAi: string;
+            action: string;
+            actionCreate: string;
+            actionUpdate: string;
+            actionDelete: string;
+            username: string;
+            usernamePlaceholder: string;
+            method: string;
+            path: string;
+            statusCode: string;
+            duration: string;
+            createTime: string;
+            clean: string;
+            cleanConfirm: string;
+            cleanSuccess: string;
+          };
+          loginLog: {
+            title: string;
+            username: string;
+            usernamePlaceholder: string;
+            ipPlaceholder: string;
+            status: string;
+            statusSuccess: string;
+            statusFailed: string;
+            statusLocked: string;
+            userAgent: string;
+            message: string;
+            loginTime: string;
+            clean: string;
+            cleanConfirm: string;
+            cleanSuccess: string;
+          };
           config: {
             title: string;
             configName: string;

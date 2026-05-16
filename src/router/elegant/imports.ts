@@ -31,7 +31,9 @@ export const views: Record<LastLevelRouteKey, RouteComponent | (() => Promise<Ro
   system_file: () => import("@/views/system/file/index.vue"),
   "system_job-log": () => import("@/views/system/job-log/index.vue"),
   system_job: () => import("@/views/system/job/index.vue"),
+  "system_login-log": () => import("@/views/system/login-log/index.vue"),
   system_menu: () => import("@/views/system/menu/index.vue"),
+  "system_operation-log": () => import("@/views/system/operation-log/index.vue"),
   system_role: () => import("@/views/system/role/index.vue"),
   system_user: () => import("@/views/system/user/index.vue"),
 };
