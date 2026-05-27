@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useDialog } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import { useAiStore } from '@/store/modules/ai';
@@ -8,11 +8,14 @@ const { t } = useI18n();
 const aiStore = useAiStore();
 const dialog = useDialog();
 const searchKeyword = ref('');
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
-const filteredConversations = computed(() => {
-  const keyword = searchKeyword.value.trim().toLowerCase();
-  if (!keyword) return aiStore.conversations;
-  return aiStore.conversations.filter(c => (c.title || t('page.ai.chat.newChat')).toLowerCase().includes(keyword));
+watch(searchKeyword, val => {
+  if (searchTimer) clearTimeout(searchTimer);
+  const keyword = val.trim() || null;
+  searchTimer = setTimeout(() => {
+    aiStore.loadConversations(keyword);
+  }, 300);
 });
 
 function handleCreate() {
@@ -33,6 +36,15 @@ function handleDelete(id: string) {
       await aiStore.removeConversation(id);
     }
   });
+}
+
+function handleScroll(e: Event) {
+  const el = e.target as HTMLElement;
+  if (!aiStore.hasMoreConversations || aiStore.loading) return;
+  const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+  if (distanceFromBottom < 50) {
+    aiStore.loadMoreConversations();
+  }
 }
 </script>
 
@@ -64,10 +76,10 @@ function handleDelete(id: string) {
     </div>
 
     <!-- Conversation list -->
-    <NScrollbar class="flex-1 px-8px">
+    <NScrollbar class="flex-1 px-8px" @scroll="handleScroll">
       <div class="flex flex-col gap-4px">
         <div
-          v-for="conv in filteredConversations"
+          v-for="conv in aiStore.conversations"
           :key="conv.conversationId"
           class="conv-item"
           :class="{ 'conv-item--active': aiStore.currentConversationId === conv.conversationId }"
@@ -88,10 +100,13 @@ function handleDelete(id: string) {
           </NButton>
         </div>
         <NEmpty
-          v-if="filteredConversations.length === 0"
+          v-if="aiStore.conversations.length === 0"
           :description="t('page.ai.chat.noConversation')"
           class="py-24px"
         />
+        <div v-if="aiStore.loading" class="flex justify-center py-12px">
+          <NSpin size="small" />
+        </div>
       </div>
     </NScrollbar>
   </div>

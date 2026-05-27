@@ -23,7 +23,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const loading = ref(false);
   const availableModels = ref<AiModelOption[]>([]);
   const selectedModelId = ref<string>('');
+  const conversationCurrent = ref(1);
+  const conversationSize = 20;
+  const hasMoreConversations = ref(true);
+  const searchTitle = ref<string | null>(null);
   let abortController: AbortController | null = null;
+  let selectSeq = 0;
 
   /** get base URL for SSE fetch */
   function getBaseUrl(): string {
@@ -32,13 +37,45 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     return baseURL;
   }
 
-  /** load conversation list */
-  async function loadConversations() {
+  /** load conversation list (first page, reset) */
+  async function loadConversations(title?: string | null) {
+    searchTitle.value = title ?? null;
+    conversationCurrent.value = 1;
+    hasMoreConversations.value = true;
     loading.value = true;
     try {
-      const { data, error } = await fetchGetConversationList({ current: 1, size: 50, status: null, title: null });
+      const { data, error } = await fetchGetConversationList({
+        current: 1,
+        size: conversationSize,
+        status: null,
+        title: searchTitle.value
+      });
       if (!error && data) {
         conversations.value = data.records;
+        hasMoreConversations.value = data.records.length >= conversationSize;
+      }
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /** load more conversations (append next page) */
+  async function loadMoreConversations() {
+    if (loading.value || !hasMoreConversations.value) return;
+    loading.value = true;
+    conversationCurrent.value += 1;
+    try {
+      const { data, error } = await fetchGetConversationList({
+        current: conversationCurrent.value,
+        size: conversationSize,
+        status: null,
+        title: searchTitle.value
+      });
+      if (!error && data) {
+        conversations.value.push(...data.records);
+        hasMoreConversations.value = data.records.length >= conversationSize;
+      } else {
+        hasMoreConversations.value = false;
       }
     } finally {
       loading.value = false;
@@ -47,11 +84,16 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** select conversation and load messages */
   async function selectConversation(conversationId: string) {
+    const seq = ++selectSeq;
     currentConversationId.value = conversationId;
     streamingText.value = '';
+    currentMessages.value = [];
     const { data, error } = await fetchGetConversationDetail(conversationId);
+    if (seq !== selectSeq) return;
     if (!error && data) {
       currentMessages.value = data.messages;
+    } else {
+      window.$message?.error('加载会话失败');
     }
   }
 
@@ -76,6 +118,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     isStreaming.value = true;
     streamingText.value = '';
     abortController = new AbortController();
+    let streamCompleted = false;
 
     try {
       const baseUrl = getBaseUrl();
@@ -154,9 +197,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           createTime: new Date().toISOString()
         });
       }
+      streamCompleted = true;
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        // save partial response
+        // save partial response locally (backend may not have persisted it)
         if (streamingText.value) {
           currentMessages.value.push({
             messageId: `temp-assistant-${Date.now()}`,
@@ -177,6 +221,18 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       isStreaming.value = false;
       streamingText.value = '';
       abortController = null;
+
+      // Replace temp messages with real IDs from backend after stream completes normally
+      if (streamCompleted && currentConversationId.value) {
+        try {
+          const { data, error } = await fetchGetConversationDetail(currentConversationId.value);
+          if (!error && data) {
+            currentMessages.value = data.messages;
+          }
+        } catch {
+          // keep local messages as fallback
+        }
+      }
     }
   }
 
@@ -265,7 +321,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     loading,
     availableModels,
     selectedModelId,
+    hasMoreConversations,
     loadConversations,
+    loadMoreConversations,
     selectConversation,
     clearCurrentConversation,
     removeConversation,

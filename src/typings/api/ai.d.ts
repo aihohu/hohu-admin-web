@@ -101,16 +101,5 @@ declare namespace Api {
       conversation: Conversation;
       messages: Message[];
     };
-
-    /** chat request (sync) */
-    type ChatRequest = {
-      conversationId: string;
-      message: string;
-    };
-
-    /** chat response (sync) */
-    type ChatResponse = {
-      content: string;
-    };
   }
 }

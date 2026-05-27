@@ -76,7 +76,6 @@ const hasConversation = computed(() => !!aiStore.currentConversationId);
 async function handleSend() {
   const text = inputText.value.trim();
   if (!text) return;
-  inputText.value = '';
 
   // 没有会话时自动创建
   if (!hasConversation.value) {
@@ -89,6 +88,7 @@ async function handleSend() {
     await aiStore.selectConversation(data.conversationId);
   }
 
+  inputText.value = '';
   await aiStore.sendMessage(text);
 }
 

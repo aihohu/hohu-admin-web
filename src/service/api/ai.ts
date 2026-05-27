@@ -96,14 +96,3 @@ export function fetchDeleteConversation(conversationId: string) {
     method: 'delete'
   });
 }
-
-// ==================== Chat ====================
-
-/** sync chat */
-export function fetchChatSync(data: Api.Ai.ChatRequest) {
-  return request<Api.Ai.ChatResponse>({
-    url: '/ai/sync',
-    method: 'post',
-    data
-  });
-}

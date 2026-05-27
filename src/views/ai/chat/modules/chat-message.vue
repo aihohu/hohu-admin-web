@@ -29,12 +29,12 @@ const md: MarkdownIt = new MarkdownIt({
   highlight(str: string, lang: string): string {
     if (lang && hljs.getLanguage(lang)) {
       try {
-        return `<pre class="hljs-pre"><div class="hljs-header"><span class="hljs-lang">${lang}</span><button class="hljs-copy" onclick="navigator.clipboard.writeText(this.closest('pre').querySelector('code').textContent)">${t('page.ai.chat.copy')}</button></div><code class="hljs language-${lang}">${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre>`;
+        return `<pre class="hljs-pre"><div class="hljs-header"><span class="hljs-lang">${lang}</span><button class="hljs-copy">${t('page.ai.chat.copy')}</button></div><code class="hljs language-${lang}">${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre>`;
       } catch {
         // fallback
       }
     }
-    return `<pre class="hljs-pre"><div class="hljs-header"><span class="hljs-lang">text</span><button class="hljs-copy" onclick="navigator.clipboard.writeText(this.closest('pre').querySelector('code').textContent)">${t('page.ai.chat.copy')}</button></div><code class="hljs">${md.utils.escapeHtml(str)}</code></pre>`;
+    return `<pre class="hljs-pre"><div class="hljs-header"><span class="hljs-lang">text</span><button class="hljs-copy">${t('page.ai.chat.copy')}</button></div><code class="hljs">${md.utils.escapeHtml(str)}</code></pre>`;
   }
 });
 
@@ -73,6 +73,17 @@ function handleEditKeydown(e: KeyboardEvent) {
 function copyMessageContent() {
   navigator.clipboard.writeText(props.message.content || '');
   window.$message?.success(t('page.ai.chat.copied'));
+}
+
+function handleMarkdownClick(e: Event) {
+  const target = (e.target as HTMLElement).closest('.hljs-copy');
+  if (!target) return;
+  const pre = target.closest('pre');
+  const code = pre?.querySelector('code');
+  if (code) {
+    navigator.clipboard.writeText(code.textContent || '');
+    window.$message?.success(t('page.ai.chat.copied'));
+  }
 }
 </script>
 
@@ -146,7 +157,7 @@ function copyMessageContent() {
       <template v-else>
         <div class="msg-bubble msg-bubble--ai">
           <!-- eslint-disable-next-line vue/no-v-html -->
-          <div class="markdown-body" v-html="renderedContent" />
+          <div class="markdown-body" @click="handleMarkdownClick" v-html="renderedContent" />
         </div>
         <div class="msg-actions">
           <NTooltip v-if="isLastAssistantMessage" trigger="hover">
