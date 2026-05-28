@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.1.2] (2026-05-28)
+
+### Features
+
+- **AI Model Management** — Separate model CRUD with capabilities (`text`, `vision`, `image-gen`, `video`, `audio`, `embedding`), per-model base URL, sort order, and required validation
+- **Image Vision in Chat** — Upload/paste/drag-drop images in AI chat, auto-send to LLM providers as base64
+- **Model Selector** — Chat model dropdown grouped by provider, using Snowflake model ID
+- **Provider Drawer Redesign** — Model management section with card layout, capability tags, add/edit/delete with form validation
+
+### Bug Fixes
+
+- **Streaming Message Parts** — Fix missing `parts` field in abort handler causing TypeScript errors
+- **Unused Import** — Remove stale `AiModelOption` type and `request` import from AI store
+
+### Improvements
+
+- **Model API Service** — New `fetchGetAvailableModels`, `fetchGetProviderModels`, `fetchAddProviderModel`, `fetchUpdateProviderModel`, `fetchDeleteProviderModel` API wrappers
+- **i18n** — Add model capability labels (文本/视觉/图片生成/视频/音频/向量), model form labels, and validation messages in zh-CN and en-US
+- **Types** — New `AiModel`, `ModelCapability`, `AvailableModel`, `AiModelCreateParams`, `AiModelUpdateParams` types in `ai.d.ts`
+
 ## [v0.1.1] (2026-05-06)
 
 ### Features
