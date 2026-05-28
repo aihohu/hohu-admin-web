@@ -960,6 +960,15 @@ declare namespace App {
             status: string;
             addProvider: string;
             editProvider: string;
+            capabilities: string;
+            capText: string;
+            capVision: string;
+            capImageGen: string;
+            capVideo: string;
+            capAudio: string;
+            capEmbedding: string;
+            modelBaseUrl: string;
+            sortOrder: string;
             form: {
               code: string;
               name: string;
@@ -967,8 +976,11 @@ declare namespace App {
               apiKeyEdit: string;
               baseUrl: string;
               model: string;
+              modelBaseUrl: string;
+              modelName: string;
             };
             addModel: string;
+            capabilitiesRequired: string;
             testConnectivity: string;
             testSuccess: string;
             testFailed: string;
@@ -1015,6 +1027,7 @@ declare namespace App {
         ACCOUNT_DISABLED: string;
         UNSUPPORTED_LOGIN_TYPE: string;
         AI_PROVIDER_NOT_FOUND: string;
+        AI_MODEL_NOT_FOUND: string;
         AI_CONVERSATION_NOT_FOUND: string;
         AI_MODEL_NOT_CONFIGURED: string;
         AI_PROVIDER_DUPLICATE: string;

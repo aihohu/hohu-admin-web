@@ -75,12 +75,14 @@ const hasConversation = computed(() => !!aiStore.currentConversationId);
 
 async function handleSend() {
   const text = inputText.value.trim();
-  if (!text) return;
+  const hasImages = aiStore.attachedImages.length > 0;
+  if (!text && !hasImages) return;
 
   // 没有会话时自动创建
   if (!hasConversation.value) {
+    const title = text ? text.slice(0, 20) + (text.length > 20 ? '...' : '') : '图片对话';
     const { data, error } = await fetchSaveConversation({
-      title: text.slice(0, 20) + (text.length > 20 ? '...' : ''),
+      title,
       modelName: aiStore.selectedModelId || undefined
     });
     if (error || !data) return;
@@ -89,7 +91,7 @@ async function handleSend() {
   }
 
   inputText.value = '';
-  await aiStore.sendMessage(text);
+  await aiStore.sendMessage(text || '');
 }
 
 async function handleEdit(index: number, newContent: string) {
@@ -179,6 +181,7 @@ const quickActions = [
               role: 'assistant',
               messageType: 'text',
               content: aiStore.streamingText,
+              parts: null,
               tokensInput: null,
               tokensOutput: null,
               createTime: new Date().toISOString()

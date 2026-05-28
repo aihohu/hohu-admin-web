@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAiStore } from '@/store/modules/ai';
-import type { AiModelOption } from '@/store/modules/ai';
+import { fetchUploadFile } from '@/service/api';
 
 const { t } = useI18n();
 const model = defineModel<string>('modelValue', { required: true });
@@ -19,9 +19,12 @@ const emit = defineEmits<{
 
 const aiStore = useAiStore();
 const textareaRef = ref<HTMLTextAreaElement>();
+const fileInputRef = ref<HTMLInputElement>();
 const showModelMenu = ref(false);
 
-const canSend = computed(() => !props.disabled && !props.isStreaming && model.value.trim());
+const canSend = computed(
+  () => !props.disabled && !props.isStreaming && (model.value.trim() || aiStore.attachedImages.length > 0)
+);
 
 const currentModel = computed(() => {
   return aiStore.availableModels.find(m => m.modelId === aiStore.selectedModelId);
@@ -29,7 +32,7 @@ const currentModel = computed(() => {
 
 // 按 provider 分组
 const groupedModels = computed(() => {
-  const groups: Record<string, { providerName: string; models: AiModelOption[] }> = {};
+  const groups: Record<string, { providerName: string; models: Api.Ai.AvailableModel[] }> = {};
   for (const m of aiStore.availableModels) {
     if (!groups[m.providerCode]) {
       groups[m.providerCode] = { providerName: m.providerName, models: [] };
@@ -72,10 +75,64 @@ function autoResize(e: Event) {
   el.style.height = 'auto';
   el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
 }
+
+function triggerFileInput() {
+  fileInputRef.value?.click();
+}
+
+async function handleFileSelect(e: Event) {
+  const input = e.target as HTMLInputElement;
+  if (!input.files) return;
+  for (const file of Array.from(input.files)) {
+    if (!file.type.startsWith('image/')) continue;
+    const { data, error } = await fetchUploadFile(file, 'ai-chat');
+    if (!error && data) {
+      aiStore.addImage(data.fileUrl, file.type, file.name);
+    } else {
+      window.$message?.error('图片上传失败');
+    }
+  }
+  input.value = '';
+}
+
+async function handlePaste(e: ClipboardEvent) {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of Array.from(items)) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      const file = item.getAsFile();
+      if (!file) continue;
+      const { data, error } = await fetchUploadFile(file, 'ai-chat');
+      if (!error && data) {
+        aiStore.addImage(data.fileUrl, file.type, 'pasted-image');
+      }
+    }
+  }
+}
+
+function handleDragOver(e: DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+async function handleDrop(e: DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  const files = e.dataTransfer?.files;
+  if (!files) return;
+  for (const file of Array.from(files)) {
+    if (!file.type.startsWith('image/')) continue;
+    const { data, error } = await fetchUploadFile(file, 'ai-chat');
+    if (!error && data) {
+      aiStore.addImage(data.fileUrl, file.type, file.name);
+    }
+  }
+}
 </script>
 
 <template>
-  <div class="input-wrapper" @click="handleClickOutside">
+  <div class="input-wrapper" @click="handleClickOutside" @dragover="handleDragOver" @drop="handleDrop">
     <div class="input-container">
       <!-- Model selector -->
       <div v-if="currentModel" class="model-bar" @click.stop>
@@ -107,8 +164,31 @@ function autoResize(e: Event) {
         </Transition>
       </div>
 
+      <!-- Attached images preview -->
+      <div v-if="aiStore.attachedImages.length > 0" class="attach-preview">
+        <div v-for="(img, i) in aiStore.attachedImages" :key="i" class="attach-thumb">
+          <img :src="img.fileUrl" :alt="img.fileName" />
+          <button class="attach-remove" @click="aiStore.removeImage(i)">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <!-- Input box -->
       <div class="input-box">
+        <button class="input-attach-btn" :disabled="disabled || isStreaming" title="上传图片" @click="triggerFileInput">
+          <icon-ic-round-image class="text-18px" />
+        </button>
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          multiple
+          class="hidden-input"
+          @change="handleFileSelect"
+        />
         <textarea
           ref="textareaRef"
           v-model="model"
@@ -118,6 +198,7 @@ function autoResize(e: Event) {
           rows="1"
           @keydown="handleKeydown"
           @input="autoResize"
+          @paste="handlePaste"
         />
         <!-- Send / Stop button -->
         <button
@@ -274,7 +355,7 @@ function autoResize(e: Event) {
 .input-box {
   display: flex;
   align-items: flex-end;
-  padding: 10px 10px 10px 18px;
+  padding: 10px 10px 10px 6px;
   border-radius: 24px;
   border: 1px solid var(--n-border-color, #e0e0e6);
   background: var(--n-color, #fff);
@@ -357,6 +438,75 @@ function autoResize(e: Event) {
   text-align: center;
   font-size: 11px;
   color: var(--n-text-color-3, #aaa);
+}
+
+/* Attach button */
+.input-attach-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--n-text-color-3, #999);
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-attach-btn:hover {
+  color: var(--n-text-color, #333);
+  background: rgba(119, 119, 119, 0.08);
+}
+
+.input-attach-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hidden-input {
+  display: none;
+}
+
+/* Attached images preview */
+.attach-preview {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 18px 8px;
+}
+
+.attach-thumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--n-border-color, #e0e0e0);
+}
+
+.attach-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.attach-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
 }
 
 /* Dark mode */

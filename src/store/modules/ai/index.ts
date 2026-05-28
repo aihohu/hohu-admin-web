@@ -4,15 +4,7 @@ import { SetupStoreId } from '@/enum';
 import { localStg } from '@/utils/storage';
 import { getServiceBaseURL } from '@/utils/service';
 import { fetchGetConversationList, fetchGetConversationDetail, fetchDeleteConversation } from '@/service/api';
-import { request } from '@/service/request';
-
-export interface AiModelOption {
-  providerId: string;
-  providerCode: string;
-  providerName: string;
-  model: string;
-  modelId: string;
-}
+import { fetchGetAvailableModels } from '@/service/api/ai';
 
 export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const conversations = ref<Api.Ai.Conversation[]>([]);
@@ -21,12 +13,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const streamingText = ref('');
   const isStreaming = ref(false);
   const loading = ref(false);
-  const availableModels = ref<AiModelOption[]>([]);
+  const availableModels = ref<Api.Ai.AvailableModel[]>([]);
   const selectedModelId = ref<string>('');
   const conversationCurrent = ref(1);
   const conversationSize = 20;
   const hasMoreConversations = ref(true);
   const searchTitle = ref<string | null>(null);
+  const attachedImages = ref<{ fileUrl: string; mediaType: string; fileName: string }[]>([]);
   let abortController: AbortController | null = null;
   let selectSeq = 0;
 
@@ -135,7 +128,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           messages: currentMessages.value.map((msg, i) => ({
             id: `msg-history-${i}`,
             role: msg.role,
-            parts: [{ type: 'text', text: msg.content }]
+            parts: msg.parts && msg.parts.length > 0 ? msg.parts : [{ type: 'text', text: msg.content }]
           })),
           conversationId: currentConversationId.value,
           modelId: selectedModelId.value || undefined
@@ -192,6 +185,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           role: 'assistant',
           messageType: 'text',
           content: streamingText.value,
+          parts: null,
           tokensInput: null,
           tokensOutput: null,
           createTime: new Date().toISOString()
@@ -209,6 +203,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             role: 'assistant',
             messageType: 'text',
             content: streamingText.value,
+            parts: null,
             tokensInput: null,
             tokensOutput: null,
             createTime: new Date().toISOString()
@@ -238,7 +233,16 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** send a new user message + stream response */
   async function sendMessage(content: string) {
-    if (!content.trim() || isStreaming.value) return;
+    if ((!content.trim() && attachedImages.value.length === 0) || isStreaming.value) return;
+
+    // build parts
+    const parts: Api.Ai.MessagePart[] = [];
+    if (content.trim()) {
+      parts.push({ type: 'text', text: content });
+    }
+    for (const img of attachedImages.value) {
+      parts.push({ type: 'file', url: img.fileUrl, mediaType: img.mediaType });
+    }
 
     // add user message locally
     currentMessages.value.push({
@@ -248,11 +252,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       role: 'user',
       messageType: 'text',
       content,
+      parts: parts.length > 0 ? parts : null,
       tokensInput: null,
       tokensOutput: null,
       createTime: new Date().toISOString()
     });
 
+    attachedImages.value = [];
     await doStream();
   }
 
@@ -261,6 +267,21 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     if (abortController) {
       abortController.abort();
     }
+  }
+
+  /** add attached image */
+  function addImage(fileUrl: string, mediaType: string, fileName: string) {
+    attachedImages.value.push({ fileUrl, mediaType, fileName });
+  }
+
+  /** remove attached image by index */
+  function removeImage(index: number) {
+    attachedImages.value.splice(index, 1);
+  }
+
+  /** clear all attached images */
+  function clearImages() {
+    attachedImages.value = [];
   }
 
   /** regenerate: remove last assistant message, re-stream with existing user message */
@@ -284,17 +305,31 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     // truncate messages from this index onward
     currentMessages.value = currentMessages.value.slice(0, messageIndex);
 
-    // send the edited message
-    await sendMessage(newContent);
+    // clear attached images since editing replaces the message
+    attachedImages.value = [];
+
+    // send the edited message (text only, no images)
+    const parts: Api.Ai.MessagePart[] = [{ type: 'text', text: newContent }];
+    currentMessages.value.push({
+      messageId: `temp-${Date.now()}`,
+      conversationId: currentConversationId.value || '',
+      parentMessageId: null,
+      role: 'user',
+      messageType: 'text',
+      content: newContent,
+      parts,
+      tokensInput: null,
+      tokensOutput: null,
+      createTime: new Date().toISOString()
+    });
+
+    await doStream();
   }
 
   /** load available models from enabled providers */
   async function loadModels() {
     try {
-      const { data, error } = await request<AiModelOption[]>({
-        url: '/ai/provider/models',
-        method: 'get'
-      });
+      const { data, error } = await fetchGetAvailableModels();
       if (!error && data) {
         availableModels.value = data;
         // auto select first if none selected
@@ -322,6 +357,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     availableModels,
     selectedModelId,
     hasMoreConversations,
+    attachedImages,
     loadConversations,
     loadMoreConversations,
     selectConversation,
@@ -331,6 +367,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     stopStreaming,
     regenerate,
     editAndResend,
+    addImage,
+    removeImage,
+    clearImages,
     init
   };
 });

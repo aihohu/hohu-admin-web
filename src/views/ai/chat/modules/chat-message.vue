@@ -85,6 +85,10 @@ function handleMarkdownClick(e: Event) {
     window.$message?.success(t('page.ai.chat.copied'));
   }
 }
+
+function previewImage(url: string) {
+  window.open(url, '_blank');
+}
 </script>
 
 <template>
@@ -129,7 +133,18 @@ function handleMarkdownClick(e: Event) {
         <!-- Display mode -->
         <template v-else>
           <div class="msg-bubble msg-bubble--user">
-            <div class="whitespace-pre-wrap">{{ message.content }}</div>
+            <template v-if="message.parts && message.parts.length > 0">
+              <template v-for="(part, pi) in message.parts" :key="pi">
+                <img
+                  v-if="part.type === 'file' && part.mediaType?.startsWith('image/')"
+                  :src="part.url"
+                  class="msg-image"
+                  @click="previewImage(part.url)"
+                />
+                <div v-else-if="part.type === 'text'" class="whitespace-pre-wrap">{{ part.text }}</div>
+              </template>
+            </template>
+            <div v-else class="whitespace-pre-wrap">{{ message.content }}</div>
           </div>
           <!-- Actions: hover show -->
           <div class="msg-actions">
@@ -240,6 +255,19 @@ function handleMarkdownClick(e: Event) {
   background: #4d6bfe;
   color: #fff;
   border-top-right-radius: 4px;
+}
+
+.msg-image {
+  max-width: 260px;
+  max-height: 200px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.msg-image:last-child {
+  margin-bottom: 0;
 }
 
 .msg-bubble--ai {

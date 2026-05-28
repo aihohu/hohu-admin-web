@@ -52,6 +52,51 @@ export function fetchTestModel(data: {
   });
 }
 
+// ==================== Provider Models ====================
+
+/** get models under a provider */
+export function fetchGetProviderModels(providerId: string) {
+  return request<Api.Ai.AiModel[]>({
+    url: `/ai/provider/${providerId}/models`,
+    method: 'get'
+  });
+}
+
+/** add model under a provider */
+export function fetchAddProviderModel(providerId: string, data: Api.Ai.AiModelCreateParams) {
+  return request<App.Service.Response<any>>({
+    url: `/ai/provider/${providerId}/models`,
+    method: 'post',
+    data
+  });
+}
+
+/** update model */
+export function fetchUpdateProviderModel(providerId: string, modelId: string, data: Api.Ai.AiModelUpdateParams) {
+  return request<App.Service.Response<any>>({
+    url: `/ai/provider/${providerId}/models/${modelId}`,
+    method: 'put',
+    data
+  });
+}
+
+/** delete model */
+export function fetchDeleteProviderModel(providerId: string, modelId: string) {
+  return request<App.Service.Response<any>>({
+    url: `/ai/provider/${providerId}/models/${modelId}`,
+    method: 'delete'
+  });
+}
+
+/** get available models for chat */
+export function fetchGetAvailableModels(capability?: string) {
+  return request<Api.Ai.AvailableModel[]>({
+    url: '/ai/provider/models',
+    method: 'get',
+    params: capability ? { capability } : undefined
+  });
+}
+
 // ==================== Conversation ====================
 
 /** get conversation list */
