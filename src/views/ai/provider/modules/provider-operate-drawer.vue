@@ -249,8 +249,8 @@ async function handleSubmit() {
     const { error, data } = res;
     if (!error) {
       // 新增模式：批量保存待处理的模型
-      if (props.operateType === 'add' && data?.providerId && pendingModels.value.length > 0) {
-        const providerId = data.providerId;
+      if (props.operateType === 'add' && (data as unknown as Api.Ai.Provider)?.providerId && pendingModels.value.length > 0) {
+        const providerId = (data as unknown as Api.Ai.Provider).providerId;
         for (const pm of pendingModels.value) {
           await fetchAddProviderModel(providerId, pm);
         }
