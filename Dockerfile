@@ -1,7 +1,7 @@
 # --- Build Stage ---
-FROM node:22-alpine AS builder
+FROM node:20-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
+RUN corepack enable && corepack prepare pnpm@10.15.4 --activate
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/ ./packages/
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm install
 
 COPY . .
 
