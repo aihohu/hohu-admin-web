@@ -27,7 +27,8 @@ const searchParams: Api.SystemManage.UserSearchParams = reactive({
   userGender: null,
   nickname: null,
   userPhone: null,
-  userEmail: null
+  userEmail: null,
+  roleCode: null
 });
 
 const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagination } = useNaivePaginatedTable({
@@ -82,6 +83,24 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       title: $t('page.system.user.nickname'),
       align: 'center',
       minWidth: 100
+    },
+    {
+      key: 'roleNames',
+      title: $t('page.system.user.userRole'),
+      align: 'center',
+      minWidth: 150,
+      render: row => {
+        if (!row.roleNames || row.roleNames.length === 0) return '-';
+        return (
+          <NSpace size="small" justify="center">
+            {row.roleNames.map(name => (
+              <NTag size="small" type="info">
+                {name}
+              </NTag>
+            ))}
+          </NSpace>
+        );
+      }
     },
     {
       key: 'userPhone',

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, toRaw } from 'vue';
+import { computed, onMounted, ref, toRaw } from 'vue';
 import { jsonClone } from '@sa/utils';
 import { enableStatusOptions, userGenderOptions } from '@/constants/business';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { fetchGetAllRoles } from '@/service/api';
 import { translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
 
@@ -29,6 +30,19 @@ const rules = computed<Record<RuleKey, App.Global.FormRule>>(() => {
     userEmail: patternRules.email,
     userPhone: patternRules.phone
   };
+});
+
+const roleOptions = ref<{ label: string; value: string }[]>([]);
+
+async function loadRoles() {
+  const { data, error } = await fetchGetAllRoles();
+  if (!error && data) {
+    roleOptions.value = data.map(r => ({ label: r.roleName, value: r.roleCode }));
+  }
+}
+
+onMounted(() => {
+  loadRoles();
 });
 
 const defaultModel = jsonClone(toRaw(model.value));
@@ -89,6 +103,14 @@ async function search() {
                 v-model:value="model.userGender"
                 :placeholder="$t('page.system.user.form.userGender')"
                 :options="translateOptions(userGenderOptions)"
+                clearable
+              />
+            </NFormItemGi>
+            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.user.userRole')" class="pr-24px">
+              <NSelect
+                v-model:value="model.roleCode"
+                :placeholder="$t('page.system.user.form.userRole')"
+                :options="roleOptions"
                 clearable
               />
             </NFormItemGi>

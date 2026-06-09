@@ -148,7 +148,11 @@ watch(visible, () => {
           <NInput v-model:value="model.roleName" :placeholder="$t('page.system.role.form.roleName')" />
         </NFormItem>
         <NFormItem :label="$t('page.system.role.roleCode')" path="roleCode">
-          <NInput v-model:value="model.roleCode" :placeholder="$t('page.system.role.form.roleCode')" />
+          <NInput
+            v-model:value="model.roleCode"
+            :placeholder="$t('page.system.role.form.roleCode')"
+            @input="(val: string) => (model.roleCode = val.toUpperCase())"
+          />
         </NFormItem>
         <NFormItem :label="$t('page.system.role.roleStatus')" path="status">
           <NRadioGroup v-model:value="model.status">
