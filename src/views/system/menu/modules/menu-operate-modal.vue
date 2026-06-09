@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import type { SelectOption } from 'naive-ui';
 import { enableStatusOptions, menuIconTypeOptions, menuTypeOptions } from '@/constants/business';
-import { fetchSaveMenu, fetchUpdateMenu } from '@/service/api';
+import { fetchGetMenuTree, fetchSaveMenu, fetchUpdateMenu } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { getLocalIcons } from '@/utils/icon';
 import { $t } from '@/locales';
@@ -126,6 +126,16 @@ const disabledMenuType = computed(() => props.operateType === 'edit');
 
 const loading = ref(false);
 
+const parentTreeOptions = ref<Api.SystemManage.MenuTree[]>([]);
+const editingMenuId = ref<string | null>(null);
+
+async function loadMenuTree() {
+  const { data, error } = await fetchGetMenuTree();
+  if (!error && data) {
+    parentTreeOptions.value = data;
+  }
+}
+
 const localIcons = getLocalIcons();
 const localIconOptions = localIcons.map<SelectOption>(item => ({
   label: () => (
@@ -169,6 +179,7 @@ const layoutOptions: CommonType.Option[] = [
 
 function handleInitModel() {
   model.value = createDefaultModel();
+  editingMenuId.value = null;
 
   if (!props.rowData) return;
 
@@ -179,6 +190,7 @@ function handleInitModel() {
   }
 
   if (props.operateType === 'edit') {
+    editingMenuId.value = props.rowData.menuId;
     const {
       menuType, menuName, routeName, routePath, component, order,
       i18nKey, icon, iconType, status, parentId, keepAlive, constant,
@@ -310,6 +322,7 @@ watch(visible, () => {
   if (visible.value) {
     handleInitModel();
     restoreValidation();
+    loadMenuTree();
   }
 });
 
@@ -333,6 +346,17 @@ watch(
             <NRadioGroup v-model:value="model.menuType" :disabled="disabledMenuType">
               <NRadio v-for="item in menuTypeOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
             </NRadioGroup>
+          </NFormItemGi>
+          <NFormItemGi span="24 m:12" :label="$t('page.system.menu.parentMenu')" path="parentId">
+            <NTreeSelect
+              v-model:value="model.parentId"
+              :options="parentTreeOptions"
+              :placeholder="$t('page.system.menu.form.parentMenu')"
+              key-field="id"
+              label-field="label"
+              children-field="children"
+              clearable
+            />
           </NFormItemGi>
           <NFormItemGi span="24 m:12" :label="$t('page.system.menu.menuName')" path="menuName">
             <NInput v-model:value="model.menuName" :placeholder="$t('page.system.menu.form.menuName')" />
