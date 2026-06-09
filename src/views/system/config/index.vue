@@ -2,14 +2,16 @@
 import { reactive } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord } from '@/constants/business';
-import { fetchBatchDeleteConfig, fetchDeleteConfig, fetchGetConfigList } from '@/service/api';
+import { fetchBatchDeleteConfig, fetchDeleteConfig, fetchExportConfig, fetchGetConfigList, fetchImportConfig } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
+import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
 import ConfigOperateDrawer from './modules/config-operate-drawer.vue';
 import ConfigSearch from './modules/config-search.vue';
 
 const appStore = useAppStore();
+const { hasAuth } = useAuth();
 
 const searchParams: Api.SystemManage.ConfigSearchParams = reactive({
   current: 1,
@@ -165,6 +167,31 @@ async function handleDelete(id: string) {
 function edit(id: string) {
   handleEdit(id);
 }
+
+async function handleExport() {
+  const { error, response } = await fetchExportConfig(searchParams);
+  if (!error && response) {
+    const blob = new Blob([response as any], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'config_export.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+}
+
+function handleImport({ file }: { file: { file: File } }) {
+  fetchImportConfig(file.file).then((res: any) => {
+    if (!res.error) {
+      window.$message?.success(res.data?.msg || '导入成功');
+      getDataByPage();
+    }
+  });
+  return false;
+}
 </script>
 
 <template>
@@ -172,14 +199,35 @@ function edit(id: string) {
     <ConfigSearch v-model:model="searchParams" @search="getDataByPage" />
     <NCard :title="$t('page.system.config.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
-        <TableHeaderOperation
-          v-model:columns="columnChecks"
-          :disabled-delete="checkedRowKeys.length === 0"
-          :loading="loading"
-          @add="handleAdd"
-          @delete="handleBatchDelete"
-          @refresh="getData"
-        />
+        <NSpace>
+          <NButton v-if="hasAuth('system:config:export')" size="small" ghost type="success" @click="handleExport">
+            <template #icon>
+              <icon-uil-export class="text-icon" />
+            </template>
+            {{ $t('common.export') }}
+          </NButton>
+          <NUpload
+            v-if="hasAuth('system:config:import')"
+            :show-file-list="false"
+            accept=".xlsx,.xls"
+            :custom-request="handleImport"
+          >
+            <NButton size="small" ghost type="warning">
+              <template #icon>
+                <icon-uil-import class="text-icon" />
+              </template>
+              {{ $t('common.import') }}
+            </NButton>
+          </NUpload>
+          <TableHeaderOperation
+            v-model:columns="columnChecks"
+            :disabled-delete="checkedRowKeys.length === 0"
+            :loading="loading"
+            @add="handleAdd"
+            @delete="handleBatchDelete"
+            @refresh="getData"
+          />
+        </NSpace>
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"

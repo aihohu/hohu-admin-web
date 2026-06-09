@@ -244,8 +244,9 @@ function handleUpdateI18nKeyByRouteName() {
 }
 
 function handleCreateButton() {
+  const prefix = getPermissionPrefix();
   const buttonItem: Api.SystemManage.MenuButton = {
-    code: '',
+    code: prefix ? `${prefix}:` : '',
     desc: ''
   };
 
@@ -257,7 +258,9 @@ const crudPresets = [
   { code: 'add', labelKey: 'page.system.menu.presetButton.add' as const, desc: '新增' },
   { code: 'edit', labelKey: 'page.system.menu.presetButton.edit' as const, desc: '修改' },
   { code: 'delete', labelKey: 'page.system.menu.presetButton.delete' as const, desc: '删除' },
-  { code: 'batch-delete', labelKey: 'page.system.menu.presetButton.batchDelete' as const, desc: '批量删除' }
+  { code: 'batch-delete', labelKey: 'page.system.menu.presetButton.batchDelete' as const, desc: '批量删除' },
+  { code: 'export', labelKey: 'page.system.menu.presetButton.export' as const, desc: '导出' },
+  { code: 'import', labelKey: 'page.system.menu.presetButton.import' as const, desc: '导入' }
 ];
 
 function getPermissionPrefix(): string {
@@ -509,7 +512,7 @@ watch(
                   <div class="ml-8px flex-y-center flex-1 gap-12px">
                     <NInput
                       v-model:value="value.code"
-                      :placeholder="$t('page.system.menu.form.buttonCode')"
+                      :placeholder="getPermissionPrefix() ? `${getPermissionPrefix()}:` : $t('page.system.menu.form.buttonCode')"
                       class="flex-1"
                     />
                     <NInput

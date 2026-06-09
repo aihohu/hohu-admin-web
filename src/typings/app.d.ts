@@ -359,6 +359,8 @@ declare namespace App {
         saveSuccess: string;
         clear: string;
         view: string;
+        export: string;
+        import: string;
         userCenter: string;
         yesOrNo: {
           yes: string;
@@ -656,6 +658,8 @@ declare namespace App {
               edit: string;
               delete: string;
               batchDelete: string;
+              export: string;
+              import: string;
             };
             menuStatus: string;
             form: {

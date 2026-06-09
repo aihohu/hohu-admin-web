@@ -559,6 +559,27 @@ export function fetchBatchDeleteConfig(data: string[]) {
   });
 }
 
+/** export config to excel */
+export function fetchExportConfig(params?: Api.SystemManage.ConfigSearchParams) {
+  return request<Blob>({
+    url: '/system/config/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  });
+}
+
+/** import config from excel */
+export function fetchImportConfig(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request({
+    url: '/system/config/import',
+    method: 'post',
+    data: formData
+  });
+}
+
 /** get operation log list */
 export function fetchGetOperationLogList(params?: Api.SystemManage.OperationLogSearchParams) {
   return request<Api.SystemManage.OperationLogList>({

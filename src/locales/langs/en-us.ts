@@ -51,7 +51,9 @@ const local: App.I18n.Schema = {
     },
     saveSuccess: 'Save Success',
     clear: 'Clear',
-    view: 'View'
+    view: 'View',
+    export: 'Export',
+    import: 'Import'
   },
   request: {
     logout: 'Logout user after request failed',
@@ -428,7 +430,9 @@ const local: App.I18n.Schema = {
           add: 'Add',
           edit: 'Edit',
           delete: 'Delete',
-          batchDelete: 'Batch Delete'
+          batchDelete: 'Batch Delete',
+          export: 'Export',
+          import: 'Import'
         },
         menuStatus: 'Menu Status',
         form: {

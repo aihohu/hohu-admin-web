@@ -51,7 +51,9 @@ const local: App.I18n.Schema = {
     },
     saveSuccess: '保存成功',
     clear: '清除',
-    view: '查看'
+    view: '查看',
+    export: '导出',
+    import: '导入'
   },
   request: {
     logout: '请求失败后登出用户',
@@ -423,7 +425,9 @@ const local: App.I18n.Schema = {
           add: '新增',
           edit: '修改',
           delete: '删除',
-          batchDelete: '批量删除'
+          batchDelete: '批量删除',
+          export: '导出',
+          import: '导入'
         },
         menuStatus: '菜单状态',
         form: {
