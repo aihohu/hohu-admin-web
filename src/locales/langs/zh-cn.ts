@@ -50,7 +50,8 @@ const local: App.I18n.Schema = {
       no: '否'
     },
     saveSuccess: '保存成功',
-    clear: '清除'
+    clear: '清除',
+    view: '查看'
   },
   request: {
     logout: '请求失败后登出用户',
@@ -580,7 +581,8 @@ const local: App.I18n.Schema = {
         statusRunning: '执行中',
         clean: '清理日志',
         cleanConfirm: '确认清理30天前的日志？',
-        cleanSuccess: '日志清理成功'
+        cleanSuccess: '日志清理成功',
+        detailTitle: '日志详情'
       },
       operationLog: {
         title: '操作日志',

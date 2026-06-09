@@ -1,10 +1,11 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { fetchBatchDeleteJobLog, fetchCleanJobLog, fetchGetJobLogList } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
+import JobLogDetailDrawer from './modules/job-log-detail-drawer.vue';
 import JobLogSearch from './modules/job-log-search.vue';
 
 defineOptions({
@@ -98,11 +99,32 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         minWidth: 200,
         ellipsis: { tooltip: true },
         render: row => row.errorMsg || '-'
+      },
+      {
+        key: 'actions',
+        title: $t('common.action'),
+        align: 'center',
+        width: 80,
+        fixed: 'right',
+        render: row => (
+          <NButton size="small" type="primary" text onClick={() => handleViewDetail(row)}>
+            {$t('common.view')}
+          </NButton>
+        )
       }
     ]
   });
 
 const { checkedRowKeys, onDeleted } = useTableOperate(data, 'jobLogId', getData);
+
+/** 详情抽屉 */
+const detailVisible = ref(false);
+const detailRow = ref<Api.SystemManage.JobLog | null>(null);
+
+function handleViewDetail(row: Api.SystemManage.JobLog) {
+  detailRow.value = row;
+  detailVisible.value = true;
+}
 
 async function handleBatchDelete() {
   const { error } = await fetchBatchDeleteJobLog(checkedRowKeys.value);
@@ -150,7 +172,7 @@ async function handleClean() {
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
-        :scroll-x="1200"
+        :scroll-x="1280"
         :loading="loading"
         remote
         :row-key="row => row.jobLogId"
@@ -158,6 +180,7 @@ async function handleClean() {
         class="sm:h-full"
       />
     </NCard>
+    <JobLogDetailDrawer v-model:visible="detailVisible" :row-data="detailRow" />
   </div>
 </template>
 

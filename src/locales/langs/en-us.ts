@@ -50,7 +50,8 @@ const local: App.I18n.Schema = {
       no: 'No'
     },
     saveSuccess: 'Save Success',
-    clear: 'Clear'
+    clear: 'Clear',
+    view: 'View'
   },
   request: {
     logout: 'Logout user after request failed',
@@ -585,7 +586,8 @@ const local: App.I18n.Schema = {
         statusRunning: 'Running',
         clean: 'Clean Logs',
         cleanConfirm: 'Confirm to clean logs older than 30 days?',
-        cleanSuccess: 'Logs cleaned successfully'
+        cleanSuccess: 'Logs cleaned successfully',
+        detailTitle: 'Log Detail'
       },
       operationLog: {
         title: 'Operation Log',

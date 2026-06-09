@@ -358,6 +358,7 @@ declare namespace App {
         updateSuccess: string;
         saveSuccess: string;
         clear: string;
+        view: string;
         userCenter: string;
         yesOrNo: {
           yes: string;
@@ -856,6 +857,7 @@ declare namespace App {
             clean: string;
             cleanConfirm: string;
             cleanSuccess: string;
+            detailTitle: string;
           };
           operationLog: {
             title: string;
