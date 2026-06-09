@@ -249,7 +249,11 @@ async function handleSubmit() {
     const { error, data } = res;
     if (!error) {
       // 新增模式：批量保存待处理的模型
-      if (props.operateType === 'add' && (data as unknown as Api.Ai.Provider)?.providerId && pendingModels.value.length > 0) {
+      if (
+        props.operateType === 'add' &&
+        (data as unknown as Api.Ai.Provider)?.providerId &&
+        pendingModels.value.length > 0
+      ) {
         const providerId = (data as unknown as Api.Ai.Provider).providerId;
         for (const pm of pendingModels.value) {
           await fetchAddProviderModel(providerId, pm);
@@ -402,7 +406,14 @@ watch(visible, () => {
       <!-- Add/Edit model form (shared) -->
       <div v-if="showModelForm" class="model-form">
         <NCard size="small" :title="editingModel ? t('common.edit') : t('page.ai.provider.addModel')">
-          <NForm ref="modelFormRef" :model="newModel" :rules="modelFormRules" label-placement="left" label-width="auto" size="small">
+          <NForm
+            ref="modelFormRef"
+            :model="newModel"
+            :rules="modelFormRules"
+            label-placement="left"
+            label-width="auto"
+            size="small"
+          >
             <NFormItem :label="t('page.ai.provider.name')" path="name">
               <NInput v-model:value="newModel.name" :placeholder="t('page.ai.provider.form.modelName')" />
             </NFormItem>
