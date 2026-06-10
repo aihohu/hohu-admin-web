@@ -613,7 +613,10 @@ const local: App.I18n.Schema = {
         createTime: 'Time',
         clean: 'Clean',
         cleanConfirm: 'Confirm cleaning operation logs older than 90 days?',
-        cleanSuccess: 'Cleaned successfully'
+        cleanSuccess: 'Cleaned successfully',
+        detailTitle: 'Operation Log Detail',
+        requestParams: 'Request Params',
+        noParams: 'No request params'
       },
       loginLog: {
         title: 'Login Log',

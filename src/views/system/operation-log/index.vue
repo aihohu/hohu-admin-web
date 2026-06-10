@@ -1,10 +1,11 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { fetchBatchDeleteOperationLog, fetchCleanOperationLog, fetchGetOperationLogList } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
+import OperationLogDetailModal from './modules/operation-log-detail-modal.vue';
 import OperationLogSearch from './modules/operation-log-search.vue';
 
 defineOptions({
@@ -115,11 +116,30 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         title: $t('page.system.operationLog.createTime'),
         align: 'center',
         minWidth: 160
+      },
+      {
+        key: 'actions',
+        title: $t('common.action'),
+        align: 'center',
+        width: 80,
+        render: row => (
+          <NButton text type="primary" size="small" onClick={() => handleView(row)}>
+            {$t('common.view')}
+          </NButton>
+        )
       }
     ]
   });
 
 const { checkedRowKeys, onDeleted } = useTableOperate(data, 'operationLogId', getData);
+
+const detailVisible = ref(false);
+const detailRow = ref<Api.SystemManage.OperationLog | null>(null);
+
+function handleView(row: Api.SystemManage.OperationLog) {
+  detailRow.value = row;
+  detailVisible.value = true;
+}
 
 async function handleBatchDelete() {
   const { error } = await fetchBatchDeleteOperationLog(checkedRowKeys.value);
@@ -180,6 +200,7 @@ async function handleClean() {
         class="sm:h-full"
       />
     </NCard>
+    <OperationLogDetailModal v-model:visible="detailVisible" :row-data="detailRow" />
   </div>
 </template>
 

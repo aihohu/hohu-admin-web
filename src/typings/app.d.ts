@@ -884,6 +884,9 @@ declare namespace App {
             clean: string;
             cleanConfirm: string;
             cleanSuccess: string;
+            detailTitle: string;
+            requestParams: string;
+            noParams: string;
           };
           loginLog: {
             title: string;

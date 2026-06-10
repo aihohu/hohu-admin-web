@@ -608,7 +608,10 @@ const local: App.I18n.Schema = {
         createTime: '操作时间',
         clean: '清理',
         cleanConfirm: '确认清理 90 天前的操作日志？',
-        cleanSuccess: '清理成功'
+        cleanSuccess: '清理成功',
+        detailTitle: '操作日志详情',
+        requestParams: '请求参数',
+        noParams: '无请求参数'
       },
       loginLog: {
         title: '登录日志',
