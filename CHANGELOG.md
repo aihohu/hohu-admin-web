@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.1.3] (2026-06-11)
+
+### Features
+
+- **Config Export/Import UI** — Excel-based config export and import with permission control and preset button improvements
+- **Operation Log Detail** — Modal to view full request parameters in operation log
+- **Job Log Detail** — Modal to view job log details with dedicated view button
+- **User Role Column** — Display role names in user list, add role search filter and auto-uppercase role code
+- **Menu Parent Selector** — Tree-based parent menu selector in menu edit modal
+
+### Bug Fixes
+
+- **Dockerfile** — Fix pnpm/Node.js version compatibility (pin pnpm 11.1.3, Node 22, client_max_body_size)
+
+### Improvements
+
+- **Upstream Sync** — Sync SoybeanAdmin framework updates: Vite 8, TypeScript 6, UnoCSS, `moduleResolution: bundler`, oxc extension, MixMenu context key stability, mobile sider fix
+
 ## [v0.1.2] (2026-05-28)
 
 ### Features
