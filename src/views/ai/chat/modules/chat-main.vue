@@ -128,7 +128,7 @@ const quickActions = [
     <template v-if="!hasConversation">
       <div class="flex-1 flex flex-col items-center justify-center px-24px">
         <div class="welcome-icon">
-          <icon-ic-round-smart-toy class="text-36px" />
+          <IconIcRoundSmartToy class="text-36px" />
         </div>
         <h2 class="welcome-title">{{ t('page.ai.chat.welcomeTitle') }}</h2>
         <p class="welcome-desc">{{ t('page.ai.chat.welcomeDesc') }}</p>
@@ -194,7 +194,7 @@ const quickActions = [
           <!-- Thinking indicator -->
           <div v-if="aiStore.isStreaming && !aiStore.streamingText" class="msg-row msg-row--assistant">
             <div class="msg-avatar msg-avatar--ai">
-              <icon-ic-round-smart-toy class="text-18px" />
+              <IconIcRoundSmartToy class="text-18px" />
             </div>
             <div class="msg-bubble msg-bubble--ai flex items-center gap-8px">
               <NSpin size="small" />
@@ -215,7 +215,7 @@ const quickActions = [
     <!-- Scroll to bottom FAB -->
     <Transition name="fab-fade">
       <button v-if="showScrollBtn" class="scroll-bottom-fab" @click="scrollToBottom">
-        <icon-ic-round-arrow-downward class="text-20px" />
+        <IconIcRoundArrowDownward class="text-20px" />
       </button>
     </Transition>
   </div>

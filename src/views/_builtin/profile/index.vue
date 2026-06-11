@@ -194,7 +194,7 @@ onMounted(() => {
               <div
                 class="absolute inset-0 flex-center rounded-full bg-black/30 opacity-0 transition-opacity hover:opacity-100"
               >
-                <icon-ic-round-edit class="text-20px text-white" />
+                <IconIcRoundEdit class="text-20px text-white" />
               </div>
             </div>
             <NText class="text-18px font-bold mb-4px">{{ profile.userName }}</NText>
@@ -335,7 +335,7 @@ onMounted(() => {
         <NUpload accept="image/*" :max="1" :show-file-list="false" :custom-request="handleAvatarUpload">
           <NButton block>
             <template #icon>
-              <icon-ic-round-cloud-upload class="text-icon" />
+              <IconIcRoundCloudUpload class="text-icon" />
             </template>
             {{ $t('page.profile.uploadAvatar') }}
           </NButton>

@@ -54,7 +54,7 @@ function handleScroll(e: Event) {
     <div class="px-12px pt-12px pb-8px">
       <NButton type="primary" block @click="handleCreate">
         <template #icon>
-          <icon-ic-round-plus class="text-16px" />
+          <IconIcRoundPlus class="text-16px" />
         </template>
         {{ t('page.ai.chat.newChat') }}
       </NButton>
@@ -70,7 +70,7 @@ function handleScroll(e: Event) {
         round
       >
         <template #prefix>
-          <icon-ic-round-search class="text-14px" />
+          <IconIcRoundSearch class="text-14px" />
         </template>
       </NInput>
     </div>
@@ -85,7 +85,7 @@ function handleScroll(e: Event) {
           :class="{ 'conv-item--active': aiStore.currentConversationId === conv.conversationId }"
           @click="handleSelect(conv.conversationId)"
         >
-          <icon-ic-round-chat-bubble-outline class="flex-shrink-0 text-16px" />
+          <IconIcRoundChatBubbleOutline class="flex-shrink-0 text-16px" />
           <span class="conv-title">{{ conv.title || t('page.ai.chat.newChat') }}</span>
           <NButton
             quaternary
@@ -95,7 +95,7 @@ function handleScroll(e: Event) {
             @click.stop="handleDelete(conv.conversationId)"
           >
             <template #icon>
-              <icon-ic-round-delete-outline class="text-14px" />
+              <IconIcRoundDeleteOutline class="text-14px" />
             </template>
           </NButton>
         </div>

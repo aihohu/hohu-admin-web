@@ -565,7 +565,7 @@ export function fetchExportConfig(params?: Api.SystemManage.ConfigSearchParams) 
     url: '/system/config/export',
     method: 'get',
     params,
-    responseType: 'blob'
+    responseType: 'blob' as any
   });
 }
 

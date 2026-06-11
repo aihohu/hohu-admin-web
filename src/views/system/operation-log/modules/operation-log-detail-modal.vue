@@ -53,17 +53,8 @@ const parsedParams = computed(() => {
       <NDivider v-if="parsedParams" style="margin: 16px 0 8px">
         {{ $t('page.system.operationLog.requestParams') }}
       </NDivider>
-      <NCode
-        v-if="parsedParams"
-        :code="parsedParams"
-        language="json"
-        word-wrap
-      />
-      <NEmpty
-        v-else
-        :description="$t('page.system.operationLog.noParams')"
-        style="margin-top: 16px"
-      />
+      <NCode v-if="parsedParams" :code="parsedParams" language="json" word-wrap />
+      <NEmpty v-else :description="$t('page.system.operationLog.noParams')" style="margin-top: 16px" />
     </template>
   </NModal>
 </template>

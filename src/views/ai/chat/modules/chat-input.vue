@@ -139,7 +139,7 @@ async function handleDrop(e: DragEvent) {
         <button class="model-selector" @click.stop="showModelMenu = !showModelMenu">
           <span class="model-name">{{ currentModel.providerName }}</span>
           <span class="model-tag">{{ currentModel.model }}</span>
-          <icon-ic-round-arrow-drop-down class="text-16px" />
+          <IconIcRoundArrowDropDown class="text-16px" />
         </button>
 
         <!-- Dropdown grouped by provider -->
@@ -179,7 +179,7 @@ async function handleDrop(e: DragEvent) {
       <!-- Input box -->
       <div class="input-box">
         <button class="input-attach-btn" :disabled="disabled || isStreaming" title="上传图片" @click="triggerFileInput">
-          <icon-ic-round-image class="text-18px" />
+          <IconIcRoundImage class="text-18px" />
         </button>
         <input
           ref="fileInputRef"

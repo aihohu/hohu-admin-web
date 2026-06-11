@@ -335,7 +335,7 @@ watch(visible, () => {
                       @click="handleTestModel(m)"
                     >
                       <template #icon>
-                        <icon-ic-round-play-arrow class="text-14px" />
+                        <IconIcRoundPlayArrow class="text-14px" />
                       </template>
                     </NButton>
                   </template>
@@ -343,14 +343,14 @@ watch(visible, () => {
                 </NTooltip>
                 <NButton quaternary circle size="tiny" @click="openEditModel(m)">
                   <template #icon>
-                    <icon-ic-round-edit class="text-14px" />
+                    <IconIcRoundEdit class="text-14px" />
                   </template>
                 </NButton>
                 <NPopconfirm @positive-click="deleteModel(m)">
                   <template #trigger>
                     <NButton quaternary circle size="tiny">
                       <template #icon>
-                        <icon-ic-round-delete class="text-14px" />
+                        <IconIcRoundDelete class="text-14px" />
                       </template>
                     </NButton>
                   </template>
@@ -363,7 +363,7 @@ watch(visible, () => {
 
           <NButton v-if="!showModelForm" dashed size="small" block @click="openAddModel">
             <template #icon>
-              <icon-ic-round-add class="text-14px" />
+              <IconIcRoundAdd class="text-14px" />
             </template>
             {{ t('page.ai.provider.addModel') }}
           </NButton>
@@ -387,7 +387,7 @@ watch(visible, () => {
               </NTag>
               <NButton quaternary circle size="tiny" @click="removePendingModel(idx)">
                 <template #icon>
-                  <icon-ic-round-close class="text-14px" />
+                  <IconIcRoundClose class="text-14px" />
                 </template>
               </NButton>
             </NSpace>
@@ -397,7 +397,7 @@ watch(visible, () => {
 
         <NButton v-if="!showModelForm" dashed size="small" block @click="openAddModel">
           <template #icon>
-            <icon-ic-round-add class="text-14px" />
+            <IconIcRoundAdd class="text-14px" />
           </template>
           {{ t('page.ai.provider.addModel') }}
         </NButton>

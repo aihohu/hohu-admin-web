@@ -143,7 +143,7 @@ watch(
     <slot>
       <NButton v-if="!isImageMode" size="small" :disabled="disabled">
         <template #icon>
-          <icon-ic-round-cloud-upload class="text-icon" />
+          <IconIcRoundCloudUpload class="text-icon" />
         </template>
         {{ $t('page.system.file.uploadFile') }}
       </NButton>

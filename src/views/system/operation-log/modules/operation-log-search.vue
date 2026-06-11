@@ -113,13 +113,13 @@ function handleDateRangeChange(value: [number, number] | null) {
               <NSpace class="w-full" justify="end">
                 <NButton @click="resetModel">
                   <template #icon>
-                    <icon-ic-round-refresh class="text-icon" />
+                    <IconIcRoundRefresh class="text-icon" />
                   </template>
                   {{ $t('common.reset') }}
                 </NButton>
                 <NButton type="primary" ghost @click="search">
                   <template #icon>
-                    <icon-ic-round-search class="text-icon" />
+                    <IconIcRoundSearch class="text-icon" />
                   </template>
                   {{ $t('common.search') }}
                 </NButton>

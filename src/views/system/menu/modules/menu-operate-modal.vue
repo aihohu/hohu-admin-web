@@ -512,7 +512,9 @@ watch(
                   <div class="ml-8px flex-y-center flex-1 gap-12px">
                     <NInput
                       v-model:value="value.code"
-                      :placeholder="getPermissionPrefix() ? `${getPermissionPrefix()}:` : $t('page.system.menu.form.buttonCode')"
+                      :placeholder="
+                        getPermissionPrefix() ? `${getPermissionPrefix()}:` : $t('page.system.menu.form.buttonCode')
+                      "
                       class="flex-1"
                     />
                     <NInput

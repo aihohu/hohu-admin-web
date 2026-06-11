@@ -164,7 +164,7 @@ function handleReset() {
         <NFormItem>
           <NButton type="primary" @click="handleSearch">
             <template #icon>
-              <icon-ic-round-search class="align-sub text-icon" />
+              <IconIcRoundSearch class="align-sub text-icon" />
             </template>
             {{ $t('common.search') }}
           </NButton>
@@ -193,7 +193,7 @@ function handleReset() {
           <template #prefix>
             <NButton type="primary" size="small" @click="uploadModalRef?.open()">
               <template #icon>
-                <icon-ic-round-cloud-upload class="align-sub text-icon" />
+                <IconIcRoundCloudUpload class="align-sub text-icon" />
               </template>
               {{ $t('page.system.file.uploadFile') }}
             </NButton>
@@ -203,7 +203,7 @@ function handleReset() {
               <template #trigger>
                 <NButton size="small" ghost type="error" :disabled="checkedRowKeys.length === 0">
                   <template #icon>
-                    <icon-ic-round-delete class="text-icon" />
+                    <IconIcRoundDelete class="text-icon" />
                   </template>
                   {{ $t('common.batchDelete') }}
                 </NButton>

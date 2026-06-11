@@ -95,8 +95,8 @@ function previewImage(url: string) {
   <div class="msg-row" :class="message.role === 'user' ? 'msg-row--user' : 'msg-row--assistant'">
     <!-- Avatar -->
     <div class="msg-avatar" :class="message.role === 'user' ? 'msg-avatar--user' : 'msg-avatar--ai'">
-      <icon-ic-round-person v-if="message.role === 'user'" class="text-18px" />
-      <icon-ic-round-smart-toy v-else class="text-18px" />
+      <IconIcRoundPerson v-if="message.role === 'user'" class="text-18px" />
+      <IconIcRoundSmartToy v-else class="text-18px" />
     </div>
 
     <!-- Content area -->
@@ -122,7 +122,7 @@ function previewImage(url: string) {
               <div class="msg-edit-btns">
                 <button class="edit-btn edit-btn--cancel" @click="cancelEdit">{{ t('common.cancel') }}</button>
                 <button class="edit-btn edit-btn--submit" :disabled="!editContent.trim()" @click="submitEdit">
-                  <icon-ic-round-arrow-upward class="text-14px" />
+                  <IconIcRoundArrowUpward class="text-14px" />
                   {{ t('common.confirm') }}
                 </button>
               </div>
@@ -151,7 +151,7 @@ function previewImage(url: string) {
             <NTooltip v-if="isLastUserMessage" trigger="hover">
               <template #trigger>
                 <button class="msg-action-btn" @click="startEdit">
-                  <icon-ic-round-edit class="text-14px" />
+                  <IconIcRoundEdit class="text-14px" />
                 </button>
               </template>
               {{ t('common.edit') }}
@@ -159,7 +159,7 @@ function previewImage(url: string) {
             <NTooltip trigger="hover">
               <template #trigger>
                 <button class="msg-action-btn" @click="copyMessageContent">
-                  <icon-ic-round-content-copy class="text-14px" />
+                  <IconIcRoundContentCopy class="text-14px" />
                 </button>
               </template>
               {{ t('page.ai.chat.copy') }}
@@ -178,7 +178,7 @@ function previewImage(url: string) {
           <NTooltip v-if="isLastAssistantMessage" trigger="hover">
             <template #trigger>
               <button class="msg-action-btn" @click="emit('regenerate')">
-                <icon-ic-round-refresh class="text-14px" />
+                <IconIcRoundRefresh class="text-14px" />
               </button>
             </template>
             {{ t('page.ai.chat.regenerate') }}
@@ -186,7 +186,7 @@ function previewImage(url: string) {
           <NTooltip trigger="hover">
             <template #trigger>
               <button class="msg-action-btn" @click="copyMessageContent">
-                <icon-ic-round-content-copy class="text-14px" />
+                <IconIcRoundContentCopy class="text-14px" />
               </button>
             </template>
             {{ t('page.ai.chat.copy') }}

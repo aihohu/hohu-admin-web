@@ -29,7 +29,7 @@ defineExpose({ open });
     <FileUpload multiple>
       <NUploadDragger>
         <div class="mb-12px">
-          <icon-ic-round-cloud-upload class="text-48px text-gray-400" />
+          <IconIcRoundCloudUpload class="text-48px text-gray-400" />
         </div>
         <NText>{{ $t('page.system.file.uploadDraggerTip') }}</NText>
         <NP depth="3" class="m-0 mt-8px">

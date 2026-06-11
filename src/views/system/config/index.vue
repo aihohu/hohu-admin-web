@@ -183,7 +183,8 @@ async function handleExport() {
   }
 }
 
-function handleImport({ file }: { file: { file: File } }) {
+function handleImport({ file }: { file: { file: File | null } }) {
+  if (!file.file) return false;
   fetchImportConfig(file.file).then((res: any) => {
     if (!res.error) {
       window.$message?.success(res.data?.msg || '导入成功');
@@ -202,7 +203,7 @@ function handleImport({ file }: { file: { file: File } }) {
         <NSpace>
           <NButton v-if="hasAuth('system:config:export')" size="small" ghost type="success" @click="handleExport">
             <template #icon>
-              <icon-uil-export class="text-icon" />
+              <IconUilExport class="text-icon" />
             </template>
             {{ $t('common.export') }}
           </NButton>
@@ -214,7 +215,7 @@ function handleImport({ file }: { file: { file: File } }) {
           >
             <NButton size="small" ghost type="warning">
               <template #icon>
-                <icon-uil-import class="text-icon" />
+                <IconUilImport class="text-icon" />
               </template>
               {{ $t('common.import') }}
             </NButton>
