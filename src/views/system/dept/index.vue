@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import type { FlatResponseData } from '@sa/axios';
 import { jsonClone } from '@sa/utils';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
@@ -10,6 +10,7 @@ import { useNaiveTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
 import DeptOperateDrawer from './modules/dept-operate-drawer.vue';
 import DeptSearch from './modules/dept-search.vue';
+import DeptUsersModal from './modules/dept-users-modal.vue';
 
 const appStore = useAppStore();
 
@@ -97,9 +98,12 @@ const { columns, columnChecks, data, loading, getData, scrollX } = useNaiveTable
       key: 'operate',
       title: $t('common.operate'),
       align: 'center',
-      width: 220,
+      width: 280,
       render: row => (
         <div class="flex-center gap-8px">
+          <NButton type="success" ghost size="small" onClick={() => manageUsers(row.deptId)}>
+            {$t('page.system.dept.manageUsers')}
+          </NButton>
           <NButton type="info" ghost size="small" onClick={() => addChild(row.deptId)}>
             {$t('page.system.dept.addChildDept')}
           </NButton>
@@ -132,6 +136,15 @@ const {
   onBatchDeleted,
   onDeleted
 } = useTableOperate(data, 'deptId', getData);
+
+/** users modal state */
+const usersModalVisible = ref(false);
+const usersModalDeptId = ref<string>('');
+
+function manageUsers(deptId: string) {
+  usersModalDeptId.value = deptId;
+  usersModalVisible.value = true;
+}
 
 /** recursively find node in tree */
 function findInTree(tree: Api.SystemManage.DeptTree[], id: string): Api.SystemManage.DeptTree | null {
@@ -207,6 +220,7 @@ async function handleDelete(id: string) {
         :row-data="editingData"
         @submitted="getData"
       />
+      <DeptUsersModal v-model:visible="usersModalVisible" :dept-id="usersModalDeptId" @updated="getData" />
     </NCard>
   </div>
 </template>

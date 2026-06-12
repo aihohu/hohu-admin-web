@@ -112,6 +112,14 @@ declare namespace Api {
      */
     type UserGender = '0' | '1' | '2';
 
+    /** user dept association item */
+    type UserDeptItem = {
+      /** dept id */
+      deptId: string;
+      /** whether this is the primary dept */
+      isPrimary: boolean;
+    };
+
     /** user */
     type User = Common.CommonRecord<{
       userId: string;
@@ -130,12 +138,23 @@ declare namespace Api {
       roles: string[];
       /** user role name display */
       roleNames: string[];
+      /** user dept id list (display) */
+      deptIds: string[];
+      /** user dept names joined string */
+      deptNames: string;
+      /** primary dept id */
+      primaryDept: string | null;
+      /** full user-dept associations */
+      userDepts: UserDeptItem[];
     }>;
 
     type CreateUserParams = Pick<
       Api.SystemManage.User,
       'userName' | 'password' | 'userGender' | 'nickname' | 'userPhone' | 'userEmail' | 'roles' | 'status'
-    >;
+    > & {
+      /** dept associations (required: at least one primary if non-empty) */
+      deptIds: Api.SystemManage.UserDeptItem[];
+    };
 
     /** user search params */
     type UserSearchParams = CommonType.RecordNullable<
@@ -303,6 +322,30 @@ declare namespace Api {
       Api.SystemManage.Dept,
       'parentId' | 'deptName' | 'orderNum' | 'leader' | 'phone' | 'email' | 'status'
     >;
+
+    /** dept user item (for dept-users management) */
+    type DeptUserItem = {
+      userId: string;
+      userName: string;
+      nickname: string | null;
+      userEmail: string | null;
+      userPhone: string | null;
+      status: string | null;
+      isMember: boolean;
+      isPrimary: boolean;
+    };
+
+    /** dept users management data */
+    type DeptUsersOut = {
+      deptId: string;
+      deptName: string;
+      users: DeptUserItem[];
+    };
+
+    /** dept users update params */
+    type DeptUsersUpdateParams = {
+      userIds: string[];
+    };
 
     /** file record */
     type FileRecord = {

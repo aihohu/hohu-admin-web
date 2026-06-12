@@ -368,6 +368,8 @@ const local: App.I18n.Schema = {
         userEmail: '邮箱',
         userStatus: '用户状态',
         userRole: '用户角色',
+        userDept: '所属部门',
+        primaryDept: '主部门',
         form: {
           userName: '请输入用户名',
           password: '请输入密码',
@@ -376,7 +378,8 @@ const local: App.I18n.Schema = {
           userPhone: '请输入手机号',
           userEmail: '请输入邮箱',
           userStatus: '请选择用户状态',
-          userRole: '请选择用户角色'
+          userRole: '请选择用户角色',
+          primaryDeptRequired: '请选择主部门'
         },
         addUser: '新增用户',
         editUser: '编辑用户',
@@ -677,6 +680,12 @@ const local: App.I18n.Schema = {
         addDept: '新增部门',
         addChildDept: '新增子部门',
         editDept: '编辑部门',
+        manageUsers: '用户',
+        manageUsersTip: '当前部门共 {count} 名成员，勾选以添加/移除',
+        candidateUsers: '全部用户',
+        deptMembers: '部门成员',
+        searchUser: '搜索用户名/昵称',
+        searchMember: '搜索部门成员',
         validation: {
           deptNameMinLength: '部门名称至少需要2个字符'
         }

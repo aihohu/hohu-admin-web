@@ -359,6 +359,23 @@ export function fetchBatchDeleteDept(data: string[]) {
   });
 }
 
+/** get dept users (members + candidates) */
+export function fetchGetDeptUsers(deptId: string) {
+  return request<Api.SystemManage.DeptUsersOut>({
+    url: `/system/dept/${deptId}/users`,
+    method: 'get'
+  });
+}
+
+/** update dept users (final member ids) */
+export function fetchUpdateDeptUsers(deptId: string, data: Api.SystemManage.DeptUsersUpdateParams) {
+  return request<App.Service.Response<any>>({
+    url: `/system/dept/${deptId}/users`,
+    method: 'put',
+    data
+  });
+}
+
 /** upload file */
 export function fetchUploadFile(file: File, businessType?: string, businessId?: string) {
   const formData = new FormData();

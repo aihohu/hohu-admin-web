@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { jsonClone } from '@sa/utils';
 import { enableStatusOptions, userGenderOptions } from '@/constants/business';
-import { fetchGetAllRoles, fetchSaveUser, fetchUpdateUser } from '@/service/api';
+import { fetchGetAllRoles, fetchGetDeptTreeOption, fetchSaveUser, fetchUpdateUser } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
 
@@ -51,7 +51,8 @@ function createDefaultModel(): Api.SystemManage.CreateUserParams {
     userPhone: '',
     userEmail: '',
     roles: [],
-    status: '1'
+    status: '1',
+    deptIds: []
   };
 }
 
@@ -60,15 +61,6 @@ type RuleKey = Extract<keyof Api.SystemManage.CreateUserParams, 'userName' | 'ni
 const rules: Record<RuleKey, App.Global.FormRule[]> = {
   userName: formRules.userName,
   nickname: formRules.userName,
-  // nickname: [
-  //   defaultRequiredRule,
-  //   {
-  //     min: 4,
-  //     max: 20,
-  //     message: '昵称长度为2-20个字符',
-  //     trigger: 'blur'
-  //   }
-  // ],
   password: formRules.pwd,
   status: [defaultRequiredRule]
 };
@@ -91,11 +83,66 @@ async function getRoleOptions() {
   }
 }
 
+/** dept tree options (id/label format from /tree-option endpoint) */
+const deptTreeData = ref<Api.SystemManage.DeptTreeOption[]>([]);
+
+async function loadDeptTree() {
+  const { data } = await fetchGetDeptTreeOption();
+  if (data) {
+    deptTreeData.value = data;
+  }
+}
+
+/** fully-checked dept keys (leaf + fully-checked parents under cascade) */
+const checkedDeptKeys = ref<string[]>([]);
+
+/** indeterminate parent keys (partially-checked under cascade) */
+const indeterminateDeptKeys = ref<Array<string | number>>([]);
+
+/** combined dept ids: fully-checked + indeterminate parents, mirrors menu-auth submit pattern */
+const allSelectedDeptIds = computed(() => [...checkedDeptKeys.value, ...indeterminateDeptKeys.value.map(String)]);
+
+/** primary dept id among all selected */
+const primaryDeptId = ref<string>('');
+
+/** radio options for primary dept, derived from all selected depts */
+const primaryDeptOptions = computed<CommonType.Option<string>[]>(() =>
+  allSelectedDeptIds.value.map(id => ({ label: findDeptLabel(deptTreeData.value, id) || id, value: id }))
+);
+
+function findDeptLabel(nodes: Api.SystemManage.DeptTreeOption[], id: string): string | undefined {
+  for (const n of nodes) {
+    if (n.id === id) return n.label;
+    if (n.children?.length) {
+      const found = findDeptLabel(n.children, id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+function handleIndeterminateKeysUpdate(keys: Array<string | number>) {
+  indeterminateDeptKeys.value = keys;
+}
+
+/** keep primary dept selection valid when selected set changes */
+watch(allSelectedDeptIds, ids => {
+  if (!ids.includes(primaryDeptId.value)) {
+    primaryDeptId.value = ids[0] || '';
+  }
+});
+
 function handleInitModel() {
   model.value = createDefaultModel();
+  checkedDeptKeys.value = [];
+  indeterminateDeptKeys.value = [];
+  primaryDeptId.value = '';
 
   if (props.operateType === 'edit' && props.rowData) {
     Object.assign(model.value, jsonClone(props.rowData));
+    const userDepts = props.rowData.userDepts || [];
+    checkedDeptKeys.value = userDepts.map(d => d.deptId);
+    primaryDeptId.value = userDepts.find(d => d.isPrimary)?.deptId || userDepts[0]?.deptId || '';
   }
 }
 
@@ -105,13 +152,25 @@ function closeDrawer() {
 
 async function handleSubmit() {
   await validate();
+  if (allSelectedDeptIds.value.length > 0 && !primaryDeptId.value) {
+    window.$message?.error($t('page.system.user.form.primaryDeptRequired'));
+    return;
+  }
   loading.value = true;
   try {
+    const payload: Api.SystemManage.CreateUserParams = {
+      ...model.value,
+      deptIds: allSelectedDeptIds.value.map(id => ({
+        deptId: id,
+        isPrimary: id === primaryDeptId.value
+      }))
+    };
+
     let res;
     if (props.operateType === 'edit' && props.rowData) {
-      res = await fetchUpdateUser(props.rowData.userId, model.value);
+      res = await fetchUpdateUser(props.rowData.userId, payload);
     } else {
-      res = await fetchSaveUser(model.value);
+      res = await fetchSaveUser(payload);
     }
 
     const { error, response } = res;
@@ -132,6 +191,7 @@ watch(visible, () => {
     handleInitModel();
     restoreValidation();
     getRoleOptions();
+    loadDeptTree();
   }
 });
 </script>
@@ -178,6 +238,31 @@ watch(visible, () => {
             :options="roleOptions"
             :placeholder="$t('page.system.user.form.userRole')"
           />
+        </NFormItem>
+        <NFormItem :label="$t('page.system.user.userDept')" path="deptIds">
+          <NTree
+            v-model:checked-keys="checkedDeptKeys"
+            :data="deptTreeData"
+            key-field="id"
+            label-field="label"
+            checkable
+            cascade
+            show-line
+            expand-on-click
+            virtual-scroll
+            block-line
+            class="h-280px w-full"
+            @update-indeterminate-keys="handleIndeterminateKeysUpdate"
+          />
+        </NFormItem>
+        <NFormItem
+          v-if="allSelectedDeptIds.length > 0"
+          :label="$t('page.system.user.primaryDept')"
+          path="primaryDeptId"
+        >
+          <NRadioGroup v-model:value="primaryDeptId">
+            <NRadio v-for="item in primaryDeptOptions" :key="item.value" :value="item.value" :label="item.label" />
+          </NRadioGroup>
         </NFormItem>
       </NForm>
       <template #footer>

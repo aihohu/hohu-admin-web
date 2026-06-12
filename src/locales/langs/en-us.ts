@@ -373,6 +373,8 @@ const local: App.I18n.Schema = {
         userEmail: 'Email',
         userStatus: 'User Status',
         userRole: 'User Role',
+        userDept: 'Department',
+        primaryDept: 'Primary Department',
         form: {
           userName: 'Please enter user name',
           password: 'Please enter password',
@@ -381,7 +383,8 @@ const local: App.I18n.Schema = {
           userPhone: 'Please enter phone number',
           userEmail: 'Please enter email',
           userStatus: 'Please select user status',
-          userRole: 'Please select user role'
+          userRole: 'Please select user role',
+          primaryDeptRequired: 'Please select a primary department'
         },
         addUser: 'Add User',
         editUser: 'Edit User',
@@ -682,6 +685,12 @@ const local: App.I18n.Schema = {
         addDept: 'Add Dept',
         addChildDept: 'Add Child Dept',
         editDept: 'Edit Dept',
+        manageUsers: 'Users',
+        manageUsersTip: 'This dept has {count} member(s). Check items to add/remove',
+        candidateUsers: 'All Users',
+        deptMembers: 'Members',
+        searchUser: 'Search user name / nickname',
+        searchMember: 'Search members',
         validation: {
           deptNameMinLength: 'Dept name requires at least 2 characters'
         }

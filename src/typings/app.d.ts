@@ -601,6 +601,8 @@ declare namespace App {
             userEmail: string;
             userStatus: string;
             userRole: string;
+            userDept: string;
+            primaryDept: string;
             form: {
               userName: string;
               password: string;
@@ -610,6 +612,7 @@ declare namespace App {
               userEmail: string;
               userStatus: string;
               userRole: string;
+              primaryDeptRequired: string;
             };
             addUser: string;
             editUser: string;
@@ -771,6 +774,12 @@ declare namespace App {
             addDept: string;
             addChildDept: string;
             editDept: string;
+            manageUsers: string;
+            manageUsersTip: string;
+            candidateUsers: string;
+            deptMembers: string;
+            searchUser: string;
+            searchMember: string;
             validation: {
               deptNameMinLength: string;
             };
