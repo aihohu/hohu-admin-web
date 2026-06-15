@@ -7,7 +7,6 @@ dist
 .idea
 *.log
 .claude/
-docker-compose.yml
 Dockerfile
 *.tgz
 .editorconfig
