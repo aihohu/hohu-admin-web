@@ -106,6 +106,13 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         }
       },
       {
+        key: 'nextRunTime',
+        title: $t('page.system.job.nextRunTime'),
+        align: 'center',
+        minWidth: 160,
+        render: row => row.nextRunTime || '-'
+      },
+      {
         key: 'operate',
         title: $t('common.operate'),
         align: 'center',
@@ -228,7 +235,7 @@ function edit(id: string) {
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
-        :scroll-x="1100"
+        :scroll-x="1260"
         :loading="loading"
         remote
         :row-key="row => row.jobId"

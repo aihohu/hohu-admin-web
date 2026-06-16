@@ -404,11 +404,19 @@ declare namespace Api {
       jobArgs: string | null;
       status: JobStatus;
       concurrent: JobConcurrent;
+      /** per-execution timeout in seconds, null = unlimited */
+      timeoutSeconds: number | null;
+      /** max retries on failure, 0 = no retry */
+      maxRetries: number;
+      /** run immediately once when enabled (does not affect subsequent scheduled runs) */
+      runOnEnable: boolean;
       remark: string | null;
       createBy: string | null;
       createTime: string;
       updateBy: string | null;
       updateTime: string;
+      /** computed at runtime, null when disabled or trigger misconfigured */
+      nextRunTime: string | null;
     };
 
     /** job search params */
@@ -429,6 +437,9 @@ declare namespace Api {
       | 'jobArgs'
       | 'status'
       | 'concurrent'
+      | 'timeoutSeconds'
+      | 'maxRetries'
+      | 'runOnEnable'
       | 'remark'
     >;
 
@@ -449,6 +460,7 @@ declare namespace Api {
       startTime: string;
       endTime: string | null;
       duration: number | null;
+      attemptCount: number;
     };
 
     /** job log search params */

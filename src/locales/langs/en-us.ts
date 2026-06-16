@@ -556,6 +556,10 @@ const local: App.I18n.Schema = {
         remark: 'Remark',
         concurrentAllow: 'Allow',
         concurrentForbid: 'Forbid',
+        timeoutSeconds: 'Timeout (s)',
+        maxRetries: 'Max Retries',
+        nextRunTime: 'Next Run',
+        runOnEnable: 'Run on Enable',
         form: {
           jobName: 'Enter job name',
           jobKey: 'Select job key',
@@ -565,7 +569,10 @@ const local: App.I18n.Schema = {
           concurrent: 'Select concurrent strategy',
           remark: 'Enter remark',
           intervalValue: 'Enter interval value',
-          intervalUnit: 'Select unit'
+          intervalUnit: 'Select unit',
+          timeoutSeconds: 'Empty = unlimited',
+          maxRetries: '0 = no retry',
+          runOnEnableHint: 'Run once immediately when enabled; does not affect subsequent scheduled runs'
         },
         addJob: 'Add Job',
         editJob: 'Edit Job',
@@ -588,6 +595,7 @@ const local: App.I18n.Schema = {
         startTime: 'Start Time',
         endTime: 'End Time',
         duration: 'Duration(ms)',
+        attemptCount: 'Attempts',
         statusSuccess: 'Success',
         statusFailed: 'Failed',
         statusRunning: 'Running',

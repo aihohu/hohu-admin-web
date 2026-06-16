@@ -551,6 +551,10 @@ const local: App.I18n.Schema = {
         remark: '备注',
         concurrentAllow: '允许',
         concurrentForbid: '禁止',
+        timeoutSeconds: '超时秒数',
+        maxRetries: '失败重试',
+        nextRunTime: '下次执行',
+        runOnEnable: '启用即执行',
         form: {
           jobName: '请输入任务名称',
           jobKey: '请选择任务标识',
@@ -560,7 +564,10 @@ const local: App.I18n.Schema = {
           concurrent: '请选择并发策略',
           remark: '请输入备注',
           intervalValue: '请输入间隔值',
-          intervalUnit: '请选择单位'
+          intervalUnit: '请选择单位',
+          timeoutSeconds: '留空表示不限',
+          maxRetries: '0 表示不重试',
+          runOnEnableHint: '启用时立即执行一次，不影响后续按计划触发'
         },
         addJob: '新增定时任务',
         editJob: '编辑定时任务',
@@ -583,6 +590,7 @@ const local: App.I18n.Schema = {
         startTime: '开始时间',
         endTime: '结束时间',
         duration: '耗时(ms)',
+        attemptCount: '执行次数',
         statusSuccess: '成功',
         statusFailed: '失败',
         statusRunning: '执行中',

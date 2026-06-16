@@ -832,6 +832,10 @@ declare namespace App {
             remark: string;
             concurrentAllow: string;
             concurrentForbid: string;
+            timeoutSeconds: string;
+            maxRetries: string;
+            nextRunTime: string;
+            runOnEnable: string;
             form: {
               jobName: string;
               jobKey: string;
@@ -842,6 +846,9 @@ declare namespace App {
               remark: string;
               intervalValue: string;
               intervalUnit: string;
+              timeoutSeconds: string;
+              maxRetries: string;
+              runOnEnableHint: string;
             };
             addJob: string;
             editJob: string;
@@ -864,6 +871,7 @@ declare namespace App {
             startTime: string;
             endTime: string;
             duration: string;
+            attemptCount: string;
             statusSuccess: string;
             statusFailed: string;
             statusRunning: string;

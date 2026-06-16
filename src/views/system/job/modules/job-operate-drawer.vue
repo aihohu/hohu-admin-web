@@ -53,6 +53,9 @@ function createDefaultModel(): Model {
     jobArgs: null,
     status: '2',
     concurrent: '2',
+    timeoutSeconds: null,
+    maxRetries: 0,
+    runOnEnable: false,
     remark: null
   };
 }
@@ -130,6 +133,9 @@ function handleInitModel() {
       jobArgs: clone.jobArgs,
       status: clone.status,
       concurrent: clone.concurrent,
+      timeoutSeconds: clone.timeoutSeconds ?? null,
+      maxRetries: clone.maxRetries ?? 0,
+      runOnEnable: clone.runOnEnable ?? false,
       remark: clone.remark
     };
   }
@@ -257,6 +263,27 @@ watch(visible, () => {
           <NRadioGroup v-model:value="model.concurrent">
             <NRadio v-for="item in concurrentOptions" :key="item.value" :value="item.value" :label="item.label" />
           </NRadioGroup>
+        </NFormItem>
+        <NFormItem :label="$t('page.system.job.timeoutSeconds')" path="timeoutSeconds">
+          <NInputNumber
+            v-model:value="model.timeoutSeconds"
+            :min="1"
+            :placeholder="$t('page.system.job.form.timeoutSeconds')"
+            style="width: 100%"
+            clearable
+          />
+        </NFormItem>
+        <NFormItem :label="$t('page.system.job.maxRetries')" path="maxRetries">
+          <NInputNumber
+            v-model:value="model.maxRetries"
+            :min="0"
+            :placeholder="$t('page.system.job.form.maxRetries')"
+            style="width: 100%"
+          />
+        </NFormItem>
+        <NFormItem :label="$t('page.system.job.runOnEnable')" path="runOnEnable">
+          <NSwitch v-model:value="model.runOnEnable" />
+          <span class="ml-8px text-12px text-gray-500">{{ $t('page.system.job.form.runOnEnableHint') }}</span>
         </NFormItem>
         <NFormItem :label="$t('page.system.job.remark')" path="remark">
           <NInput

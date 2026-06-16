@@ -81,6 +81,13 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         render: row => (row.duration != null ? `${row.duration}` : '-')
       },
       {
+        key: 'attemptCount',
+        title: $t('page.system.jobLog.attemptCount'),
+        align: 'center',
+        width: 80,
+        render: row => (row.attemptCount > 1 ? `${row.attemptCount}` : '-')
+      },
+      {
         key: 'startTime',
         title: $t('page.system.jobLog.startTime'),
         align: 'center',
