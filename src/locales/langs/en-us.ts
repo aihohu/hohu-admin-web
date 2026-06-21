@@ -255,7 +255,8 @@ const local: App.I18n.Schema = {
     'task_job-log': 'Job Log',
     ai: 'AI Assistant',
     ai_chat: 'AI Chat',
-    ai_provider: 'Model Manage'
+    ai_provider: 'Model Manage',
+    app: 'App Page'
   },
   page: {
     login: {

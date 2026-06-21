@@ -23,6 +23,7 @@ declare module "@elegant-router/types" {
     "ai": "/ai";
     "ai_chat": "/ai/chat";
     "ai_provider": "/ai/provider";
+    "app": "/app";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
     "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
@@ -75,6 +76,7 @@ declare module "@elegant-router/types" {
     | "404"
     | "500"
     | "ai"
+    | "app"
     | "home"
     | "iframe-page"
     | "login"
@@ -104,6 +106,7 @@ declare module "@elegant-router/types" {
     | "profile"
     | "ai_chat"
     | "ai_provider"
+    | "app"
     | "home"
     | "system_config"
     | "system_dept"

@@ -169,6 +169,7 @@ const routeMap: RouteMap = {
   "ai": "/ai",
   "ai_chat": "/ai/chat",
   "ai_provider": "/ai/provider",
+  "app": "/app",
   "home": "/home",
   "iframe-page": "/iframe-page/:url",
   "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?",

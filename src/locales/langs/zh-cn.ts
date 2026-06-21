@@ -251,7 +251,8 @@ const local: App.I18n.Schema = {
     'task_job-log': '任务日志',
     ai: 'AI 助手',
     ai_chat: 'AI 对话',
-    ai_provider: '模型管理'
+    ai_provider: '模型管理',
+    app: '应用页面'
   },
   page: {
     login: {
