@@ -24,7 +24,12 @@ async function loadApp() {
   loading.value = true;
   error.value = null;
   try {
-    manifest.value = await fetchAppManifest(slug);
+    const { data, error: reqError } = await fetchAppManifest(slug);
+    if (reqError) {
+      error.value = reqError.message || '加载应用失败';
+    } else {
+      manifest.value = data;
+    }
   } catch (e: any) {
     error.value = e?.message || '加载应用失败';
   } finally {
