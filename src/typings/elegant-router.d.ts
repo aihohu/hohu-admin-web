@@ -27,6 +27,10 @@ declare module "@elegant-router/types" {
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
     "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
+    "marketplace": "/marketplace";
+    "marketplace-detail": "/marketplace-detail";
+    "marketplace-installed": "/marketplace-installed";
+    "marketplace-upload": "/marketplace-upload";
     "profile": "/profile";
     "system": "/system";
     "system_config": "/system/config";
@@ -80,6 +84,10 @@ declare module "@elegant-router/types" {
     | "home"
     | "iframe-page"
     | "login"
+    | "marketplace"
+    | "marketplace-detail"
+    | "marketplace-installed"
+    | "marketplace-upload"
     | "profile"
     | "system"
   >;
@@ -108,6 +116,10 @@ declare module "@elegant-router/types" {
     | "ai_provider"
     | "app"
     | "home"
+    | "marketplace-detail"
+    | "marketplace-installed"
+    | "marketplace-upload"
+    | "marketplace"
     | "system_config"
     | "system_dept"
     | "system_dict_data"

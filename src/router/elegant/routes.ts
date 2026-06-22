@@ -114,6 +114,42 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'marketplace',
+    path: '/marketplace',
+    component: 'layout.base$view.marketplace',
+    meta: {
+      title: 'marketplace',
+      i18nKey: 'route.marketplace'
+    }
+  },
+  {
+    name: 'marketplace-detail',
+    path: '/marketplace-detail',
+    component: 'layout.base$view.marketplace-detail',
+    meta: {
+      title: 'marketplace-detail',
+      i18nKey: 'route.marketplace-detail'
+    }
+  },
+  {
+    name: 'marketplace-installed',
+    path: '/marketplace-installed',
+    component: 'layout.base$view.marketplace-installed',
+    meta: {
+      title: 'marketplace-installed',
+      i18nKey: 'route.marketplace-installed'
+    }
+  },
+  {
+    name: 'marketplace-upload',
+    path: '/marketplace-upload',
+    component: 'layout.base$view.marketplace-upload',
+    meta: {
+      title: 'marketplace-upload',
+      i18nKey: 'route.marketplace-upload'
+    }
+  },
+  {
     name: 'profile',
     path: '/profile',
     component: 'layout.base$view.profile',

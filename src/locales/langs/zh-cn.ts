@@ -252,7 +252,11 @@ const local: App.I18n.Schema = {
     ai: 'AI 助手',
     ai_chat: 'AI 对话',
     ai_provider: '模型管理',
-    app: '应用页面'
+    app: '应用页面',
+    marketplace: '应用市场',
+    'marketplace-detail': '应用详情',
+    'marketplace-installed': '已安装应用',
+    'marketplace-upload': '上传应用'
   },
   page: {
     login: {
