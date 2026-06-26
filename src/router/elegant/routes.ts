@@ -124,7 +124,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   },
   {
     name: 'marketplace-detail',
-    path: '/marketplace-detail',
+    path: '/marketplace/detail',
     component: 'layout.base$view.marketplace-detail',
     meta: {
       title: 'marketplace-detail',
@@ -133,7 +133,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   },
   {
     name: 'marketplace-installed',
-    path: '/marketplace-installed',
+    path: '/marketplace/installed',
     component: 'layout.base$view.marketplace-installed',
     meta: {
       title: 'marketplace-installed',
@@ -141,8 +141,17 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'marketplace-review',
+    path: '/marketplace-review',
+    component: 'layout.base$view.marketplace-review',
+    meta: {
+      title: 'marketplace-review',
+      i18nKey: 'route.marketplace-review'
+    }
+  },
+  {
     name: 'marketplace-upload',
-    path: '/marketplace-upload',
+    path: '/marketplace/upload',
     component: 'layout.base$view.marketplace-upload',
     meta: {
       title: 'marketplace-upload',

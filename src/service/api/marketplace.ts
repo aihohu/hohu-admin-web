@@ -35,6 +35,8 @@ export namespace Marketplace {
   export interface Install {
     id: string;
     appId: string;
+    appSlug: string;
+    appName: string;
     installedVersion: string;
     status: string;
     config: Record<string, any> | null;
@@ -127,7 +129,14 @@ export function disableApp(slug: string) {
 }
 
 /** fetch installed apps */
-export function fetchInstalledApps(params: { current?: number; size?: number; status?: string } = {}) {
+export function fetchInstalledApps(
+  params: {
+    current?: number;
+    size?: number;
+    status?: string | null;
+    appSlug?: string | null;
+  } = {}
+) {
   return request<Marketplace.InstallListResult>({
     url: '/marketplace/installed',
     method: 'get',
@@ -153,5 +162,85 @@ export function fetchMyApps() {
   return request<Marketplace.App[]>({
     url: '/marketplace/developer/my-apps',
     method: 'get'
+  });
+}
+
+// ============ Review (admin) ============
+
+export namespace Review {
+  export interface Item {
+    id: string;
+    appId: string;
+    appName: string;
+    appSlug: string;
+    versionId: string;
+    version: string;
+    finalStatus: string;
+    aiRiskLevel: string | null;
+    reviewerId: string | null;
+    createdAt: string;
+    humanReviewedAt: string | null;
+  }
+
+  export interface Detail extends Item {
+    manifest: Record<string, any>;
+    fileSize: number | null;
+    ruleCheckResult: Record<string, any> | null;
+    aiReport: Record<string, any> | null;
+    humanComment: string | null;
+    changelog: string | null;
+  }
+
+  export interface ListResult {
+    records: Item[];
+    total: number;
+    current: number;
+    size: number;
+  }
+}
+
+/** fetch pending/all reviews (admin) */
+export function fetchReviews(
+  params: {
+    current?: number;
+    size?: number;
+    status?: string | null;
+    appSlug?: string | null;
+  } = {}
+) {
+  return request<Review.ListResult>({
+    url: '/marketplace/admin/reviews',
+    method: 'get',
+    params
+  });
+}
+
+/** fetch review detail with manifest */
+export function fetchReviewDetail(reviewId: string) {
+  return request<Review.Detail>({
+    url: `/marketplace/admin/review/${reviewId}`,
+    method: 'get'
+  });
+}
+
+/** approve a review */
+export function approveReview(reviewId: string, comment = '') {
+  const formData = new FormData();
+  formData.append('comment', comment);
+  return request<null>({
+    url: `/marketplace/admin/review/${reviewId}/approve`,
+    method: 'post',
+    data: formData
+  });
+}
+
+/** reject a review */
+export function rejectReview(reviewId: string, comment = '') {
+  const formData = new FormData();
+  formData.append('comment', comment);
+  return request<null>({
+    url: `/marketplace/admin/review/${reviewId}/reject`,
+    method: 'post',
+    data: formData
   });
 }

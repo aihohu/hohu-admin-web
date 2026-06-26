@@ -27,6 +27,7 @@ export const views: Record<LastLevelRouteKey, RouteComponent | (() => Promise<Ro
   home: () => import("@/views/home/index.vue"),
   "marketplace-detail": () => import("@/views/marketplace-detail/index.vue"),
   "marketplace-installed": () => import("@/views/marketplace-installed/index.vue"),
+  "marketplace-review": () => import("@/views/marketplace-review/index.vue"),
   "marketplace-upload": () => import("@/views/marketplace-upload/index.vue"),
   marketplace: () => import("@/views/marketplace/index.vue"),
   system_config: () => import("@/views/system/config/index.vue"),

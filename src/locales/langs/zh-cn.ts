@@ -256,7 +256,9 @@ const local: App.I18n.Schema = {
     marketplace: '应用市场',
     'marketplace-detail': '应用详情',
     'marketplace-installed': '已安装应用',
-    'marketplace-upload': '上传应用'
+    'marketplace-upload': '上传应用',
+    'marketplace-review': '应用审核',
+    'app-management': '应用管理'
   },
   page: {
     login: {
@@ -786,6 +788,136 @@ const local: App.I18n.Schema = {
         testNoModel: '请先输入模型名称',
         testNoCode: '请先填写提供商编码',
         modelTestSuccess: '模型 {name} 连通性测试成功'
+      }
+    },
+    marketplace: {
+      browse: {
+        searchPlaceholder: '搜索应用...',
+        categoryAll: '全部分类',
+        categoryBusiness: '业务管理',
+        categoryTool: '效率工具',
+        categoryAnalytics: '数据分析',
+        categoryAiAgent: 'AI Agent',
+        categoryAiSkill: 'AI Skill',
+        categoryMcpAdapter: 'MCP 适配器',
+        categoryIntegration: '系统集成',
+        categoryTheme: '主题外观',
+        sortDownload: '最多下载',
+        sortLatest: '最新发布',
+        sortRating: '评分最高',
+        navUpload: '上传应用',
+        navInstalled: '已安装管理',
+        empty: '暂无应用',
+        unknownAuthor: '未知',
+        noDescription: '暂无描述',
+        downloadLabel: '下载',
+        ratingLabel: '评分'
+      },
+      detail: {
+        author: '作者',
+        descTitle: '描述',
+        downloadCount: '下载量',
+        avgRating: '评分',
+        ratingCount: '评分数',
+        notFound: '应用不存在或加载失败',
+        confirmUninstall: '确认卸载？数据表将被删除。',
+        openApp: '打开应用'
+      },
+      installed: {
+        title: '已安装应用',
+        colApp: '应用',
+        colVersion: '版本',
+        colStatus: '状态',
+        colInstalledAt: '安装时间',
+        colActions: '操作',
+        detailHint: '请从应用市场详情页操作',
+        searchAppSlug: '应用编码',
+        searchAppSlugPlaceholder: '如 hohu-sample-crm',
+        searchStatus: '状态',
+        statusAll: '全部',
+        statusEnabled: '已启用',
+        statusInstalled: '已安装',
+        statusDisabled: '已禁用',
+        statusUninstalled: '已卸载'
+      },
+      upload: {
+        title: '上传应用包',
+        dropzoneTitle: '点击或拖拽上传 .zip 应用包',
+        dropzoneDesc: '包内必须包含 app.json',
+        manifestTitle: 'Manifest (JSON)',
+        submit: '上传'
+      },
+      actions: {
+        install: '安装',
+        enable: '启用',
+        disable: '禁用',
+        uninstall: '卸载',
+        open: '打开',
+        back: '返回',
+        detail: '详情'
+      },
+      status: {
+        enabled: '已启用',
+        installed: '已安装',
+        disabled: '已禁用',
+        uninstalled: '已卸载'
+      },
+      messages: {
+        installSuccess: '安装成功',
+        installFailed: '安装失败',
+        enabled: '已启用',
+        disabled: '已禁用',
+        uninstalled: '已卸载',
+        selectPackage: '请选择应用包',
+        fillManifest: '请填写 manifest',
+        invalidJson: 'manifest JSON 格式错误',
+        uploadSuccess: '上传成功，等待审核',
+        uploadFailed: '上传失败'
+      },
+      lowcode: {
+        invalidRoute: '无效的应用路由',
+        loadFailed: '加载应用失败',
+        colActions: '操作',
+        buttonEdit: '编辑',
+        buttonDelete: '删除',
+        buttonCreate: '新增',
+        confirmDelete: '确认删除？',
+        itemCount: '共 {total} 条',
+        titleEdit: '编辑{title}',
+        titleCreate: '新建{title}',
+        buttonCancel: '取消',
+        buttonSave: '保存',
+        msgLoadFailed: '加载失败',
+        msgSubmitFailed: '提交失败',
+        msgCreateSuccess: '创建成功',
+        msgUpdateSuccess: '更新成功',
+        msgDeleteFailed: '删除失败'
+      },
+      review: {
+        title: '应用审核',
+        statusAll: '全部',
+        statusPending: '待审核',
+        statusApproved: '已通过',
+        statusRejected: '已拒绝',
+        colApp: '应用',
+        colVersion: '版本',
+        colStatus: '状态',
+        colRisk: 'AI 风险',
+        colCreatedAt: '提交时间',
+        colActions: '操作',
+        btnDetail: '详情',
+        btnApprove: '通过',
+        btnReject: '拒绝',
+        btnConfirmReject: '确认拒绝',
+        rejectTitle: '拒绝原因（可选）',
+        rejectPlaceholder: '请填写拒绝原因，会反馈给开发者',
+        changelogTitle: '版本说明',
+        manifestTitle: 'Manifest',
+        previousCommentTitle: '历史审核意见',
+        notFound: '审核记录不存在',
+        msgApproveSuccess: '已通过',
+        msgRejectSuccess: '已拒绝',
+        msgInvalidId: '无效的审核记录 ID'
       }
     }
   },

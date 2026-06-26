@@ -3,6 +3,7 @@ import { computed, h, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { NButton, NCard, NDataTable, NPopconfirm, NSpace } from 'naive-ui';
 import type { DataTableColumns } from 'naive-ui';
+import { $t } from '@/locales';
 import { deleteAppData, fetchAppData } from '@/service/api/lowcode';
 
 const props = defineProps<{
@@ -32,7 +33,7 @@ async function loadData() {
       size: pageSize.value
     });
     if (error) {
-      window.$message?.error(error.message || '加载失败');
+      window.$message?.error(error.message || $t('page.marketplace.lowcode.msgLoadFailed'));
       records.value = [];
       total.value = 0;
       return;
@@ -62,19 +63,36 @@ const columns = computed<DataTableColumns>(() => {
   }
 
   cols.push({
-    title: '操作',
+    title: $t('page.marketplace.lowcode.colActions'),
     key: '__actions',
     width: 180,
     fixed: 'right',
     render: (row: any) =>
       h(NSpace, { size: 'small' }, () => [
-        h(NButton, { size: 'small', onClick: () => onEdit(row) }, () => '编辑'),
+        h(
+          NButton,
+          {
+            size: 'small',
+            onClick: () => onEdit(row),
+            'data-testid': `lowcode-table-edit-btn-${row.id}`
+          },
+          () => $t('page.marketplace.lowcode.buttonEdit')
+        ),
         h(
           NPopconfirm,
           { onPositiveClick: () => onDelete(row.id) },
           {
-            trigger: () => h(NButton, { size: 'small', type: 'error' }, () => '删除'),
-            default: () => '确认删除？'
+            trigger: () =>
+              h(
+                NButton,
+                {
+                  size: 'small',
+                  type: 'error',
+                  'data-testid': `lowcode-table-delete-btn-${row.id}`
+                },
+                () => $t('page.marketplace.lowcode.buttonDelete')
+              ),
+            default: () => $t('page.marketplace.lowcode.confirmDelete')
           }
         )
       ])
@@ -104,7 +122,7 @@ function onCreate() {
 async function onDelete(id: number | string) {
   const { error } = await deleteAppData(slug.value, modelKey.value, id);
   if (error) {
-    window.$message?.error(error.message || '删除失败');
+    window.$message?.error(error.message || $t('page.marketplace.lowcode.msgDeleteFailed'));
     return;
   }
   await loadData();
@@ -119,15 +137,18 @@ onMounted(loadData);
 </script>
 
 <template>
-  <NCard>
+  <NCard data-testid="lowcode-table-card">
     <template #header>
       <NSpace justify="space-between" align="center">
-        <span>{{ page.title }}</span>
-        <NButton type="primary" @click="onCreate">新增</NButton>
+        <span data-testid="lowcode-table-page-title">{{ page.title }}</span>
+        <NButton type="primary" data-testid="lowcode-table-create-btn" @click="onCreate">
+          {{ $t('page.marketplace.lowcode.buttonCreate') }}
+        </NButton>
       </NSpace>
     </template>
     <NDataTable
       remote
+      data-testid="lowcode-table-datatable"
       :columns="columns"
       :data="records"
       :loading="loading"
@@ -136,7 +157,8 @@ onMounted(loadData);
         pageSize: pageSize,
         itemCount: total,
         showSizePicker: false,
-        prefix: ({ itemCount }: { itemCount?: number }) => `共 ${itemCount ?? 0} 条`
+        prefix: ({ itemCount }: { itemCount?: number }) =>
+          $t('page.marketplace.lowcode.itemCount', { total: itemCount ?? 0 })
       }"
       @update:page="onPageChange"
     />

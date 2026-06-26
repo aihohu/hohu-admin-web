@@ -260,7 +260,9 @@ const local: App.I18n.Schema = {
     marketplace: 'Marketplace',
     'marketplace-detail': 'App Detail',
     'marketplace-installed': 'Installed Apps',
-    'marketplace-upload': 'Upload App'
+    'marketplace-upload': 'Upload App',
+    'marketplace-review': 'App Review',
+    'app-management': 'App Management'
   },
   page: {
     login: {
@@ -791,6 +793,136 @@ const local: App.I18n.Schema = {
         testNoModel: 'Please enter model name first',
         testNoCode: 'Please enter provider code first',
         modelTestSuccess: 'Model {name} connectivity test successful'
+      }
+    },
+    marketplace: {
+      browse: {
+        searchPlaceholder: 'Search apps...',
+        categoryAll: 'All Categories',
+        categoryBusiness: 'Business',
+        categoryTool: 'Productivity',
+        categoryAnalytics: 'Analytics',
+        categoryAiAgent: 'AI Agent',
+        categoryAiSkill: 'AI Skill',
+        categoryMcpAdapter: 'MCP Adapter',
+        categoryIntegration: 'Integration',
+        categoryTheme: 'Theme',
+        sortDownload: 'Most Downloaded',
+        sortLatest: 'Latest',
+        sortRating: 'Top Rated',
+        navUpload: 'Upload App',
+        navInstalled: 'Installed',
+        empty: 'No apps',
+        unknownAuthor: 'Unknown',
+        noDescription: 'No description',
+        downloadLabel: 'Downloads',
+        ratingLabel: 'Rating'
+      },
+      detail: {
+        author: 'Author',
+        descTitle: 'Description',
+        downloadCount: 'Downloads',
+        avgRating: 'Rating',
+        ratingCount: 'Reviews',
+        notFound: 'App not found or failed to load',
+        confirmUninstall: 'Confirm uninstall? Data tables will be deleted.',
+        openApp: 'Open App'
+      },
+      installed: {
+        title: 'Installed Apps',
+        colApp: 'App',
+        colVersion: 'Version',
+        colStatus: 'Status',
+        colInstalledAt: 'Installed At',
+        colActions: 'Actions',
+        detailHint: 'Please operate from marketplace detail page',
+        searchAppSlug: 'App Code',
+        searchAppSlugPlaceholder: 'e.g. hohu-sample-crm',
+        searchStatus: 'Status',
+        statusAll: 'All',
+        statusEnabled: 'Enabled',
+        statusInstalled: 'Installed',
+        statusDisabled: 'Disabled',
+        statusUninstalled: 'Uninstalled'
+      },
+      upload: {
+        title: 'Upload App Package',
+        dropzoneTitle: 'Click or drag to upload a .zip app package',
+        dropzoneDesc: 'Must contain app.json inside',
+        manifestTitle: 'Manifest (JSON)',
+        submit: 'Upload'
+      },
+      actions: {
+        install: 'Install',
+        enable: 'Enable',
+        disable: 'Disable',
+        uninstall: 'Uninstall',
+        open: 'Open',
+        back: 'Back',
+        detail: 'Details'
+      },
+      status: {
+        enabled: 'Enabled',
+        installed: 'Installed',
+        disabled: 'Disabled',
+        uninstalled: 'Uninstalled'
+      },
+      messages: {
+        installSuccess: 'Installed successfully',
+        installFailed: 'Install failed',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        uninstalled: 'Uninstalled',
+        selectPackage: 'Please select an app package',
+        fillManifest: 'Please fill in the manifest',
+        invalidJson: 'Invalid manifest JSON',
+        uploadSuccess: 'Uploaded, pending review',
+        uploadFailed: 'Upload failed'
+      },
+      lowcode: {
+        invalidRoute: 'Invalid app route',
+        loadFailed: 'Failed to load app',
+        colActions: 'Actions',
+        buttonEdit: 'Edit',
+        buttonDelete: 'Delete',
+        buttonCreate: 'New',
+        confirmDelete: 'Confirm delete?',
+        itemCount: '{total} item(s)',
+        titleEdit: 'Edit {title}',
+        titleCreate: 'New {title}',
+        buttonCancel: 'Cancel',
+        buttonSave: 'Save',
+        msgLoadFailed: 'Load failed',
+        msgSubmitFailed: 'Submit failed',
+        msgCreateSuccess: 'Created successfully',
+        msgUpdateSuccess: 'Updated successfully',
+        msgDeleteFailed: 'Delete failed'
+      },
+      review: {
+        title: 'App Review',
+        statusAll: 'All',
+        statusPending: 'Pending',
+        statusApproved: 'Approved',
+        statusRejected: 'Rejected',
+        colApp: 'App',
+        colVersion: 'Version',
+        colStatus: 'Status',
+        colRisk: 'AI Risk',
+        colCreatedAt: 'Submitted',
+        colActions: 'Actions',
+        btnDetail: 'Details',
+        btnApprove: 'Approve',
+        btnReject: 'Reject',
+        btnConfirmReject: 'Confirm Reject',
+        rejectTitle: 'Reject reason (optional)',
+        rejectPlaceholder: 'Provide a reason, will be sent to developer',
+        changelogTitle: 'Changelog',
+        manifestTitle: 'Manifest',
+        previousCommentTitle: 'Previous Review Comment',
+        notFound: 'Review not found',
+        msgApproveSuccess: 'Approved',
+        msgRejectSuccess: 'Rejected',
+        msgInvalidId: 'Invalid review ID'
       }
     }
   },

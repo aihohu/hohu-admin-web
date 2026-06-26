@@ -28,9 +28,10 @@ declare module "@elegant-router/types" {
     "iframe-page": "/iframe-page/:url";
     "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
     "marketplace": "/marketplace";
-    "marketplace-detail": "/marketplace-detail";
-    "marketplace-installed": "/marketplace-installed";
-    "marketplace-upload": "/marketplace-upload";
+    "marketplace-detail": "/marketplace/detail";
+    "marketplace-installed": "/marketplace/installed";
+    "marketplace-review": "/marketplace-review";
+    "marketplace-upload": "/marketplace/upload";
     "profile": "/profile";
     "system": "/system";
     "system_config": "/system/config";
@@ -87,6 +88,7 @@ declare module "@elegant-router/types" {
     | "marketplace"
     | "marketplace-detail"
     | "marketplace-installed"
+    | "marketplace-review"
     | "marketplace-upload"
     | "profile"
     | "system"
@@ -118,6 +120,7 @@ declare module "@elegant-router/types" {
     | "home"
     | "marketplace-detail"
     | "marketplace-installed"
+    | "marketplace-review"
     | "marketplace-upload"
     | "marketplace"
     | "system_config"

@@ -1,161 +1,173 @@
 <script setup lang="tsx">
-import { ref, h, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { NButton, NDataTable, NTag, NSpace, NPopconfirm } from 'naive-ui';
-import type { DataTableColumns } from 'naive-ui';
-import {
-  fetchInstalledApps,
-  fetchMarketplaceApps,
-  enableApp,
-  disableApp,
-  uninstallApp,
-  type Marketplace
-} from '@/service/api/marketplace';
+import { reactive } from 'vue';
+import { NButton, NPopconfirm, NTag } from 'naive-ui';
+import { $t } from '@/locales';
+import { fetchInstalledApps, enableApp, disableApp, uninstallApp, type Marketplace } from '@/service/api/marketplace';
+import { defaultTransform, useNaivePaginatedTable } from '@/hooks/common/table';
+import InstalledSearch from './modules/installed-search.vue';
 
-defineOptions({ name: 'MarketplaceInstalled', meta: { title: '已安装应用', i18nKey: 'route.marketplace_installed' } });
+const searchParams = reactive({
+  current: 1,
+  size: 10,
+  appSlug: null as string | null,
+  status: null as string | null
+});
 
-const router = useRouter();
-const loading = ref(false);
-const records = ref<Marketplace.Install[]>([]);
-const actionLoading = ref(false);
-// Map appId -> app slug (for actions that need slug). Built from published apps list.
-const slugByAppId = ref<Record<string, string>>({});
-
-const statusLabels: Record<string, { label: string; type: 'success' | 'warning' | 'error' | 'info' | 'default' }> = {
-  enabled: { label: '已启用', type: 'success' },
-  installed: { label: '已安装', type: 'info' },
-  disabled: { label: '已禁用', type: 'warning' },
-  uninstalled: { label: '已卸载', type: 'error' }
+const statusConfig: Record<
+  string,
+  { key: App.I18n.I18nKey; type: 'success' | 'warning' | 'error' | 'info' | 'default' }
+> = {
+  enabled: { key: 'page.marketplace.status.enabled', type: 'success' },
+  installed: { key: 'page.marketplace.status.installed', type: 'info' },
+  disabled: { key: 'page.marketplace.status.disabled', type: 'warning' },
+  uninstalled: { key: 'page.marketplace.status.uninstalled', type: 'error' }
 };
 
-const columns: DataTableColumns<Marketplace.Install> = [
-  {
-    title: '应用',
-    key: 'appId',
-    minWidth: 200,
-    render: row => {
-      const slug = slugByAppId.value[row.appId];
-      return slug || row.appId;
-    }
+const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
+  api: () => fetchInstalledApps(searchParams),
+  transform: response => defaultTransform(response),
+  onPaginationParamsChange: params => {
+    searchParams.current = params.page ?? 1;
+    searchParams.size = params.pageSize ?? 10;
   },
-  { title: '版本', key: 'installedVersion', width: 120 },
-  {
-    title: '状态',
-    key: 'status',
-    width: 100,
-    render: row => {
-      const s = statusLabels[row.status] || { label: row.status, type: 'default' as const };
-      return h(NTag, { type: s.type, size: 'small' }, () => s.label);
-    }
-  },
-  { title: '安装时间', key: 'installedAt', width: 180 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 280,
-    render: row => {
-      const buttons: ReturnType<typeof h>[] = [];
-      const slug = slugByAppId.value[row.appId];
-      if (!slug) {
-        buttons.push(h(NButton, { size: 'small', quaternary: true, onClick: () => goToDetail(row) }, () => '详情'));
-        return h(NSpace, { size: 'small' }, () => buttons);
+  columns: () => [
+    {
+      key: 'index',
+      title: $t('common.index'),
+      width: 64,
+      align: 'center',
+      render: (_, index) => index + 1
+    },
+    {
+      key: 'appName',
+      title: $t('page.marketplace.installed.colApp'),
+      minWidth: 200,
+      render: row => (
+        <div>
+          <div class="font-bold">{row.appName}</div>
+          <div class="text-xs text-gray-400">{row.appSlug}</div>
+        </div>
+      )
+    },
+    { key: 'installedVersion', title: $t('page.marketplace.installed.colVersion'), align: 'center', width: 100 },
+    {
+      key: 'status',
+      title: $t('page.marketplace.installed.colStatus'),
+      align: 'center',
+      width: 100,
+      render: row => {
+        const s = statusConfig[row.status] || { key: ('route.' + row.status) as App.I18n.I18nKey, type: 'default' as const };
+        return <NTag type={s.type} size="small">{$t(s.key)}</NTag>;
       }
-      if (row.status === 'enabled') {
-        buttons.push(h(NButton, { size: 'small', type: 'success', onClick: () => openApp(slug) }, () => '打开'));
-        buttons.push(h(NButton, { size: 'small', onClick: () => onDisable(slug) }, () => '禁用'));
-      } else if (row.status === 'disabled' || row.status === 'installed') {
-        buttons.push(h(NButton, { size: 'small', type: 'primary', onClick: () => onEnable(slug) }, () => '启用'));
+    },
+    { key: 'installedAt', title: $t('page.marketplace.installed.colInstalledAt'), width: 170 },
+    {
+      key: 'operate',
+      title: $t('page.marketplace.installed.colActions'),
+      align: 'center',
+      width: 280,
+      fixed: 'right',
+      render: row => {
+        const buttons: any[] = [];
+        if (row.status === 'enabled') {
+          buttons.push(
+            <NButton size="small" type="success" ghost onClick={() => onOpen(row)}>
+              {$t('page.marketplace.actions.open')}
+            </NButton>
+          );
+          buttons.push(
+            <NButton size="small" ghost onClick={() => onDisable(row)}>
+              {$t('page.marketplace.actions.disable')}
+            </NButton>
+          );
+        } else if (row.status === 'disabled' || row.status === 'installed') {
+          buttons.push(
+            <NButton size="small" type="primary" ghost onClick={() => onEnable(row)}>
+              {$t('page.marketplace.actions.enable')}
+            </NButton>
+          );
+        }
+        buttons.push(
+          <NPopconfirm onPositiveClick={() => onUninstall(row)}>
+            {{
+              default: () => $t('page.marketplace.detail.confirmUninstall'),
+              trigger: () => (
+                <NButton size="small" type="error" ghost>
+                  {$t('page.marketplace.actions.uninstall')}
+                </NButton>
+              )
+            }}
+          </NPopconfirm>
+        );
+        return <div class="flex-center gap-8px">{buttons}</div>;
       }
-      buttons.push(
-        h(
-          NPopconfirm,
-          { onPositiveClick: () => onUninstall(slug) },
-          {
-            trigger: () => h(NButton, { size: 'small', type: 'error' }, () => '卸载'),
-            default: () => '确认卸载？数据表将被删除。'
-          }
-        )
-      );
-      return h(NSpace, { size: 'small' }, () => buttons);
     }
-  }
-];
+  ]
+});
 
-async function loadData() {
-  loading.value = true;
-  try {
-    const { data, error } = await fetchInstalledApps({ size: 100 });
-    if (!error) {
-      records.value = data.records;
-    }
-    // Load app list to map appId -> slug
-    const { data: appsData } = await fetchMarketplaceApps({ size: 200 });
-    if (appsData) {
-      const map: Record<string, string> = {};
-      appsData.records.forEach(a => {
-        map[a.id] = a.slug;
-      });
-      slugByAppId.value = map;
-    }
-  } finally {
-    loading.value = false;
+async function onOpen(row: Marketplace.Install) {
+  window.open(`/app/${row.appSlug}/list`, '_blank');
+}
+
+async function onEnable(row: Marketplace.Install) {
+  const { error } = await enableApp(row.appSlug);
+  if (!error) {
+    window.$message?.success($t('page.marketplace.messages.enabled'));
+    getData();
   }
 }
 
-function openApp(slug: string) {
-  router.push(`/app/${slug}/list`);
-}
-
-function goToDetail(_row: Marketplace.Install) {
-  window.$message?.info('请从应用市场详情页操作');
-}
-
-async function onEnable(slug: string) {
-  actionLoading.value = true;
-  try {
-    const { error } = await enableApp(slug);
-    if (!error) {
-      window.$message?.success('已启用');
-      await loadData();
-    }
-  } finally {
-    actionLoading.value = false;
+async function onDisable(row: Marketplace.Install) {
+  const { error } = await disableApp(row.appSlug);
+  if (!error) {
+    window.$message?.success($t('page.marketplace.messages.disabled'));
+    getData();
   }
 }
 
-async function onDisable(slug: string) {
-  actionLoading.value = true;
-  try {
-    const { error } = await disableApp(slug);
-    if (!error) {
-      window.$message?.success('已禁用');
-      await loadData();
-    }
-  } finally {
-    actionLoading.value = false;
+async function onUninstall(row: Marketplace.Install) {
+  const { error } = await uninstallApp(row.appSlug);
+  if (!error) {
+    window.$message?.success($t('page.marketplace.messages.uninstalled'));
+    getData();
   }
 }
-
-async function onUninstall(slug: string) {
-  actionLoading.value = true;
-  try {
-    const { error } = await uninstallApp(slug);
-    if (!error) {
-      window.$message?.success('已卸载');
-      await loadData();
-    }
-  } finally {
-    actionLoading.value = false;
-  }
-}
-
-onMounted(loadData);
 </script>
 
 <template>
-  <div class="p-4">
-    <NCard title="已安装应用">
-      <NDataTable :columns="columns" :data="records" :loading="loading" :bordered="false" />
+  <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
+    <InstalledSearch v-model:model="searchParams" @search="getDataByPage" />
+    <NCard
+      :title="$t('page.marketplace.installed.title')"
+      :bordered="false"
+      size="small"
+      class="card-wrapper sm:flex-1-hidden"
+      data-testid="installed-apps-card"
+    >
+      <template #header-extra>
+        <TableHeaderOperation
+          v-model:columns="columnChecks"
+          :hide-add="true"
+          :hide-delete="true"
+          :loading="loading"
+          @refresh="getData"
+        />
+      </template>
+      <NDataTable
+        :columns="columns"
+        :data="data"
+        size="small"
+        :flex-height="true"
+        :scroll-x="1100"
+        :loading="loading"
+        remote
+        :row-key="(row: Marketplace.Install) => row.id"
+        :pagination="mobilePagination"
+        data-testid="installed-apps-table"
+        class="sm:h-full"
+      />
     </NCard>
   </div>
 </template>
+
+<style scoped></style>

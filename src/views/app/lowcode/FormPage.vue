@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { NButton, NCard, NForm, NFormItem, NGrid, NGridItem, NSpace } from 'naive-ui';
+import { $t } from '@/locales';
 import { createAppData, getAppData, updateAppData } from '@/service/api/lowcode';
 import { resolveSpan } from './composables/useResponsive';
 import { inferWidget, WIDGET_REGISTRY } from './widgets';
@@ -60,7 +61,7 @@ async function loadRecord() {
   if (!isEdit.value) return;
   const { data, error } = await getAppData(slug.value, modelKey.value, editId.value as string);
   if (error) {
-    window.$message?.error(error.message || '加载失败');
+    window.$message?.error(error.message || $t('page.marketplace.lowcode.msgLoadFailed'));
     return;
   }
   if (data) {
@@ -83,10 +84,12 @@ async function onSubmit() {
       ? await updateAppData(slug.value, modelKey.value, editId.value as string, formData)
       : await createAppData(slug.value, modelKey.value, formData);
     if (res.error) {
-      window.$message?.error(res.error.message || '提交失败');
+      window.$message?.error(res.error.message || $t('page.marketplace.lowcode.msgSubmitFailed'));
       return;
     }
-    window.$message?.success(isEdit.value ? '更新成功' : '创建成功');
+    window.$message?.success(
+      isEdit.value ? $t('page.marketplace.lowcode.msgUpdateSuccess') : $t('page.marketplace.lowcode.msgCreateSuccess')
+    );
     const listPage = findListPage();
     if (listPage) {
       router.push(`/app/${slug.value}/${listPage.key}`);
@@ -109,11 +112,22 @@ onMounted(async () => {
 </script>
 
 <template>
-  <NCard :title="isEdit ? `编辑${page.title}` : `新建${page.title}`">
-    <NForm :model="formData" label-placement="top">
+  <NCard
+    :data-testid="isEdit ? 'lowcode-form-card-edit' : 'lowcode-form-card-create'"
+    :title="
+      isEdit
+        ? $t('page.marketplace.lowcode.titleEdit', { title: page.title })
+        : $t('page.marketplace.lowcode.titleCreate', { title: page.title })
+    "
+  >
+    <NForm :model="formData" label-placement="top" data-testid="lowcode-form">
       <NGrid :cols="breakpoint === 'mobile' ? 1 : 24" :x-gap="12" :y-gap="12" responsive="screen">
         <NGridItem v-for="field in fields" :key="field.key" :span="resolveSpan(field.ui, breakpoint as any)">
-          <NFormItem :label="field.def.title || field.key" :path="field.key">
+          <NFormItem
+            :label="field.def.title || field.key"
+            :path="field.key"
+            :data-testid="`lowcode-form-field-${field.key}`"
+          >
             <component
               :is="WIDGET_REGISTRY[resolveWidget(field)]"
               :value="formData[field.key]"
@@ -127,8 +141,12 @@ onMounted(async () => {
     </NForm>
     <template #footer>
       <NSpace justify="end">
-        <NButton @click="onCancel">取消</NButton>
-        <NButton type="primary" :loading="submitting" @click="onSubmit">保存</NButton>
+        <NButton data-testid="lowcode-form-cancel-btn" @click="onCancel">
+          {{ $t('page.marketplace.lowcode.buttonCancel') }}
+        </NButton>
+        <NButton type="primary" :loading="submitting" data-testid="lowcode-form-save-btn" @click="onSubmit">
+          {{ $t('page.marketplace.lowcode.buttonSave') }}
+        </NButton>
       </NSpace>
     </template>
   </NCard>

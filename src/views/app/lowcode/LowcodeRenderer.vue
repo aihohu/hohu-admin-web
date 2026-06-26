@@ -50,8 +50,20 @@ const uiSchema = computed(() => currentPage.value?.ui_schema || {});
         :ui-schema="uiSchema"
         :breakpoint="breakpoint"
       />
-      <NResult v-else status="info" title="不支持的 page_type" :description="currentPage.page_type" />
+      <NResult
+        v-else
+        status="info"
+        title="不支持的 page_type"
+        :description="currentPage.page_type"
+        data-testid="lowcode-unsupported-page-type"
+      />
     </template>
-    <NResult v-else status="warning" title="页面不存在" :description="`page_key=${pageKey}`" />
+    <NResult
+      v-else
+      status="warning"
+      title="页面不存在"
+      :description="`page_key=${pageKey}`"
+      data-testid="lowcode-page-not-found"
+    />
   </div>
 </template>

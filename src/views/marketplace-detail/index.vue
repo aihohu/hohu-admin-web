@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { $t } from '@/locales';
 import {
   fetchAppDetail,
   installApp,
@@ -10,8 +11,6 @@ import {
   fetchInstalledApps,
   type Marketplace
 } from '@/service/api/marketplace';
-
-defineOptions({ name: 'MarketplaceDetail', meta: { title: '应用详情', i18nKey: 'route.marketplace_detail' } });
 
 const route = useRoute();
 const router = useRouter();
@@ -46,13 +45,13 @@ async function onInstall() {
   try {
     const { error } = await installApp({ appSlug: slug });
     if (!error) {
-      window.$message?.success('安装成功');
+      window.$message?.success($t('page.marketplace.messages.installSuccess'));
       installStatus.value = 'installed';
       await enableApp(slug);
       installStatus.value = 'enabled';
     }
   } catch (e: any) {
-    window.$message?.error(e?.message || '安装失败');
+    window.$message?.error(e?.message || $t('page.marketplace.messages.installFailed'));
   } finally {
     actionLoading.value = false;
   }
@@ -63,7 +62,7 @@ async function onUninstall() {
   try {
     const { error } = await uninstallApp(slug);
     if (!error) {
-      window.$message?.success('已卸载');
+      window.$message?.success($t('page.marketplace.messages.uninstalled'));
       installStatus.value = null;
     }
   } finally {
@@ -76,7 +75,7 @@ async function onEnable() {
   try {
     const { error } = await enableApp(slug);
     if (!error) {
-      window.$message?.success('已启用');
+      window.$message?.success($t('page.marketplace.messages.enabled'));
       installStatus.value = 'enabled';
     }
   } finally {
@@ -89,7 +88,7 @@ async function onDisable() {
   try {
     const { error } = await disableApp(slug);
     if (!error) {
-      window.$message?.success('已禁用');
+      window.$message?.success($t('page.marketplace.messages.disabled'));
       installStatus.value = 'disabled';
     }
   } finally {
@@ -111,14 +110,17 @@ onMounted(loadData);
 <template>
   <div class="p-4">
     <NSpin :show="loading">
-      <NCard v-if="app">
+      <NCard v-if="app" :data-testid="`marketplace-detail-card-${app.slug}`">
         <template #header>
           <NSpace align="center" size="large">
             <NAvatar v-if="app.icon" :src="app.icon" :size="60" round />
             <NAvatar v-else :size="60" round>{{ app.name.charAt(0) }}</NAvatar>
             <div>
               <h2 class="text-xl font-bold">{{ app.name }}</h2>
-              <p class="text-gray-400">作者：{{ app.authorName || '未知' }}</p>
+              <p class="text-gray-400">
+                {{ $t('page.marketplace.detail.author') }}:
+                {{ app.authorName || $t('page.marketplace.browse.unknownAuthor') }}
+              </p>
             </div>
           </NSpace>
         </template>
@@ -126,15 +128,15 @@ onMounted(loadData);
         <NSpace vertical size="large">
           <!-- Description -->
           <div>
-            <h3 class="font-bold mb-2">描述</h3>
-            <p>{{ app.description || '暂无描述' }}</p>
+            <h3 class="font-bold mb-2">{{ $t('page.marketplace.detail.descTitle') }}</h3>
+            <p>{{ app.description || $t('page.marketplace.browse.noDescription') }}</p>
           </div>
 
           <!-- Stats -->
           <NSpace size="large">
-            <NStatistic label="下载量" :value="app.downloadCount" />
-            <NStatistic label="评分" :value="app.avgRating.toFixed(1)" />
-            <NStatistic label="评分数" :value="app.ratingCount" />
+            <NStatistic :label="$t('page.marketplace.detail.downloadCount')" :value="app.downloadCount" />
+            <NStatistic :label="$t('page.marketplace.detail.avgRating')" :value="app.avgRating.toFixed(1)" />
+            <NStatistic :label="$t('page.marketplace.detail.ratingCount')" :value="app.ratingCount" />
           </NSpace>
 
           <!-- Tags -->
@@ -146,49 +148,69 @@ onMounted(loadData);
 
         <template #action>
           <NSpace>
-            <NButton quaternary @click="goBack">返回</NButton>
+            <NButton quaternary data-testid="detail-back-btn" @click="goBack">
+              {{ $t('page.marketplace.actions.back') }}
+            </NButton>
 
             <!-- Not installed -->
             <NButton
               v-if="!installStatus || installStatus === 'uninstalled'"
               type="primary"
               :loading="actionLoading"
+              data-testid="detail-install-btn"
               @click="onInstall"
             >
-              安装
+              {{ $t('page.marketplace.actions.install') }}
             </NButton>
 
             <!-- Installed + enabled -->
             <template v-if="installStatus === 'enabled'">
-              <NButton type="success" @click="openApp">打开应用</NButton>
-              <NButton :loading="actionLoading" @click="onDisable">禁用</NButton>
+              <NButton type="success" data-testid="detail-open-btn" @click="openApp">
+                {{ $t('page.marketplace.detail.openApp') }}
+              </NButton>
+              <NButton :loading="actionLoading" data-testid="detail-disable-btn" @click="onDisable">
+                {{ $t('page.marketplace.actions.disable') }}
+              </NButton>
               <NPopconfirm @positive-click="onUninstall">
                 <template #trigger>
-                  <NButton type="error" :loading="actionLoading">卸载</NButton>
+                  <NButton type="error" :loading="actionLoading" data-testid="detail-uninstall-btn">
+                    {{ $t('page.marketplace.actions.uninstall') }}
+                  </NButton>
                 </template>
-                确认卸载？数据表将被删除。
+                {{ $t('page.marketplace.detail.confirmUninstall') }}
               </NPopconfirm>
             </template>
 
             <!-- Installed + disabled -->
             <template v-if="installStatus === 'disabled'">
-              <NButton type="primary" :loading="actionLoading" @click="onEnable">启用</NButton>
+              <NButton type="primary" :loading="actionLoading" data-testid="detail-enable-btn" @click="onEnable">
+                {{ $t('page.marketplace.actions.enable') }}
+              </NButton>
               <NPopconfirm @positive-click="onUninstall">
                 <template #trigger>
-                  <NButton type="error" :loading="actionLoading">卸载</NButton>
+                  <NButton type="error" :loading="actionLoading" data-testid="detail-uninstall-btn">
+                    {{ $t('page.marketplace.actions.uninstall') }}
+                  </NButton>
                 </template>
-                确认卸载？数据表将被删除。
+                {{ $t('page.marketplace.detail.confirmUninstall') }}
               </NPopconfirm>
             </template>
 
             <!-- Installed (just installed, not enabled) -->
             <template v-if="installStatus === 'installed'">
-              <NButton type="primary" :loading="actionLoading" @click="onEnable">启用</NButton>
+              <NButton type="primary" :loading="actionLoading" data-testid="detail-enable-btn" @click="onEnable">
+                {{ $t('page.marketplace.actions.enable') }}
+              </NButton>
             </template>
           </NSpace>
         </template>
       </NCard>
-      <NEmpty v-else description="应用不存在或加载失败" class="py-20" />
+      <NEmpty
+        v-else
+        :description="$t('page.marketplace.detail.notFound')"
+        class="py-20"
+        data-testid="detail-not-found"
+      />
     </NSpin>
   </div>
 </template>
