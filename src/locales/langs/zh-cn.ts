@@ -893,7 +893,9 @@ const local: App.I18n.Schema = {
         msgUpdateSuccess: '更新成功',
         msgDeleteFailed: '删除失败',
         rangeMin: '最小值',
-        rangeMax: '最大值'
+        rangeMax: '最大值',
+        msgFieldRequired: '此项为必填项',
+        msgValidationFailed: '请完善表单必填项'
       },
       review: {
         title: '应用审核',

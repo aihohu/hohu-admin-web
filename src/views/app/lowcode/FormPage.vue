@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FormInst, FormRules } from 'naive-ui';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { NButton, NCard, NForm, NFormItem, NGrid, NGridItem, NSpace } from 'naive-ui';
@@ -29,8 +30,14 @@ const modelKey = computed(() => props.page.model || '_');
 
 const formData = reactive<Record<string, any>>({});
 const submitting = ref(false);
+const formRef = ref<FormInst | null>(null);
 
 const SYSTEM_COLUMNS = new Set(['id', 'tenant_id', 'created_at', 'updated_at', 'created_by', 'updated_by']);
+
+const requiredKeys = computed<Set<string>>(() => {
+  const arr = (props.dataSchema?.required as string[] | undefined) || [];
+  return new Set(arr);
+});
 
 const fields = computed(() => {
   if (!props.dataSchema) return [];
@@ -41,8 +48,24 @@ const fields = computed(() => {
     .map(key => ({
       key,
       def: properties[key] || {},
-      ui: props.uiSchema[key] || {}
+      ui: props.uiSchema[key] || {},
+      required: requiredKeys.value.has(key)
     }));
+});
+
+/** Build NaiveUI FormRules from data_schema.required. */
+const formRules = computed<FormRules>(() => {
+  const rules: FormRules = {};
+  for (const key of requiredKeys.value) {
+    rules[key] = [
+      {
+        required: true,
+        trigger: ['blur', 'change'],
+        message: $t('page.marketplace.lowcode.msgFieldRequired')
+      }
+    ];
+  }
+  return rules;
 });
 
 function initDefaults() {
@@ -78,6 +101,14 @@ function findListPage() {
 }
 
 async function onSubmit() {
+  // Validate required fields before submit; NaiveUI runs the async validator
+  // and returns errors via callback. On failure we abort and surface message.
+  try {
+    await formRef.value?.validate();
+  } catch {
+    window.$message?.warning($t('page.marketplace.lowcode.msgValidationFailed'));
+    return;
+  }
   submitting.value = true;
   try {
     const res = isEdit.value
@@ -120,12 +151,13 @@ onMounted(async () => {
         : $t('page.marketplace.lowcode.titleCreate', { title: page.title })
     "
   >
-    <NForm :model="formData" label-placement="top" data-testid="lowcode-form">
+    <NForm ref="formRef" :model="formData" :rules="formRules" label-placement="top" data-testid="lowcode-form">
       <NGrid :cols="breakpoint === 'mobile' ? 1 : 24" :x-gap="12" :y-gap="12" responsive="screen">
         <NGridItem v-for="field in fields" :key="field.key" :span="resolveSpan(field.ui, breakpoint as any)">
           <NFormItem
             :label="field.def.title || field.key"
             :path="field.key"
+            :required="field.required"
             :data-testid="`lowcode-form-field-${field.key}`"
           >
             <component

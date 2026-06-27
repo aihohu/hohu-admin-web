@@ -898,7 +898,9 @@ const local: App.I18n.Schema = {
         msgUpdateSuccess: 'Updated successfully',
         msgDeleteFailed: 'Delete failed',
         rangeMin: 'Min',
-        rangeMax: 'Max'
+        rangeMax: 'Max',
+        msgFieldRequired: 'This field is required',
+        msgValidationFailed: 'Please fill in all required fields'
       },
       review: {
         title: 'App Review',
