@@ -896,7 +896,9 @@ const local: App.I18n.Schema = {
         msgSubmitFailed: 'Submit failed',
         msgCreateSuccess: 'Created successfully',
         msgUpdateSuccess: 'Updated successfully',
-        msgDeleteFailed: 'Delete failed'
+        msgDeleteFailed: 'Delete failed',
+        rangeMin: 'Min',
+        rangeMax: 'Max'
       },
       review: {
         title: 'App Review',

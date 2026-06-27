@@ -1117,6 +1117,8 @@ declare namespace App {
             msgCreateSuccess: string;
             msgUpdateSuccess: string;
             msgDeleteFailed: string;
+            rangeMin: string;
+            rangeMax: string;
           };
           review: {
             title: string;

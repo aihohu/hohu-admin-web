@@ -891,7 +891,9 @@ const local: App.I18n.Schema = {
         msgSubmitFailed: '提交失败',
         msgCreateSuccess: '创建成功',
         msgUpdateSuccess: '更新成功',
-        msgDeleteFailed: '删除失败'
+        msgDeleteFailed: '删除失败',
+        rangeMin: '最小值',
+        rangeMax: '最大值'
       },
       review: {
         title: '应用审核',
