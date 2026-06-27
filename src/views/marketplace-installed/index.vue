@@ -1,10 +1,13 @@
 <script setup lang="tsx">
 import { reactive } from 'vue';
+import { useRouter } from 'vue-router';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { $t } from '@/locales';
 import { fetchInstalledApps, enableApp, disableApp, uninstallApp, type Marketplace } from '@/service/api/marketplace';
 import { defaultTransform, useNaivePaginatedTable } from '@/hooks/common/table';
 import InstalledSearch from './modules/installed-search.vue';
+
+const router = useRouter();
 
 const searchParams = reactive({
   current: 1,
@@ -106,7 +109,10 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
 });
 
 async function onOpen(row: Marketplace.Install) {
-  window.open(`/app/${row.appSlug}/list`, '_blank');
+  // In-place navigation: lowcode apps are trusted (declared manifest, no remote code)
+  // so they render inside BaseLayout like any other module. New-tab isolation is
+  // reserved for Phase 2 remote-component apps.
+  router.push(`/app/${row.appSlug}/list`);
 }
 
 async function onEnable(row: Marketplace.Install) {
