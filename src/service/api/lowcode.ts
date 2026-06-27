@@ -46,16 +46,33 @@ export function fetchAppManifest(slug: string) {
 }
 
 /** 动态数据 CRUD */
-export function fetchAppData(slug: string, model: string, params: Record<string, any> = {}) {
+export type AppDataFilterOp = 'contains' | 'in' | 'gte' | 'lte' | 'has';
+
+export interface AppDataListParams {
+  current?: number;
+  size?: number;
+  /** `?order_by=-created_at,name` — `-` prefix = DESC, multi-column comma-separated */
+  order_by?: string;
+  /**
+   * Django-suffix filters (spec 6.2 / decision #75 #76).
+   * Keys like `name__contains` / `status__in` / `age__gte` / `tags__has`.
+   * Values are strings; `__in` accepts CSV.
+   * Unknown fields / type-mismatched ops → 400 APP_FILTER_*.
+   */
+  filters?: Record<string, string>;
+}
+
+export function fetchAppData(slug: string, model: string, params: AppDataListParams = {}) {
+  const { current, size, order_by, filters } = params;
   return request<{
-    records: any[];
+    records: Record<string, any>[];
     total: number;
     current: number;
     size: number;
   }>({
     url: `/api/v1/app-data/${slug}/${model}`,
     method: 'get',
-    params
+    params: { current, size, order_by, ...filters }
   });
 }
 

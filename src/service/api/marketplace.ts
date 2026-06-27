@@ -59,6 +59,20 @@ export namespace Marketplace {
     status?: string | null;
     sort?: string;
   }
+
+  export interface Rating {
+    id: string;
+    appId: string;
+    userId: string;
+    rating: number;
+    comment: string | null;
+    createdAt: string;
+  }
+
+  export interface RatingInput {
+    rating: number; // 1..5
+    comment?: string | null;
+  }
 }
 
 /** fetch marketplace apps (published) */
@@ -162,6 +176,32 @@ export function fetchMyApps() {
   return request<Marketplace.App[]>({
     url: '/marketplace/developer/my-apps',
     method: 'get'
+  });
+}
+
+/** create a rating for an app (Phase 1: any logged-in user) */
+export function createRating(appId: string, data: Marketplace.RatingInput) {
+  return request<Marketplace.Rating>({
+    url: '/marketplace/rating',
+    method: 'post',
+    data: { appId, ...data }
+  });
+}
+
+/** update my rating for an app */
+export function updateRating(appId: string, data: Marketplace.RatingInput) {
+  return request<Marketplace.Rating>({
+    url: `/marketplace/rating/${appId}`,
+    method: 'put',
+    data
+  });
+}
+
+/** delete my rating for an app */
+export function deleteRating(appId: string) {
+  return request<null>({
+    url: `/marketplace/rating/${appId}`,
+    method: 'delete'
   });
 }
 
