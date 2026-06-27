@@ -18,25 +18,26 @@ export function useRouterPush(inSetup = true) {
 
   const routerBack = router.back;
 
-  async function routerPushByKey(key: RouteKey, options?: App.Global.RouterPushOptions) {
+  async function routerPushByKey(key: RouteKey | string, options?: App.Global.RouterPushOptions) {
     const { query, params } = options || {};
 
-    const routeLocation: RouteLocationRaw = {
-      name: key
-    };
+    const isPath = typeof key === 'string' && key.startsWith('/');
 
-    if (Object.keys(query || {}).length) {
-      routeLocation.query = query;
+    // Path-based keys (e.g., contributes menus like '/app/demo-crm/list') resolve by path
+    // since they all share the single 'app-lowcode' Vue route name.
+    if (isPath) {
+      const loc: RouteLocationRaw = { path: key };
+      if (Object.keys(query || {}).length) loc.query = query;
+      return routerPush(loc);
     }
 
-    if (Object.keys(params || {}).length) {
-      routeLocation.params = params;
-    }
-
-    return routerPush(routeLocation);
+    const loc: RouteLocationRaw = { name: key };
+    if (Object.keys(query || {}).length) loc.query = query;
+    if (Object.keys(params || {}).length) loc.params = params;
+    return routerPush(loc);
   }
 
-  function routerPushByKeyWithMetaQuery(key: RouteKey) {
+  function routerPushByKeyWithMetaQuery(key: RouteKey | string) {
     const allRoutes = router.getRoutes();
     const meta = allRoutes.find(item => item.name === key)?.meta || null;
 
