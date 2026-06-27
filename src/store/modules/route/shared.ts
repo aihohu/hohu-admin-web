@@ -2,6 +2,7 @@ import type { RouteLocationNormalizedLoaded, RouteRecordRaw, _RouteRecordBase } 
 import type { ElegantConstRoute, LastLevelRouteKey, RouteKey, RouteMap } from '@elegant-router/types';
 import { useSvgIcon } from '@/hooks/common/icon';
 import { $t } from '@/locales';
+import type { AppContributeMenu, AppContributePage } from '@/service/api/lowcode';
 
 /**
  * Filter auth routes by roles
@@ -117,6 +118,77 @@ export function updateLocaleOfGlobalMenus(menus: App.Global.Menu[]) {
   });
 
   return result;
+}
+
+/**
+ * Build App.Global.Menu[] from marketplace contributes.
+ *
+ * Contributes ships a flat menu list with `parent` pointers; this builds a tree.
+ * Each menu maps to a unique `/app/{slug}/{pageKey}` path under the shared
+ * `app-lowcode` Vue route. Keyed by routePath (not route.name, since all
+ * contributes routes share name `app-lowcode`).
+ *
+ * Page key resolution: cm.page_key → first page of same app → 'index'.
+ *
+ * Type casts on routeKey/routePath bypass the closed @elegant-router unions;
+ * contributes menus are dynamic and cannot be typed by the static route generator.
+ */
+export function buildContributeMenus(
+  contributesMenus: AppContributeMenu[],
+  contributesPages: AppContributePage[]
+): App.Global.Menu[] {
+  const { SvgIconVNode } = useSvgIcon();
+  const defaultIcon = import.meta.env.VITE_MENU_ICON;
+
+  const resolvePageKey = (cm: AppContributeMenu): string => {
+    if (cm.page_key) return cm.page_key;
+    const firstPage = contributesPages.find(p => p.app_slug === cm.app_slug);
+    return firstPage?.key ?? 'index';
+  };
+
+  type Node = { menu: App.Global.Menu; order: number; parent: string | null };
+  const nodeByKey = new Map<string, Node>();
+
+  contributesMenus.forEach(cm => {
+    const pageKey = resolvePageKey(cm);
+    const routePath = `/app/${cm.app_slug}/${pageKey}`;
+    nodeByKey.set(routePath, {
+      menu: {
+        key: routePath,
+        label: cm.title,
+        i18nKey: null,
+        routeKey: 'app-lowcode' as unknown as RouteKey,
+        routePath: routePath as unknown as RouteMap[RouteKey],
+        icon: SvgIconVNode({ icon: cm.icon || defaultIcon, fontSize: 20 })
+      },
+      order: cm.order,
+      parent: cm.parent
+    });
+  });
+
+  const orderByKey = new Map<string, number>();
+  nodeByKey.forEach(({ order }, key) => orderByKey.set(key, order));
+
+  const topLevel: App.Global.Menu[] = [];
+  nodeByKey.forEach(({ menu, parent }) => {
+    const parentNode = parent ? nodeByKey.get(parent) : null;
+    if (parentNode) {
+      parentNode.menu.children = parentNode.menu.children ?? [];
+      parentNode.menu.children.push(menu);
+    } else {
+      topLevel.push(menu);
+    }
+  });
+
+  const sortRecursive = (list: App.Global.Menu[]) => {
+    list.sort((a, b) => (orderByKey.get(a.key) ?? 100) - (orderByKey.get(b.key) ?? 100));
+    list.forEach(m => {
+      if (m.children?.length) sortRecursive(m.children);
+    });
+  };
+  sortRecursive(topLevel);
+
+  return topLevel;
 }
 
 /**

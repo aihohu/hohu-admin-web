@@ -7,6 +7,8 @@ export interface AppContributeMenu {
   icon: string | null;
   parent: string | null;
   order: number;
+  /** Menu跳转的 page key（manifest.menu.page_key），未声明时为 null，前端 fallback 到该 app 第一个 page */
+  page_key: string | null;
 }
 
 export interface AppContributePage {
