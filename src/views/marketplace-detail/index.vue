@@ -11,15 +11,26 @@ import {
   fetchInstalledApps,
   type Marketplace
 } from '@/service/api/marketplace';
+import { useContributesStore } from '@/store/modules/contributes';
+import { useRouteStore } from '@/store/modules/route';
 
 const route = useRoute();
 const router = useRouter();
 const slug = (route.query.id as string) || '';
 
+const contributesStore = useContributesStore();
+const routeStore = useRouteStore();
+
 const loading = ref(true);
 const app = ref<Marketplace.AppDetail | null>(null);
 const installStatus = ref<string | null>(null);
 const actionLoading = ref(false);
+
+/** Refresh contributes cache + sidebar menus (call after any install/uninstall/enable/disable). */
+async function refreshContributes() {
+  await contributesStore.refresh();
+  await routeStore.rebuildMenus();
+}
 
 async function loadData() {
   loading.value = true;
@@ -49,6 +60,7 @@ async function onInstall() {
       installStatus.value = 'installed';
       await enableApp(slug);
       installStatus.value = 'enabled';
+      await refreshContributes();
     }
   } catch (e: any) {
     window.$message?.error(e?.message || $t('page.marketplace.messages.installFailed'));
@@ -64,6 +76,7 @@ async function onUninstall() {
     if (!error) {
       window.$message?.success($t('page.marketplace.messages.uninstalled'));
       installStatus.value = null;
+      await refreshContributes();
     }
   } finally {
     actionLoading.value = false;
@@ -77,6 +90,7 @@ async function onEnable() {
     if (!error) {
       window.$message?.success($t('page.marketplace.messages.enabled'));
       installStatus.value = 'enabled';
+      await refreshContributes();
     }
   } finally {
     actionLoading.value = false;
@@ -90,6 +104,7 @@ async function onDisable() {
     if (!error) {
       window.$message?.success($t('page.marketplace.messages.disabled'));
       installStatus.value = 'disabled';
+      await refreshContributes();
     }
   } finally {
     actionLoading.value = false;
