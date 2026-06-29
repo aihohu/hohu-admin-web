@@ -176,9 +176,16 @@ export function useMenu() {
   const route = useRoute();
 
   const selectedKey = computed(() => {
-    const { hideInMenu, activeMenu } = route.meta;
-    const name = route.name as string;
+    const { hideInMenu, activeMenu, isAppRoute } = route.meta;
 
+    // Contributes menus are keyed by route path (e.g. '/app/demo-crm/list')
+    // since every app page shares the single 'app-lowcode' Vue route name.
+    // Matching by name would never highlight; match by path instead.
+    if (isAppRoute) {
+      return route.path;
+    }
+
+    const name = route.name as string;
     const routeName = (hideInMenu ? activeMenu : name) || name;
 
     return routeName;
