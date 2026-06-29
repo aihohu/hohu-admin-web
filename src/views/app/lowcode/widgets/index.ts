@@ -7,10 +7,15 @@ export const WIDGET_REGISTRY: Record<string, ReturnType<typeof defineAsyncCompon
   NSwitch: defineAsyncComponent(() => import('./WidgetSwitch.vue')),
   NDatePicker: defineAsyncComponent(() => import('./WidgetDatePicker.vue')),
   NArray: defineAsyncComponent(() => import('./WidgetArray.vue')),
-  NObject: defineAsyncComponent(() => import('./WidgetObject.vue'))
+  NObject: defineAsyncComponent(() => import('./WidgetObject.vue')),
+  NSelectBelongsTo: defineAsyncComponent(() => import('./WidgetSelectBelongsTo.vue'))
 };
 
 export function inferWidget(fieldDef: Record<string, any>): string {
+  // BelongsTo relation (spec §6.5 / decision #79): field has x-ref → dropdown
+  // populated from target table. Checked before type-based inference so
+  // x-ref + integer falls into here rather than NInputNumber.
+  if (fieldDef['x-ref']) return 'NSelectBelongsTo';
   const type = fieldDef.type;
   if (type === 'number' || type === 'integer') return 'NInputNumber';
   if (type === 'boolean') return 'NSwitch';

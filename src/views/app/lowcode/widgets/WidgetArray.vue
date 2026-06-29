@@ -51,10 +51,11 @@ function onInputChange(v: string) {
     <NInput
       :value="inputValue"
       :disabled="disabled"
-      :placeholder="uiSchema?.placeholder || '输入后回车添加'"
+      :placeholder="uiSchema?.placeholder || '输入后回车添加，或失焦自动添加'"
       size="small"
       @update:value="onInputChange"
       @keyup.enter="onInputEnter"
+      @blur="addTag"
     />
   </NSpace>
 </template>

@@ -165,6 +165,7 @@ onMounted(async () => {
               :value="formData[field.key]"
               :field-def="field.def"
               :ui-schema="field.ui"
+              :manifest="manifest"
               @update:value="(v: any) => (formData[field.key] = v)"
             />
           </NFormItem>
