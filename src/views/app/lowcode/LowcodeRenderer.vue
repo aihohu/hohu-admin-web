@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useResponsive } from './composables/useResponsive';
 import TablePage from './TablePage.vue';
 import FormPage from './FormPage.vue';
+import DetailPage from './DetailPage.vue';
 
 interface Props {
   manifest: Record<string, any>;
@@ -44,6 +45,14 @@ const uiSchema = computed(() => currentPage.value?.ui_schema || {});
       />
       <FormPage
         v-else-if="currentPage.page_type === 'form'"
+        :manifest="manifest"
+        :page="currentPage"
+        :data-schema="dataSchema"
+        :ui-schema="uiSchema"
+        :breakpoint="breakpoint"
+      />
+      <DetailPage
+        v-else-if="currentPage.page_type === 'detail'"
         :manifest="manifest"
         :page="currentPage"
         :data-schema="dataSchema"
