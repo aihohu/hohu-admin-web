@@ -19,6 +19,12 @@ export function setupElegantRouter() {
         return `/login/:module(${moduleReg})?`;
       }
 
+      // Marketplace sub-routes: keep flat route names for type system,
+      // but use slash-based URLs for cleaner hierarchy.
+      if (key === 'marketplace-detail') return '/marketplace/detail';
+      if (key === 'marketplace-installed') return '/marketplace/installed';
+      if (key === 'marketplace-upload') return '/marketplace/upload';
+
       return routePath;
     },
     onRouteMetaGen(routeName) {

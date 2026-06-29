@@ -23,9 +23,15 @@ declare module "@elegant-router/types" {
     "ai": "/ai";
     "ai_chat": "/ai/chat";
     "ai_provider": "/ai/provider";
+    "app": "/app";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
     "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
+    "marketplace": "/marketplace";
+    "marketplace-detail": "/marketplace/detail";
+    "marketplace-installed": "/marketplace/installed";
+    "marketplace-review": "/marketplace-review";
+    "marketplace-upload": "/marketplace/upload";
     "profile": "/profile";
     "system": "/system";
     "system_config": "/system/config";
@@ -75,9 +81,15 @@ declare module "@elegant-router/types" {
     | "404"
     | "500"
     | "ai"
+    | "app"
     | "home"
     | "iframe-page"
     | "login"
+    | "marketplace"
+    | "marketplace-detail"
+    | "marketplace-installed"
+    | "marketplace-review"
+    | "marketplace-upload"
     | "profile"
     | "system"
   >;
@@ -104,7 +116,13 @@ declare module "@elegant-router/types" {
     | "profile"
     | "ai_chat"
     | "ai_provider"
+    | "app"
     | "home"
+    | "marketplace-detail"
+    | "marketplace-installed"
+    | "marketplace-review"
+    | "marketplace-upload"
+    | "marketplace"
     | "system_config"
     | "system_dept"
     | "system_dict_data"

@@ -69,6 +69,15 @@ export const generatedRoutes: GeneratedRoute[] = [
     ]
   },
   {
+    name: 'app',
+    path: '/app',
+    component: 'layout.base$view.app',
+    meta: {
+      title: 'app',
+      i18nKey: 'route.app'
+    }
+  },
+  {
     name: 'home',
     path: '/home',
     component: 'layout.base$view.home',
@@ -102,6 +111,51 @@ export const generatedRoutes: GeneratedRoute[] = [
       i18nKey: 'route.login',
       constant: true,
       hideInMenu: true
+    }
+  },
+  {
+    name: 'marketplace',
+    path: '/marketplace',
+    component: 'layout.base$view.marketplace',
+    meta: {
+      title: 'marketplace',
+      i18nKey: 'route.marketplace'
+    }
+  },
+  {
+    name: 'marketplace-detail',
+    path: '/marketplace/detail',
+    component: 'layout.base$view.marketplace-detail',
+    meta: {
+      title: 'marketplace-detail',
+      i18nKey: 'route.marketplace-detail'
+    }
+  },
+  {
+    name: 'marketplace-installed',
+    path: '/marketplace/installed',
+    component: 'layout.base$view.marketplace-installed',
+    meta: {
+      title: 'marketplace-installed',
+      i18nKey: 'route.marketplace-installed'
+    }
+  },
+  {
+    name: 'marketplace-review',
+    path: '/marketplace-review',
+    component: 'layout.base$view.marketplace-review',
+    meta: {
+      title: 'marketplace-review',
+      i18nKey: 'route.marketplace-review'
+    }
+  },
+  {
+    name: 'marketplace-upload',
+    path: '/marketplace/upload',
+    component: 'layout.base$view.marketplace-upload',
+    meta: {
+      title: 'marketplace-upload',
+      i18nKey: 'route.marketplace-upload'
     }
   },
   {

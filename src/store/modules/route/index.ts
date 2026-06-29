@@ -10,8 +10,10 @@ import { createStaticRoutes, getAuthVueRoutes } from '@/router/routes';
 import { ROOT_ROUTE } from '@/router/routes/builtin';
 import { getRouteName, getRoutePath } from '@/router/elegant/transform';
 import { useAuthStore } from '../auth';
+import { useContributesStore } from '../contributes';
 import { useTabStore } from '../tab';
 import {
+  buildContributeMenus,
   filterAuthRoutesByRoles,
   getBreadcrumbsByRoute,
   getCacheRouteNames,
@@ -190,7 +192,34 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
       await initDynamicAuthRoute();
     }
 
+    // Merge marketplace contributes into sidebar after static menus are built
+    await mergeContributeMenus();
+
     tabStore.initHomeTab();
+  }
+
+  /**
+   * Fetch contributes and append to menus.value.
+   * Called once after initAuthRoute; called again by rebuildMenus on install/uninstall.
+   */
+  async function mergeContributeMenus() {
+    const contributesStore = useContributesStore();
+    await contributesStore.fetchContributes();
+    const contributeMenus = buildContributeMenus(contributesStore.menus, contributesStore.pages);
+    if (contributeMenus.length) {
+      menus.value = [...menus.value, ...contributeMenus];
+    }
+  }
+
+  /**
+   * Rebuild menus from static routes + re-merge contributes.
+   * Called after contributesStore.refresh() when an app is installed/uninstalled/enabled/disabled.
+   */
+  async function rebuildMenus() {
+    const allRoutes = [...constantRoutes.value, ...authRoutes.value];
+    const sortRoutes = sortRoutesByOrder(allRoutes);
+    getGlobalMenus(sortRoutes);
+    await mergeContributeMenus();
   }
 
   /** Init static auth route */
@@ -346,6 +375,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
     getIsAuthRouteExist,
     getSelectedMenuKeyPath,
     onRouteSwitchWhenLoggedIn,
-    onRouteSwitchWhenNotLoggedIn
+    onRouteSwitchWhenNotLoggedIn,
+    rebuildMenus
   };
 });
