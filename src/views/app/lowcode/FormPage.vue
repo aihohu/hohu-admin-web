@@ -53,13 +53,29 @@ const fields = computed(() => {
     }));
 });
 
-/** Build NaiveUI FormRules from data_schema.required. */
+/** Build NaiveUI FormRules from data_schema.required.
+ *  Type declared explicitly so async-validator handles 0 / numeric strings
+ *  correctly (without type, required treats them inconsistently). */
 const formRules = computed<FormRules>(() => {
   const rules: FormRules = {};
+  const properties = props.dataSchema?.properties || {};
   for (const key of requiredKeys.value) {
+    const fieldDef = properties[key] || {};
+    const fieldType = fieldDef.type;
+    const validatorType =
+      fieldType === 'integer' || fieldType === 'number'
+        ? 'number'
+        : fieldType === 'boolean'
+          ? 'boolean'
+          : fieldType === 'array'
+            ? 'array'
+            : fieldType === 'object'
+              ? 'object'
+              : 'string';
     rules[key] = [
       {
         required: true,
+        type: validatorType as any,
         trigger: ['blur', 'change'],
         message: $t('page.marketplace.lowcode.msgFieldRequired')
       }
@@ -74,9 +90,10 @@ function initDefaults() {
   for (const [key, def] of Object.entries(properties)) {
     const fieldDef = def as Record<string, any>;
     if (SYSTEM_COLUMNS.has(key)) continue;
-    if (fieldDef.default !== undefined) {
-      formData[key] = fieldDef.default;
-    }
+    // Pre-initialize every field so Vue reactivity tracks the key from mount.
+    // Without this, formData[key] = v on a fresh reactive({}) sometimes
+    // bypasses NaiveUI's form change-trigger detection.
+    formData[key] = fieldDef.default !== undefined ? fieldDef.default : null;
   }
 }
 
