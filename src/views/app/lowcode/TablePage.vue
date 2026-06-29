@@ -94,25 +94,15 @@ const columns = computed<DataTableColumns>(() => {
     if (SYSTEM_COLUMNS.has(key)) continue;
     const fieldDef = def as Record<string, any>;
     const isBelongsTo = belongsToFields.value.has(key);
-    // Backend emits <fk>_label on list (decision #79). Read joined label
-    // instead of raw FK id; raw id still accessible via row.<key>.
-    // Omit sorter entirely on belongs_to columns: label is derived, not a
-    // real DB column. (Setting sorter:false still renders the icon under
-    // NDataTable's remote mode in some NaiveUI versions.)
-    if (isBelongsTo) {
-      cols.push({
-        title: fieldDef.title || key,
-        key: `${key}_label`,
-        ellipsis: { tooltip: true }
-      });
-    } else {
-      cols.push({
-        title: fieldDef.title || key,
-        key,
-        ellipsis: { tooltip: true },
-        sorter: true
-      });
-    }
+    // Backend emits <fk>_label on list (decision #79) and supports JOIN-based
+    // sort on the label column (LEFT JOIN target table, ORDER BY target.label).
+    // So sorter is enabled for ALL non-system columns, including belongs_to.
+    cols.push({
+      title: fieldDef.title || key,
+      key: isBelongsTo ? `${key}_label` : key,
+      ellipsis: { tooltip: true },
+      sorter: true
+    });
   }
 
   cols.push({
