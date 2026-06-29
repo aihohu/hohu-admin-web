@@ -97,7 +97,12 @@ function resolveWidget(field: { ui: Record<string, any>; def: Record<string, any
 }
 
 function findListPage() {
-  return (props.manifest.pages || []).find((p: any) => p.page_type === 'table');
+  // Match same model so multi-model apps return to the right list
+  // (e.g., order_form save → order_list, not customer_list).
+  const currentModel = props.page.model;
+  return (props.manifest.pages || []).find(
+    (p: any) => p.page_type === 'table' && (!currentModel || p.model === currentModel)
+  );
 }
 
 async function onSubmit() {

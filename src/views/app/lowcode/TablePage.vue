@@ -145,7 +145,12 @@ const columns = computed<DataTableColumns>(() => {
 });
 
 function findFormPage() {
-  return (props.manifest.pages || []).find((p: any) => p.page_type === 'form');
+  // Match same model so multi-model apps route to the right form
+  // (e.g., order_list 新增 → order_form, not customer_form).
+  const currentModel = props.page.model;
+  return (props.manifest.pages || []).find(
+    (p: any) => p.page_type === 'form' && (!currentModel || p.model === currentModel)
+  );
 }
 
 function onEdit(row: any) {
