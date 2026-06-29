@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { NGridItem, NPagination } from 'naive-ui';
 import { $t } from '@/locales';
-import { fetchMarketplaceApps, fetchSearchApps, type Marketplace } from '@/service/api/marketplace';
+import { fetchMarketplaceApps, type Marketplace } from '@/service/api/marketplace';
 
 const router = useRouter();
 const loading = ref(false);
@@ -53,23 +53,20 @@ function categoryLabel(value: string) {
 async function loadData() {
   loading.value = true;
   try {
-    if (keyword.value.trim()) {
-      const { data, error } = await fetchSearchApps(keyword.value.trim(), currentPage.value, pageSize.value);
-      if (!error) {
-        apps.value = data.records;
-        total.value = data.total;
-      }
-    } else {
-      const { data, error } = await fetchMarketplaceApps({
-        current: currentPage.value,
-        size: pageSize.value,
-        category: category.value || undefined,
-        sort: sort.value
-      });
-      if (!error) {
-        apps.value = data.records;
-        total.value = data.total;
-      }
+    // Backend /marketplace/list already supports keyword (AppQuery.keyword),
+    // so we can pass everything in one call and preserve category/sort filters
+    // while searching. The dedicated /search endpoint is keyword-only and
+    // would silently drop them.
+    const { data, error } = await fetchMarketplaceApps({
+      current: currentPage.value,
+      size: pageSize.value,
+      keyword: keyword.value.trim() || undefined,
+      category: category.value || undefined,
+      sort: sort.value
+    });
+    if (!error) {
+      apps.value = data.records;
+      total.value = data.total;
     }
   } finally {
     loading.value = false;
