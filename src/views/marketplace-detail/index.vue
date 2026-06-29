@@ -39,12 +39,11 @@ async function loadData() {
     if (!error) {
       app.value = detail;
     }
-    const { data: installed } = await fetchInstalledApps({ size: 100 });
-    if (installed && app.value) {
-      const record = installed.records.find(r => r.appId === app.value?.id);
-      if (record) {
-        installStatus.value = record.status;
-      }
+    // Server-side filter by slug — no need to pull the entire installed list
+    // and search client-side. size:1 because we only care about existence+status.
+    const { data: installed } = await fetchInstalledApps({ appSlug: slug, size: 1 });
+    if (installed && installed.records.length > 0) {
+      installStatus.value = installed.records[0].status;
     }
   } finally {
     loading.value = false;
