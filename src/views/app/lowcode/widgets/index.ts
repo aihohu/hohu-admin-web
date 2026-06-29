@@ -5,13 +5,17 @@ export const WIDGET_REGISTRY: Record<string, ReturnType<typeof defineAsyncCompon
   NInputNumber: defineAsyncComponent(() => import('./WidgetNumber.vue')),
   NSelect: defineAsyncComponent(() => import('./WidgetSelect.vue')),
   NSwitch: defineAsyncComponent(() => import('./WidgetSwitch.vue')),
-  NDatePicker: defineAsyncComponent(() => import('./WidgetDatePicker.vue'))
+  NDatePicker: defineAsyncComponent(() => import('./WidgetDatePicker.vue')),
+  NArray: defineAsyncComponent(() => import('./WidgetArray.vue')),
+  NObject: defineAsyncComponent(() => import('./WidgetObject.vue'))
 };
 
 export function inferWidget(fieldDef: Record<string, any>): string {
   const type = fieldDef.type;
   if (type === 'number' || type === 'integer') return 'NInputNumber';
   if (type === 'boolean') return 'NSwitch';
+  if (type === 'array') return 'NArray';
+  if (type === 'object') return 'NObject';
   if (type === 'string') {
     if (fieldDef.enum) return 'NSelect';
     if (fieldDef.format === 'date') return 'NDatePicker';
