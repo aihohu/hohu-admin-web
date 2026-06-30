@@ -69,6 +69,22 @@ async function loadData() {
 
 const SYSTEM_COLUMNS = new Set(['id', 'tenant_id', 'created_at', 'updated_at', 'created_by', 'updated_by']);
 
+/** Detect FK fields that point at another model (x-ref OR declared in relations[]).
+ *  Backend auto-joins these and emits <fk>_label; the column should read that field. */
+const belongsToFields = computed<Set<string>>(() => {
+  const out = new Set<string>();
+  if (!props.dataSchema) return out;
+  // Field-level x-ref
+  for (const [key, def] of Object.entries(props.dataSchema.properties || {})) {
+    if ((def as Record<string, any>)['x-ref']) out.add(key);
+  }
+  // Explicit relations (rare for single-table mode but spec allows)
+  for (const rel of props.dataSchema.relations || []) {
+    if (rel?.type === 'belongs_to' && rel.foreign_key) out.add(rel.foreign_key);
+  }
+  return out;
+});
+
 const columns = computed<DataTableColumns>(() => {
   if (!props.dataSchema) return [];
   const properties = props.dataSchema.properties || {};
@@ -77,9 +93,13 @@ const columns = computed<DataTableColumns>(() => {
   for (const [key, def] of Object.entries(properties)) {
     if (SYSTEM_COLUMNS.has(key)) continue;
     const fieldDef = def as Record<string, any>;
+    const isBelongsTo = belongsToFields.value.has(key);
+    // Backend emits <fk>_label on list (decision #79) and supports JOIN-based
+    // sort on the label column (LEFT JOIN target table, ORDER BY target.label).
+    // So sorter is enabled for ALL non-system columns, including belongs_to.
     cols.push({
       title: fieldDef.title || key,
-      key,
+      key: isBelongsTo ? `${key}_label` : key,
       ellipsis: { tooltip: true },
       sorter: true
     });
@@ -125,7 +145,12 @@ const columns = computed<DataTableColumns>(() => {
 });
 
 function findFormPage() {
-  return (props.manifest.pages || []).find((p: any) => p.page_type === 'form');
+  // Match same model so multi-model apps route to the right form
+  // (e.g., order_list 新增 → order_form, not customer_form).
+  const currentModel = props.page.model;
+  return (props.manifest.pages || []).find(
+    (p: any) => p.page_type === 'form' && (!currentModel || p.model === currentModel)
+  );
 }
 
 function onEdit(row: any) {

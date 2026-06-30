@@ -123,10 +123,13 @@ export function updateLocaleOfGlobalMenus(menus: App.Global.Menu[]) {
 /**
  * Build App.Global.Menu[] from marketplace contributes.
  *
- * Contributes ships a flat menu list with `parent` pointers; this builds a tree.
- * Each menu maps to a unique `/app/{slug}/{pageKey}` path under the shared
- * `app-lowcode` Vue route. Keyed by routePath (not route.name, since all
- * contributes routes share name `app-lowcode`).
+ * Auto-grouping: apps with N≥2 menus are nested under a synthetic parent
+ * labeled with app_name so the sidebar reads as one "system" rather than
+ * N flat top-level entries. Apps with a single menu stay top-level.
+ *
+ * Each leaf menu maps to a unique `/app/{slug}/{pageKey}` path under the
+ * shared `app-lowcode` Vue route. Keyed by routePath (not route.name, since
+ * all contributes routes share name `app-lowcode`).
  *
  * Page key resolution: cm.page_key → first page of same app → 'index'.
  *
@@ -146,38 +149,71 @@ export function buildContributeMenus(
     return firstPage?.key ?? 'index';
   };
 
-  type Node = { menu: App.Global.Menu; order: number; parent: string | null };
-  const nodeByKey = new Map<string, Node>();
-
+  // Group menus by app_slug so multi-menu apps collapse into one sidebar entry
+  const menusByApp = new Map<string, AppContributeMenu[]>();
   contributesMenus.forEach(cm => {
-    const pageKey = resolvePageKey(cm);
-    const routePath = `/app/${cm.app_slug}/${pageKey}`;
-    nodeByKey.set(routePath, {
-      menu: {
+    const list = menusByApp.get(cm.app_slug) ?? [];
+    list.push(cm);
+    menusByApp.set(cm.app_slug, list);
+  });
+
+  // Track order per leaf menu key (for child sort) + per app group (for top sort)
+  const orderByKey = new Map<string, number>();
+  const topLevel: App.Global.Menu[] = [];
+
+  menusByApp.forEach((appMenus, appSlug) => {
+    // Sort within app by declared order
+    appMenus.sort((a, b) => a.order - b.order);
+
+    if (appMenus.length === 1) {
+      // Single-menu app → flat top-level entry
+      const cm = appMenus[0];
+      const pageKey = resolvePageKey(cm);
+      const routePath = `/app/${appSlug}/${pageKey}`;
+      orderByKey.set(routePath, cm.order);
+      topLevel.push({
         key: routePath,
         label: cm.title,
         i18nKey: null,
         routeKey: 'app-lowcode' as unknown as RouteKey,
         routePath: routePath as unknown as RouteMap[RouteKey],
         icon: SvgIconVNode({ icon: cm.icon || defaultIcon, fontSize: 20 })
-      },
-      order: cm.order,
-      parent: cm.parent
-    });
-  });
-
-  const orderByKey = new Map<string, number>();
-  nodeByKey.forEach(({ order }, key) => orderByKey.set(key, order));
-
-  const topLevel: App.Global.Menu[] = [];
-  nodeByKey.forEach(({ menu, parent }) => {
-    const parentNode = parent ? nodeByKey.get(parent) : null;
-    if (parentNode) {
-      parentNode.menu.children = parentNode.menu.children ?? [];
-      parentNode.menu.children.push(menu);
-    } else {
-      topLevel.push(menu);
+      });
+      return;
     }
+
+    // Multi-menu app → synthetic group parent labeled with app_name
+    const groupKey = `app-group:${appSlug}`;
+    const groupName = appMenus[0].app_name || appSlug;
+    // Use the first declared icon for the group; fallback to default
+    const groupIcon = appMenus.find(m => m.icon)?.icon || defaultIcon;
+    const groupOrder = Math.min(...appMenus.map(m => m.order));
+    orderByKey.set(groupKey, groupOrder);
+
+    const children: App.Global.Menu[] = appMenus.map(cm => {
+      const pageKey = resolvePageKey(cm);
+      const routePath = `/app/${appSlug}/${pageKey}`;
+      orderByKey.set(routePath, cm.order);
+      return {
+        key: routePath,
+        label: cm.title,
+        i18nKey: null,
+        routeKey: 'app-lowcode' as unknown as RouteKey,
+        routePath: routePath as unknown as RouteMap[RouteKey],
+        icon: SvgIconVNode({ icon: cm.icon || defaultIcon, fontSize: 20 })
+      };
+    });
+
+    topLevel.push({
+      key: groupKey,
+      label: groupName,
+      i18nKey: null,
+      // Group itself is non-navigable; reuse 'app-lowcode' but with no path
+      routeKey: 'app-lowcode' as unknown as RouteKey,
+      routePath: groupKey as unknown as RouteMap[RouteKey],
+      icon: SvgIconVNode({ icon: groupIcon, fontSize: 20 }),
+      children
+    });
   });
 
   const sortRecursive = (list: App.Global.Menu[]) => {

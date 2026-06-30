@@ -57,7 +57,11 @@ async function loadRecord() {
 }
 
 function findListPage() {
-  return (props.manifest.pages || []).find((p: any) => p.page_type === 'table');
+  // Match same model for multi-model apps (order detail back → order list).
+  const currentModel = props.page.model;
+  return (props.manifest.pages || []).find(
+    (p: any) => p.page_type === 'table' && (!currentModel || p.model === currentModel)
+  );
 }
 
 function onBack() {
