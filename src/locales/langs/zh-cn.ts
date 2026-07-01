@@ -246,6 +246,7 @@ const local: App.I18n.Schema = {
     'system_operation-log': '操作日志',
     'system_login-log': '登录日志',
     system_config: '系统设置',
+    'system_data-scope-demo': '数据权限演示',
     auth: '权限管理',
     task: '任务中心',
     'task_job-log': '任务日志',
@@ -348,6 +349,23 @@ const local: App.I18n.Schema = {
           enable: '启用',
           disable: '禁用'
         }
+      },
+      dataScopeDemo: {
+        title: '数据权限演示数据',
+        subTitle: '同一份数据，不同 data_scope 用户看到不同子集',
+        demoAccountHint: '演示账号（密码统一，见下方标签）：用不同账号登录查看效果',
+        title_field: '标题',
+        content: '内容',
+        deptId: '部门ID',
+        createBy: '创建人ID',
+        status: '状态',
+        form: {
+          title: '请输入标题',
+          content: '请输入内容',
+          status: '请选择状态'
+        },
+        addData: '新增演示数据',
+        editData: '编辑演示数据'
       },
       role: {
         title: '角色列表',

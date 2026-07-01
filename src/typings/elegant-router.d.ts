@@ -35,6 +35,7 @@ declare module "@elegant-router/types" {
     "profile": "/profile";
     "system": "/system";
     "system_config": "/system/config";
+    "system_data-scope-demo": "/system/data-scope-demo";
     "system_dept": "/system/dept";
     "system_dict": "/system/dict";
     "system_dict_data": "/system/dict/data";
@@ -124,6 +125,7 @@ declare module "@elegant-router/types" {
     | "marketplace-upload"
     | "marketplace"
     | "system_config"
+    | "system_data-scope-demo"
     | "system_dept"
     | "system_dict_data"
     | "system_dict"

@@ -650,3 +650,38 @@ export function fetchBatchDeleteLoginLog(data: string[]) {
     data
   });
 }
+
+/** get data scope demo list (applies data scope filter) */
+export function fetchGetDataScopeDemoList(params?: Api.SystemManage.DataScopeDemoSearchParams) {
+  return request<Api.SystemManage.DataScopeDemoList>({
+    url: '/system/data-scope-demo/list',
+    method: 'get',
+    params
+  });
+}
+
+/** create data scope demo */
+export function fetchCreateDataScopeDemo(data: Api.SystemManage.DataScopeDemoCreateParams) {
+  return request<App.Service.Response<Api.SystemManage.DataScopeDemo>>({
+    url: '/system/data-scope-demo/add',
+    method: 'post',
+    data
+  });
+}
+
+/** update data scope demo */
+export function fetchUpdateDataScopeDemo(demoId: string, data: Api.SystemManage.DataScopeDemoUpdateParams) {
+  return request<App.Service.Response<Api.SystemManage.DataScopeDemo>>({
+    url: `/system/data-scope-demo/${demoId}`,
+    method: 'put',
+    data
+  });
+}
+
+/** delete data scope demo */
+export function fetchDeleteDataScopeDemo(demoId: string) {
+  return request<App.Service.Response<any>>({
+    url: `/system/data-scope-demo/${demoId}`,
+    method: 'delete'
+  });
+}

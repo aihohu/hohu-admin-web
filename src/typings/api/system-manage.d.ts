@@ -561,5 +561,36 @@ declare namespace Api {
 
     /** login log list */
     type LoginLogList = Common.PaginatingQueryRecord<LoginLog>;
+
+    /** data scope demo record */
+    type DataScopeDemo = Common.CommonRecord<{
+      /** demo id */
+      demoId: string;
+      /** title */
+      title: string;
+      /** content */
+      content: string | null;
+      /** dept id (data scope anchor) */
+      deptId: string;
+      /** create by user id (SELF scope anchor) */
+      createBy: string;
+    }> & {
+      createTime: string | null;
+      updateTime: string | null;
+    };
+
+    /** data scope demo search params */
+    type DataScopeDemoSearchParams = CommonType.RecordNullable<
+      Pick<DataScopeDemo, 'title' | 'status'> & CommonSearchParams
+    >;
+
+    /** data scope demo list */
+    type DataScopeDemoList = Common.PaginatingQueryRecord<DataScopeDemo>;
+
+    /** data scope demo create params */
+    type DataScopeDemoCreateParams = Pick<DataScopeDemo, 'title' | 'content' | 'status'>;
+
+    /** data scope demo update params */
+    type DataScopeDemoUpdateParams = Partial<DataScopeDemoCreateParams>;
   }
 }

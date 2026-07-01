@@ -1,0 +1,81 @@
+<script setup lang="ts">
+import { toRaw } from 'vue';
+import { jsonClone } from '@sa/utils';
+import { enableStatusOptions } from '@/constants/business';
+import { translateOptions } from '@/utils/common';
+import { $t } from '@/locales';
+
+defineOptions({
+  name: 'DataScopeDemoSearch'
+});
+
+interface Emits {
+  (e: 'search'): void;
+}
+
+const emit = defineEmits<Emits>();
+
+const model = defineModel<Api.SystemManage.DataScopeDemoSearchParams>('model', { required: true });
+
+const defaultModel = jsonClone(toRaw(model.value));
+
+function resetModel() {
+  Object.assign(model.value, defaultModel);
+}
+
+function search() {
+  emit('search');
+}
+</script>
+
+<template>
+  <NCard :bordered="false" size="small" class="card-wrapper">
+    <NCollapse :default-expanded-names="['data-scope-demo-search']">
+      <NCollapseItem :title="$t('common.search')" name="data-scope-demo-search">
+        <NForm :model="model" label-placement="left" :label-width="80">
+          <NGrid responsive="screen" item-responsive>
+            <NFormItemGi
+              span="24 s:12 m:6"
+              :label="$t('page.system.dataScopeDemo.title_field')"
+              path="title"
+              class="pr-24px"
+            >
+              <NInput v-model:value="model.title" :placeholder="$t('page.system.dataScopeDemo.form.title')" />
+            </NFormItemGi>
+            <NFormItemGi
+              span="24 s:12 m:6"
+              :label="$t('page.system.dataScopeDemo.status')"
+              path="status"
+              class="pr-24px"
+            >
+              <NSelect
+                v-model:value="model.status"
+                :placeholder="$t('page.system.dataScopeDemo.form.status')"
+                :options="translateOptions(enableStatusOptions)"
+                clearable
+              />
+            </NFormItemGi>
+            <NFormItemGi span="24 s:12 m:6">
+              <NSpace class="w-full" justify="end">
+                <NButton @click="resetModel">
+                  <template #icon>
+                    <IconIcRoundRefresh class="text-icon" />
+                  </template>
+                  {{ $t('common.reset') }}
+                </NButton>
+                <NButton type="primary" ghost @click="search">
+                  <template #icon>
+                    <IconIcRoundSearch class="text-icon" />
+                  </template>
+                  {{ $t('common.search') }}
+                </NButton>
+              </NSpace>
+            </NFormItemGi>
+          </NGrid>
+        </NForm>
+      </NCollapseItem>
+    </NCollapse>
+  </NCard>
+</template>
+
+<style scoped></style>

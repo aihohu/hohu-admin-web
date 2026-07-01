@@ -188,6 +188,15 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       },
       {
+        name: 'system_data-scope-demo',
+        path: '/system/data-scope-demo',
+        component: 'view.system_data-scope-demo',
+        meta: {
+          title: 'system_data-scope-demo',
+          i18nKey: 'route.system_data-scope-demo'
+        }
+      },
+      {
         name: 'system_dept',
         path: '/system/dept',
         component: 'view.system_dept',

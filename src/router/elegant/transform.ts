@@ -181,6 +181,7 @@ const routeMap: RouteMap = {
   "profile": "/profile",
   "system": "/system",
   "system_config": "/system/config",
+  "system_data-scope-demo": "/system/data-scope-demo",
   "system_dept": "/system/dept",
   "system_dict": "/system/dict",
   "system_dict_data": "/system/dict/data",

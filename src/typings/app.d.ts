@@ -574,6 +574,23 @@ declare namespace App {
               disable: string;
             };
           };
+          dataScopeDemo: {
+            title: string;
+            subTitle: string;
+            demoAccountHint: string;
+            title_field: string;
+            content: string;
+            deptId: string;
+            createBy: string;
+            status: string;
+            form: {
+              title: string;
+              content: string;
+              status: string;
+            };
+            addData: string;
+            editData: string;
+          };
           role: {
             title: string;
             roleName: string;

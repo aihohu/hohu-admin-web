@@ -31,6 +31,7 @@ export const views: Record<LastLevelRouteKey, RouteComponent | (() => Promise<Ro
   "marketplace-upload": () => import("@/views/marketplace-upload/index.vue"),
   marketplace: () => import("@/views/marketplace/index.vue"),
   system_config: () => import("@/views/system/config/index.vue"),
+  "system_data-scope-demo": () => import("@/views/system/data-scope-demo/index.vue"),
   system_dept: () => import("@/views/system/dept/index.vue"),
   system_dict_data: () => import("@/views/system/dict/data/index.vue"),
   system_dict: () => import("@/views/system/dict/index.vue"),

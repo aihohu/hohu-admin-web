@@ -250,6 +250,7 @@ const local: App.I18n.Schema = {
     'system_operation-log': 'Operation Log',
     'system_login-log': 'Login Log',
     system_config: 'System Config',
+    'system_data-scope-demo': 'Data Scope Demo',
     auth: 'Permission',
     task: 'Task Center',
     'task_job-log': 'Job Log',
@@ -353,6 +354,24 @@ const local: App.I18n.Schema = {
           enable: 'Enable',
           disable: 'Disable'
         }
+      },
+      dataScopeDemo: {
+        title: 'Data Scope Demo Data',
+        subTitle: 'Same data, different data_scope users see different subsets',
+        demoAccountHint:
+          'Demo accounts (password shown in tag below): log in with different accounts to see the effect',
+        title_field: 'Title',
+        content: 'Content',
+        deptId: 'Dept ID',
+        createBy: 'Creator ID',
+        status: 'Status',
+        form: {
+          title: 'Please enter title',
+          content: 'Please enter content',
+          status: 'Please select status'
+        },
+        addData: 'Add Demo Data',
+        editData: 'Edit Demo Data'
       },
       role: {
         title: 'Role List',
