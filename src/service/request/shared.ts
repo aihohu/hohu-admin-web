@@ -10,11 +10,20 @@ export function getAuthorization() {
   return Authorization;
 }
 
-/** refresh token */
+/**
+ * Handle token expired: 用 refresh token 换新 access token，失败则登出。
+ *
+ * 单飞语义：refreshTokenPromise 保证并发请求只触发一次 refresh。
+ */
 async function handleRefreshToken() {
   const { resetStore } = useAuthStore();
 
   const rToken = localStg.get('refreshToken') || '';
+  if (!rToken) {
+    resetStore();
+    return false;
+  }
+
   const { error, data } = await fetchRefreshToken(rToken);
   if (!error) {
     localStg.set('token', data.token);
@@ -23,7 +32,6 @@ async function handleRefreshToken() {
   }
 
   resetStore();
-
   return false;
 }
 

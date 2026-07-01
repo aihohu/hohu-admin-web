@@ -22,18 +22,21 @@ export function fetchGetUserInfo() {
   return request<Api.Auth.UserInfo>({ url: '/auth/getUserInfo' });
 }
 
-/**
- * Refresh token
- *
- * @param refreshToken Refresh token
- */
+/** Logout: 把当前 token 加入黑名单，立即失效 */
+export function fetchLogout(refreshToken?: string) {
+  return request<App.Service.Response<any>>({
+    url: '/auth/logout',
+    method: 'post',
+    data: refreshToken ? { refreshToken } : {}
+  });
+}
+
+/** Refresh token: 用 refresh token 换取新的 access + refresh token 对 */
 export function fetchRefreshToken(refreshToken: string) {
   return request<Api.Auth.LoginToken>({
     url: '/auth/refreshToken',
     method: 'post',
-    data: {
-      refreshToken
-    }
+    data: { refreshToken }
   });
 }
 

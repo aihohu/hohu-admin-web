@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import type { VNode } from 'vue';
 import { Icon } from '@iconify/vue';
 import { useAuthStore } from '@/store/modules/auth';
+import { fetchLogout } from '@/service/api';
+import { localStg } from '@/utils/storage';
 import { useRouterPush } from '@/hooks/common/router';
 import { useSvgIcon } from '@/hooks/common/icon';
 import { $t } from '@/locales';
@@ -53,13 +55,16 @@ const options = computed(() => {
   return opts;
 });
 
-function logout() {
+async function logout() {
   window.$dialog?.info({
     title: $t('common.tip'),
     content: $t('common.logoutConfirm'),
     positiveText: $t('common.confirm'),
     negativeText: $t('common.cancel'),
-    onPositiveClick: () => {
+    onPositiveClick: async () => {
+      // 通知后端把 access + refresh token 加入黑名单，无论成功失败都清本地状态
+      const refreshToken = localStg.get('refreshToken') || undefined;
+      await fetchLogout(refreshToken);
       authStore.resetStore();
     }
   });

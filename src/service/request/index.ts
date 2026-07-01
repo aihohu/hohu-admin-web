@@ -73,6 +73,20 @@ export const request = createFlatRequest(
         request.state.errMsgStack = request.state.errMsgStack.filter(msg => msg !== response.data?.msg);
       }
 
+      // HTTP 401 时先尝试 refresh（有 refresh token 且不是 refresh 请求自身），失败再 logout
+      const isRefreshEndpoint = response.config.url?.includes('/auth/refreshToken');
+      const hasRefreshToken = !!localStg.get('refreshToken');
+
+      if (isUnauthorized && hasRefreshToken && !isRefreshEndpoint) {
+        const success = await handleExpiredRequest(request.state);
+        if (success) {
+          const Authorization = getAuthorization();
+          Object.assign(response.config.headers, { Authorization });
+          return instance.request(response.config) as Promise<AxiosResponse>;
+        }
+        // refresh 失败 → 继续往下走 logout
+      }
+
       // when the backend response code is in `logoutCodes`, it means the user will be logged out and redirected to login page
       const logoutCodes = import.meta.env.VITE_SERVICE_LOGOUT_CODES?.split(',') || [];
       if (logoutCodes.includes(responseCode) || isUnauthorized) {
@@ -114,7 +128,7 @@ export const request = createFlatRequest(
       // when the backend response code is in `expiredTokenCodes`, it means the token is expired, and refresh token
       // the api `refreshToken` can not return error code in `expiredTokenCodes`, otherwise it will be a dead loop, should return `logoutCodes` or `modalLogoutCodes`
       const expiredTokenCodes = import.meta.env.VITE_SERVICE_EXPIRED_TOKEN_CODES?.split(',') || [];
-      if (expiredTokenCodes.includes(responseCode)) {
+      if (expiredTokenCodes.length > 0 && expiredTokenCodes.includes(responseCode)) {
         const success = await handleExpiredRequest(request.state);
         if (success) {
           const Authorization = getAuthorization();
