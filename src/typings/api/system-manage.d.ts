@@ -466,8 +466,8 @@ declare namespace Api {
     /** job log search params */
     type JobLogSearchParams = CommonType.RecordNullable<
       Pick<JobLog, 'jobId' | 'jobKey' | 'status'> & {
-        startTime: string | null;
-        endTime: string | null;
+        startTime: number | null;
+        endTime: number | null;
       } & CommonSearchParams
     >;
 
@@ -528,8 +528,8 @@ declare namespace Api {
     type OperationLogSearchParams = CommonType.RecordNullable<
       Pick<OperationLog, 'module' | 'action' | 'username'> & {
         statusCode: number | null;
-        startTime: string | null;
-        endTime: string | null;
+        startTime: number | null;
+        endTime: number | null;
       } & CommonSearchParams
     >;
 
@@ -554,8 +554,8 @@ declare namespace Api {
     /** login log search params */
     type LoginLogSearchParams = CommonType.RecordNullable<
       Pick<LoginLog, 'username' | 'status' | 'ip'> & {
-        startTime: string | null;
-        endTime: string | null;
+        startTime: number | null;
+        endTime: number | null;
       } & CommonSearchParams
     >;
 

@@ -49,8 +49,11 @@ function search() {
 
 function handleDateRangeChange(value: [number, number] | null) {
   if (value) {
-    model.value.startTime = new Date(value[0]).toISOString();
-    model.value.endTime = new Date(value[1]).toISOString();
+    // 后端 LocalNaiveDatetime 接受 unix ms timestamp，按服务器本地时区
+    // 转 naive datetime，与 DB TIMESTAMP WITHOUT TIME ZONE 列对齐。
+    // 不要用 toISOString()——会转 UTC 导致跨时区 8 小时偏差。
+    model.value.startTime = value[0];
+    model.value.endTime = value[1];
   } else {
     model.value.startTime = null;
     model.value.endTime = null;
