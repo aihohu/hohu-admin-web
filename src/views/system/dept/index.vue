@@ -6,6 +6,7 @@ import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord } from '@/constants/business';
 import { fetchBatchDeleteDept, fetchDeleteDept, fetchGetDeptTree } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
+import { useAuth } from '@/hooks/business/auth';
 import { useNaiveTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
 import DeptOperateDrawer from './modules/dept-operate-drawer.vue';
@@ -13,6 +14,7 @@ import DeptSearch from './modules/dept-search.vue';
 import DeptUsersModal from './modules/dept-users-modal.vue';
 
 const appStore = useAppStore();
+const { hasAuth } = useAuth();
 
 const searchParams: Api.SystemManage.DeptSearchParams = reactive({
   deptName: null,
@@ -101,25 +103,33 @@ const { columns, columnChecks, data, loading, getData, scrollX } = useNaiveTable
       width: 280,
       render: row => (
         <div class="flex-center gap-8px">
-          <NButton type="success" ghost size="small" onClick={() => manageUsers(row.deptId)}>
-            {$t('page.system.dept.manageUsers')}
-          </NButton>
-          <NButton type="info" ghost size="small" onClick={() => addChild(row.deptId)}>
-            {$t('page.system.dept.addChildDept')}
-          </NButton>
-          <NButton type="primary" ghost size="small" onClick={() => edit(row.deptId)}>
-            {$t('common.edit')}
-          </NButton>
-          <NPopconfirm onPositiveClick={() => handleDelete(row.deptId)}>
-            {{
-              default: () => $t('common.confirmDelete'),
-              trigger: () => (
-                <NButton type="error" ghost size="small">
-                  {$t('common.delete')}
-                </NButton>
-              )
-            }}
-          </NPopconfirm>
+          {hasAuth('system:dept:edit') && (
+            <NButton type="success" ghost size="small" onClick={() => manageUsers(row.deptId)}>
+              {$t('page.system.dept.manageUsers')}
+            </NButton>
+          )}
+          {hasAuth('system:dept:add') && (
+            <NButton type="info" ghost size="small" onClick={() => addChild(row.deptId)}>
+              {$t('page.system.dept.addChildDept')}
+            </NButton>
+          )}
+          {hasAuth('system:dept:edit') && (
+            <NButton type="primary" ghost size="small" onClick={() => edit(row.deptId)}>
+              {$t('common.edit')}
+            </NButton>
+          )}
+          {hasAuth('system:dept:delete') && (
+            <NPopconfirm onPositiveClick={() => handleDelete(row.deptId)}>
+              {{
+                default: () => $t('common.confirmDelete'),
+                trigger: () => (
+                  <NButton type="error" ghost size="small">
+                    {$t('common.delete')}
+                  </NButton>
+                )
+              }}
+            </NPopconfirm>
+          )}
         </div>
       )
     }
@@ -197,6 +207,8 @@ async function handleDelete(id: string) {
           v-model:columns="columnChecks"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
+          add-auth="system:dept:add"
+          delete-auth="system:dept:batch-delete"
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"

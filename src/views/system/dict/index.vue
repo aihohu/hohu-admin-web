@@ -8,6 +8,7 @@ import {
   fetchGetDictTypeList
 } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
+import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { useRouter } from 'vue-router';
 import { $t } from '@/locales';
@@ -20,6 +21,7 @@ defineOptions({
 
 const router = useRouter();
 const appStore = useAppStore();
+const { hasAuth } = useAuth();
 
 const searchParams: Api.SystemManage.DictTypeSearchParams = reactive({
   current: 1,
@@ -100,19 +102,23 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
             <NButton type="info" ghost size="small" onClick={() => viewDictData(row)}>
               {$t('page.system.dict.viewDictData')}
             </NButton>
-            <NButton type="primary" ghost size="small" onClick={() => edit(row.dictTypeId)}>
-              {$t('common.edit')}
-            </NButton>
-            <NPopconfirm onPositiveClick={() => handleDelete(row.dictTypeId)}>
-              {{
-                default: () => $t('common.confirmDelete'),
-                trigger: () => (
-                  <NButton type="error" ghost size="small">
-                    {$t('common.delete')}
-                  </NButton>
-                )
-              }}
-            </NPopconfirm>
+            {hasAuth('system:dict-type:edit') && (
+              <NButton type="primary" ghost size="small" onClick={() => edit(row.dictTypeId)}>
+                {$t('common.edit')}
+              </NButton>
+            )}
+            {hasAuth('system:dict-type:delete') && (
+              <NPopconfirm onPositiveClick={() => handleDelete(row.dictTypeId)}>
+                {{
+                  default: () => $t('common.confirmDelete'),
+                  trigger: () => (
+                    <NButton type="error" ghost size="small">
+                      {$t('common.delete')}
+                    </NButton>
+                  )
+                }}
+              </NPopconfirm>
+            )}
           </div>
         )
       }
@@ -165,6 +171,8 @@ function viewDictData(row: Api.SystemManage.DictType) {
           v-model:columns="columnChecks"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
+          add-auth="system:dict-type:add"
+          delete-auth="system:dict-type:batch-delete"
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"

@@ -4,6 +4,7 @@ import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord } from '@/constants/business';
 import { fetchBatchDeleteJob, fetchDeleteJob, fetchGetJobList, fetchRunJobNow, fetchUpdateJobStatus } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
+import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
 import JobOperateDrawer from './modules/job-operate-drawer.vue';
@@ -14,6 +15,7 @@ defineOptions({
 });
 
 const appStore = useAppStore();
+const { hasAuth } = useAuth();
 
 const searchParams: Api.SystemManage.JobSearchParams = reactive({
   current: 1,
@@ -119,52 +121,59 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         width: 320,
         render: row => (
           <div class="flex-center gap-8px">
-            <NButton type="primary" ghost size="small" onClick={() => edit(row.jobId)}>
-              {$t('common.edit')}
-            </NButton>
-            {row.status === '1' ? (
-              <NPopconfirm onPositiveClick={() => handleToggleStatus(row.jobId, '2')}>
+            {hasAuth('system:job:edit') && (
+              <NButton type="primary" ghost size="small" onClick={() => edit(row.jobId)}>
+                {$t('common.edit')}
+              </NButton>
+            )}
+            {hasAuth('system:job:edit') &&
+              (row.status === '1' ? (
+                <NPopconfirm onPositiveClick={() => handleToggleStatus(row.jobId, '2')}>
+                  {{
+                    default: () => $t('page.system.job.disableConfirm'),
+                    trigger: () => (
+                      <NButton type="warning" ghost size="small">
+                        {$t('page.system.job.disableJob')}
+                      </NButton>
+                    )
+                  }}
+                </NPopconfirm>
+              ) : (
+                <NPopconfirm onPositiveClick={() => handleToggleStatus(row.jobId, '1')}>
+                  {{
+                    default: () => $t('page.system.job.enableConfirm'),
+                    trigger: () => (
+                      <NButton type="success" ghost size="small">
+                        {$t('page.system.job.enableJob')}
+                      </NButton>
+                    )
+                  }}
+                </NPopconfirm>
+              ))}
+            {hasAuth('system:job:run') && (
+              <NPopconfirm onPositiveClick={() => handleRunNow(row.jobId)}>
                 {{
-                  default: () => $t('page.system.job.disableConfirm'),
+                  default: () => $t('page.system.job.runConfirm'),
                   trigger: () => (
-                    <NButton type="warning" ghost size="small">
-                      {$t('page.system.job.disableJob')}
-                    </NButton>
-                  )
-                }}
-              </NPopconfirm>
-            ) : (
-              <NPopconfirm onPositiveClick={() => handleToggleStatus(row.jobId, '1')}>
-                {{
-                  default: () => $t('page.system.job.enableConfirm'),
-                  trigger: () => (
-                    <NButton type="success" ghost size="small">
-                      {$t('page.system.job.enableJob')}
+                    <NButton type="info" ghost size="small">
+                      {$t('page.system.job.runNow')}
                     </NButton>
                   )
                 }}
               </NPopconfirm>
             )}
-            <NPopconfirm onPositiveClick={() => handleRunNow(row.jobId)}>
-              {{
-                default: () => $t('page.system.job.runConfirm'),
-                trigger: () => (
-                  <NButton type="info" ghost size="small">
-                    {$t('page.system.job.runNow')}
-                  </NButton>
-                )
-              }}
-            </NPopconfirm>
-            <NPopconfirm onPositiveClick={() => handleDelete(row.jobId)}>
-              {{
-                default: () => $t('common.confirmDelete'),
-                trigger: () => (
-                  <NButton type="error" ghost size="small" disabled={row.status === '1'}>
-                    {$t('common.delete')}
-                  </NButton>
-                )
-              }}
-            </NPopconfirm>
+            {hasAuth('system:job:delete') && (
+              <NPopconfirm onPositiveClick={() => handleDelete(row.jobId)}>
+                {{
+                  default: () => $t('common.confirmDelete'),
+                  trigger: () => (
+                    <NButton type="error" ghost size="small" disabled={row.status === '1'}>
+                      {$t('common.delete')}
+                    </NButton>
+                  )
+                }}
+              </NPopconfirm>
+            )}
           </div>
         )
       }
@@ -224,6 +233,8 @@ function edit(id: string) {
           v-model:columns="columnChecks"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
+          add-auth="system:job:add"
+          delete-auth="system:job:batch-delete"
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"

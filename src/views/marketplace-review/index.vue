@@ -111,8 +111,8 @@ function onReviewed() {
       <template #header-extra>
         <TableHeaderOperation
           v-model:columns="columnChecks"
-          :hide-add="true"
-          :hide-delete="true"
+          :show-add="false"
+          :show-delete="false"
           :loading="loading"
           @refresh="getData"
         />

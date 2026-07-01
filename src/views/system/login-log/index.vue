@@ -123,7 +123,7 @@ async function handleClean() {
     >
       <template #header-extra>
         <NSpace>
-          <NPopconfirm @positive-click="handleClean">
+          <NPopconfirm v-permission="'monitor:login-log:clean'" @positive-click="handleClean">
             <template #trigger>
               <NButton type="warning" size="small">
                 {{ $t('page.system.loginLog.clean') }}
@@ -136,6 +136,7 @@ async function handleClean() {
             :disabled-delete="checkedRowKeys.length === 0"
             :loading="loading"
             :show-add="false"
+            delete-auth="monitor:login-log:delete"
             @delete="handleBatchDelete"
             @refresh="getData"
           />

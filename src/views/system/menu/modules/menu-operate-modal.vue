@@ -128,6 +128,11 @@ const loading = ref(false);
 
 const parentTreeOptions = ref<Api.SystemManage.MenuTree[]>([]);
 const editingMenuId = ref<string | null>(null);
+// 编辑模式下记下原始按钮 code 集合，用于禁用已有按钮的 code 编辑。
+// code（permission）是稳定业务键，改 code 会触发后端按 code 增量更新逻辑
+// 把旧行当 to_delete 删掉，CASCADE 清空所有角色的该按钮关联，重现原 bug。
+// 已有按钮 code 禁改；新增按钮 code 可填。
+const originalButtonCodes = ref<Set<string>>(new Set());
 
 async function loadMenuTree() {
   const { data, error } = await fetchGetMenuTree();
@@ -180,6 +185,7 @@ const layoutOptions: CommonType.Option[] = [
 function handleInitModel() {
   model.value = createDefaultModel();
   editingMenuId.value = null;
+  originalButtonCodes.value = new Set();
 
   if (!props.rowData) return;
 
@@ -208,6 +214,9 @@ function handleInitModel() {
       buttons: buttons || [],
       layout, page, pathParam: param
     });
+
+    // 记下编辑前的按钮 code 集合，用于 template 里逐行判断 disabled
+    originalButtonCodes.value = new Set((buttons || []).map(b => b.code));
   }
 
   if (!model.value.query) {
@@ -512,6 +521,7 @@ watch(
                   <div class="ml-8px flex-y-center flex-1 gap-12px">
                     <NInput
                       v-model:value="value.code"
+                      :disabled="operateType === 'edit' && originalButtonCodes.has(value.code)"
                       :placeholder="
                         getPermissionPrefix() ? `${getPermissionPrefix()}:` : $t('page.system.menu.form.buttonCode')
                       "

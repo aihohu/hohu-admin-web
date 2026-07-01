@@ -5,6 +5,7 @@ import { useBoolean } from '@sa/hooks';
 import { enableStatusRecord } from '@/constants/business';
 import { fetchBatchDeleteRole, fetchDeleteRole, fetchGetRoleList } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
+import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
 import RoleOperateDrawer from './modules/role-operate-drawer.vue';
@@ -12,6 +13,7 @@ import RoleSearch from './modules/role-search.vue';
 import MenuAuthModal from './modules/menu-auth-modal.vue';
 
 const appStore = useAppStore();
+const { hasAuth } = useAuth();
 const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
 
 const currentRoleId = shallowRef<string>('');
@@ -88,22 +90,28 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       width: 260,
       render: row => (
         <div class="flex-center gap-8px">
-          <NButton type="info" ghost size="small" onClick={() => onMenuAuthClick(row.roleId)}>
-            {$t('page.system.role.menuAuth')}
-          </NButton>
-          <NButton type="primary" ghost size="small" onClick={() => edit(row.roleId)}>
-            {$t('common.edit')}
-          </NButton>
-          <NPopconfirm onPositiveClick={() => handleDelete(row.roleId)}>
-            {{
-              default: () => $t('common.confirmDelete'),
-              trigger: () => (
-                <NButton type="error" ghost size="small">
-                  {$t('common.delete')}
-                </NButton>
-              )
-            }}
-          </NPopconfirm>
+          {hasAuth('system:role:menu-auth') && (
+            <NButton type="info" ghost size="small" onClick={() => onMenuAuthClick(row.roleId)}>
+              {$t('page.system.role.menuAuth')}
+            </NButton>
+          )}
+          {hasAuth('system:role:edit') && (
+            <NButton type="primary" ghost size="small" onClick={() => edit(row.roleId)}>
+              {$t('common.edit')}
+            </NButton>
+          )}
+          {hasAuth('system:role:delete') && (
+            <NPopconfirm onPositiveClick={() => handleDelete(row.roleId)}>
+              {{
+                default: () => $t('common.confirmDelete'),
+                trigger: () => (
+                  <NButton type="error" ghost size="small">
+                    {$t('common.delete')}
+                  </NButton>
+                )
+              }}
+            </NPopconfirm>
+          )}
         </div>
       )
     }
@@ -155,6 +163,8 @@ function onMenuAuthClick(id: string) {
           v-model:columns="columnChecks"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
+          add-auth="system:role:add"
+          delete-auth="system:role:batch-delete"
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"

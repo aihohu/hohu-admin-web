@@ -4,11 +4,13 @@ import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import { fetchBatchDeleteFile, fetchDeleteFile, fetchGetFileList } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
+import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import FileUploadModal from './modules/file-upload-modal.vue';
 
 const { t } = useI18n();
 const appStore = useAppStore();
+const { hasAuth } = useAuth();
 const uploadModalRef = ref<InstanceType<typeof FileUploadModal>>();
 
 function formatFileSize(bytes: number): string {
@@ -88,16 +90,18 @@ const { columns, columnChecks, data, loading, getData, mobilePagination } = useN
           <NButton type="info" ghost size="small" onClick={() => handleCopyUrl(row.fileUrl)}>
             {t('page.system.file.copyLink')}
           </NButton>
-          <NPopconfirm onPositiveClick={() => handleDelete(row.fileId)}>
-            {{
-              default: () => t('page.system.file.confirmDelete'),
-              trigger: () => (
-                <NButton type="error" ghost size="small">
-                  {t('common.delete')}
-                </NButton>
-              )
-            }}
-          </NPopconfirm>
+          {hasAuth('system:file:delete') && (
+            <NPopconfirm onPositiveClick={() => handleDelete(row.fileId)}>
+              {{
+                default: () => t('page.system.file.confirmDelete'),
+                trigger: () => (
+                  <NButton type="error" ghost size="small">
+                    {t('common.delete')}
+                  </NButton>
+                )
+              }}
+            </NPopconfirm>
+          )}
         </div>
       )
     }
@@ -187,29 +191,17 @@ function handleReset() {
           v-model:columns="columnChecks"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
+          delete-auth="system:file:delete"
           @delete="handleBatchDelete"
           @refresh="getData"
         >
           <template #prefix>
-            <NButton type="primary" size="small" @click="uploadModalRef?.open()">
+            <NButton v-permission="'system:file:upload'" type="primary" size="small" @click="uploadModalRef?.open()">
               <template #icon>
                 <IconIcRoundCloudUpload class="align-sub text-icon" />
               </template>
               {{ $t('page.system.file.uploadFile') }}
             </NButton>
-          </template>
-          <template #default>
-            <NPopconfirm @positive-click="handleBatchDelete">
-              <template #trigger>
-                <NButton size="small" ghost type="error" :disabled="checkedRowKeys.length === 0">
-                  <template #icon>
-                    <IconIcRoundDelete class="text-icon" />
-                  </template>
-                  {{ $t('common.batchDelete') }}
-                </NButton>
-              </template>
-              {{ $t('common.confirmDelete') }}
-            </NPopconfirm>
           </template>
         </TableHeaderOperation>
       </template>

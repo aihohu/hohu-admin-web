@@ -328,6 +328,7 @@ watch(visible, () => {
                 <NTooltip>
                   <template #trigger>
                     <NButton
+                      v-permission="'ai:provider:test-model'"
                       quaternary
                       circle
                       size="tiny"
@@ -341,12 +342,12 @@ watch(visible, () => {
                   </template>
                   {{ t('page.ai.provider.testConnectivity') }}
                 </NTooltip>
-                <NButton quaternary circle size="tiny" @click="openEditModel(m)">
+                <NButton v-permission="'ai:provider:edit'" quaternary circle size="tiny" @click="openEditModel(m)">
                   <template #icon>
                     <IconIcRoundEdit class="text-14px" />
                   </template>
                 </NButton>
-                <NPopconfirm @positive-click="deleteModel(m)">
+                <NPopconfirm v-permission="'ai:provider:delete'" @positive-click="deleteModel(m)">
                   <template #trigger>
                     <NButton quaternary circle size="tiny">
                       <template #icon>
@@ -361,7 +362,14 @@ watch(visible, () => {
             <div v-if="m.baseUrl" class="model-base-url">{{ m.baseUrl }}</div>
           </div>
 
-          <NButton v-if="!showModelForm" dashed size="small" block @click="openAddModel">
+          <NButton
+            v-if="!showModelForm"
+            v-permission="'ai:provider:add'"
+            dashed
+            size="small"
+            block
+            @click="openAddModel"
+          >
             <template #icon>
               <IconIcRoundAdd class="text-14px" />
             </template>

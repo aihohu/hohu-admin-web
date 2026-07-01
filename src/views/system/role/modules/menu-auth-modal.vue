@@ -70,10 +70,47 @@ async function getTree() {
 const checks = shallowRef<string[]>([]);
 const indeterminateKeys = shallowRef<Array<string | number>>([]);
 
+/**
+ * 根据 tree 与 checks 主动计算半选父节点。
+ * NTree cascade 模式下，初始加载不会 emit indeterminate-keys，导致用户
+ * 未操作直接点确认时丢失半选父菜单（父菜单关联被清空，用户失去路由）。
+ */
+function recomputeIndeterminate() {
+  const checkedSet = new Set(checks.value);
+  const result: Array<string | number> = [];
+
+  const dfs = (node: Api.SystemManage.MenuTree): { selected: number; total: number } => {
+    const children = node.children || [];
+    if (children.length === 0) {
+      return {
+        selected: checkedSet.has(node.id) ? 1 : 0,
+        total: 1
+      };
+    }
+    let selected = 0;
+    let total = 0;
+    for (const child of children) {
+      const r = dfs(child);
+      selected += r.selected;
+      total += r.total;
+    }
+    if (selected > 0 && selected < total) {
+      result.push(node.id);
+    }
+    return { selected, total };
+  };
+
+  for (const root of tree.value) {
+    dfs(root);
+  }
+  indeterminateKeys.value = result;
+}
+
 async function getChecks() {
   const { error, data } = await fetchGetRoleMenuList(props.roleId);
   if (!error) {
     checks.value = data;
+    recomputeIndeterminate();
   }
   showSpin.value = false;
 }

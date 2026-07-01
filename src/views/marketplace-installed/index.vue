@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { $t } from '@/locales';
 import { fetchInstalledApps, enableApp, disableApp, uninstallApp, type Marketplace } from '@/service/api/marketplace';
+import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable } from '@/hooks/common/table';
 import InstalledSearch from './modules/installed-search.vue';
 
 const router = useRouter();
+const { hasAuth } = useAuth();
 
 const searchParams = reactive({
   current: 1,
@@ -90,18 +92,20 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
             </NButton>
           );
         }
-        buttons.push(
-          <NPopconfirm onPositiveClick={() => onUninstall(row)}>
-            {{
-              default: () => $t('page.marketplace.detail.confirmUninstall'),
-              trigger: () => (
-                <NButton size="small" type="error" ghost>
-                  {$t('page.marketplace.actions.uninstall')}
-                </NButton>
-              )
-            }}
-          </NPopconfirm>
-        );
+        if (hasAuth('marketplace:install')) {
+          buttons.push(
+            <NPopconfirm onPositiveClick={() => onUninstall(row)}>
+              {{
+                default: () => $t('page.marketplace.detail.confirmUninstall'),
+                trigger: () => (
+                  <NButton size="small" type="error" ghost>
+                    {$t('page.marketplace.actions.uninstall')}
+                  </NButton>
+                )
+              }}
+            </NPopconfirm>
+          );
+        }
         return <div class="flex-center gap-8px">{buttons}</div>;
       }
     }
@@ -153,8 +157,8 @@ async function onUninstall(row: Marketplace.Install) {
       <template #header-extra>
         <TableHeaderOperation
           v-model:columns="columnChecks"
-          :hide-add="true"
-          :hide-delete="true"
+          :show-add="false"
+          :show-delete="false"
           :loading="loading"
           @refresh="getData"
         />

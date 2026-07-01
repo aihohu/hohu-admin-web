@@ -87,6 +87,16 @@ packages/                      # Monorepo workspace packages
 - Reference: `views/system/role/index.vue` — TSX columns + `useNaivePaginatedTable` + `useTableOperate`
 - Drawer forms: reference `role/modules/role-operate-drawer.vue`
 
+### Button-level Permission Control
+
+Button-level permission codes are delivered by backend `/auth/getUserInfo` to `userInfo.buttons` (super admin gets `["*"]`). Frontend provides three layers:
+
+- **`v-permission` directive** (preferred, globally registered): `<NButton v-permission="'system:role:add'">`
+- **`hasAuth` function** (for TSX render): `{hasAuth('xxx') && <NButton/>}`
+- **`TableHeaderOperation` props**: `<TableHeaderOperation add-auth="..." delete-auth="...">`
+
+See backend guide [`hohu-admin/docs/button-permission-guide.md`](../../hohu-admin/docs/button-permission-guide.md) for naming convention, full data flow, and how to add new permission codes. **Frontend control is UX-only — backend MUST independently gate endpoints with `require_permissions(...)`.**
+
 ### API Service Example
 
 ```typescript
@@ -115,6 +125,7 @@ export function createItem(data: Api.Module.Create) {
 10. **API Key editing:** Leave `apiKey` field empty when editing (don't send masked value); validation not required in edit mode
 11. **AI streaming:** Chat uses native `fetch` + `ReadableStream` (not axios request wrapper)
 12. **Dark theme:** Custom components use `var(--n-*)` CSS variables + `html.dark` overrides
+13. **Permission in slot:** Don't use `v-if="hasAuth('xxx')"` inside `<TableHeaderOperation>` default slot — slot children evaluating to `v-if=false` triggers Vue slot fallback and renders the component's default buttons (no auth check). Use `v-permission="'xxx'"` or `<TableHeaderOperation add-auth="xxx">` props. See [按钮级权限指南](../../hohu-admin/docs/button-permission-guide.md).
 
 ## AI Module
 

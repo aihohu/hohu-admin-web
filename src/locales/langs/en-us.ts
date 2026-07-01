@@ -1001,7 +1001,9 @@ const local: App.I18n.Schema = {
     AI_TEST_NO_API_KEY: 'Missing API Key, please fill in or select a saved provider',
     AI_TEST_FAILED: 'Connectivity test failed',
     INVALID_PASSWORD_FORMAT: 'Password must be 6-20 characters with uppercase, lowercase and digit',
-    INCORRECT_OLD_PASSWORD: 'Current password is incorrect'
+    INCORRECT_OLD_PASSWORD: 'Current password is incorrect',
+    MISSING_PERMISSION: 'You do not have permission to perform this action. Please contact the administrator.',
+    SUPER_ADMIN_ONLY: 'This action is restricted to super admins'
   }
 };
 

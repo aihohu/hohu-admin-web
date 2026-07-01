@@ -8,6 +8,7 @@ import {
   fetchGetDictDataList
 } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
+import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
 import { useRoute } from 'vue-router';
@@ -20,6 +21,7 @@ defineOptions({
 
 const route = useRoute();
 const appStore = useAppStore();
+const { hasAuth } = useAuth();
 
 const dictType = computed(() => route.query.dictType as string);
 
@@ -118,19 +120,23 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         width: 160,
         render: row => (
           <div class="flex-center gap-8px">
-            <NButton type="primary" ghost size="small" onClick={() => edit(row.dictCode)}>
-              {$t('common.edit')}
-            </NButton>
-            <NPopconfirm onPositiveClick={() => handleDelete(row.dictCode)}>
-              {{
-                default: () => $t('common.confirmDelete'),
-                trigger: () => (
-                  <NButton type="error" ghost size="small">
-                    {$t('common.delete')}
-                  </NButton>
-                )
-              }}
-            </NPopconfirm>
+            {hasAuth('system:dict-data:edit') && (
+              <NButton type="primary" ghost size="small" onClick={() => edit(row.dictCode)}>
+                {$t('common.edit')}
+              </NButton>
+            )}
+            {hasAuth('system:dict-data:delete') && (
+              <NPopconfirm onPositiveClick={() => handleDelete(row.dictCode)}>
+                {{
+                  default: () => $t('common.confirmDelete'),
+                  trigger: () => (
+                    <NButton type="error" ghost size="small">
+                      {$t('common.delete')}
+                    </NButton>
+                  )
+                }}
+              </NPopconfirm>
+            )}
           </div>
         )
       }
@@ -186,6 +192,8 @@ onMounted(() => {
           v-model:columns="columnChecks"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
+          add-auth="system:dict-data:add"
+          delete-auth="system:dict-data:batch-delete"
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"

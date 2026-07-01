@@ -120,19 +120,23 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       width: 160,
       render: row => (
         <div class="flex-center gap-8px">
-          <NButton type="primary" ghost size="small" onClick={() => edit(row.configId)}>
-            {$t('common.edit')}
-          </NButton>
-          <NPopconfirm onPositiveClick={() => handleDelete(row.configId)}>
-            {{
-              default: () => $t('common.confirmDelete'),
-              trigger: () => (
-                <NButton type="error" ghost size="small">
-                  {$t('common.delete')}
-                </NButton>
-              )
-            }}
-          </NPopconfirm>
+          {hasAuth('system:config:edit') && (
+            <NButton type="primary" ghost size="small" onClick={() => edit(row.configId)}>
+              {$t('common.edit')}
+            </NButton>
+          )}
+          {hasAuth('system:config:delete') && (
+            <NPopconfirm onPositiveClick={() => handleDelete(row.configId)}>
+              {{
+                default: () => $t('common.confirmDelete'),
+                trigger: () => (
+                  <NButton type="error" ghost size="small">
+                    {$t('common.delete')}
+                  </NButton>
+                )
+              }}
+            </NPopconfirm>
+          )}
         </div>
       )
     }
@@ -201,14 +205,14 @@ function handleImport({ file }: { file: { file: File | null } }) {
     <NCard :title="$t('page.system.config.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <NSpace>
-          <NButton v-if="hasAuth('system:config:export')" size="small" ghost type="success" @click="handleExport">
+          <NButton v-permission="'system:config:export'" size="small" ghost type="success" @click="handleExport">
             <template #icon>
               <IconUilExport class="text-icon" />
             </template>
             {{ $t('common.export') }}
           </NButton>
           <NUpload
-            v-if="hasAuth('system:config:import')"
+            v-permission="'system:config:import'"
             :show-file-list="false"
             accept=".xlsx,.xls"
             :custom-request="handleImport"
@@ -224,6 +228,8 @@ function handleImport({ file }: { file: { file: File | null } }) {
             v-model:columns="columnChecks"
             :disabled-delete="checkedRowKeys.length === 0"
             :loading="loading"
+            add-auth="system:config:add"
+            delete-auth="system:config:batch-delete"
             @add="handleAdd"
             @delete="handleBatchDelete"
             @refresh="getData"

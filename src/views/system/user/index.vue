@@ -141,9 +141,11 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       width: 200,
       render: row => (
         <div class="flex-center gap-8px">
-          <NButton type="primary" ghost size="small" onClick={() => edit(row.userId)}>
-            {$t('common.edit')}
-          </NButton>
+          {hasAuth('system:user:edit') && (
+            <NButton type="primary" ghost size="small" onClick={() => edit(row.userId)}>
+              {$t('common.edit')}
+            </NButton>
+          )}
 
           {hasAuth('system:user:reset-password') && (
             <NButton type="warning" ghost size="small" onClick={() => handleResetPassword(row.userId)}>
@@ -236,6 +238,8 @@ async function confirmResetPassword() {
           v-model:columns="columnChecks"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
+          add-auth="system:user:add"
+          delete-auth="system:user:batch-delete"
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"

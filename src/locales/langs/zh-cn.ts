@@ -996,7 +996,9 @@ const local: App.I18n.Schema = {
     AI_TEST_NO_API_KEY: '缺少 API Key，请填写或选择已保存的提供商',
     AI_TEST_FAILED: '连通性测试失败',
     INVALID_PASSWORD_FORMAT: '密码必须为6-20位，且包含大写字母、小写字母和数字',
-    INCORRECT_OLD_PASSWORD: '当前密码不正确'
+    INCORRECT_OLD_PASSWORD: '当前密码不正确',
+    MISSING_PERMISSION: '您没有权限进行此操作，请联系管理员',
+    SUPER_ADMIN_ONLY: '该操作仅限超级管理员'
   }
 };
 

@@ -7,12 +7,14 @@ import { yesOrNoRecord } from '@/constants/common';
 import { enableStatusRecord, menuTypeRecord } from '@/constants/business';
 import { fetchBatchDeleteMenu, fetchDeleteMenu, fetchGetAllPages, fetchGetMenuList } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
+import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
 import SvgIcon from '@/components/custom/svg-icon.vue';
 import MenuOperateModal, { type OperateType } from './modules/menu-operate-modal.vue';
 
 const appStore = useAppStore();
+const { hasAuth } = useAuth();
 
 const { bool: visible, setTrue: openModal } = useBoolean();
 
@@ -148,24 +150,28 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
       width: 280,
       render: row => (
         <div class="flex-center justify-end gap-8px">
-          {row.menuType === 'M' && (
+          {row.menuType === 'M' && hasAuth('system:menu:add') && (
             <NButton type="primary" ghost size="small" onClick={() => handleAddChildMenu(row)}>
               {$t('page.system.menu.addChildMenu')}
             </NButton>
           )}
-          <NButton type="primary" ghost size="small" onClick={() => handleEdit(row)}>
-            {$t('common.edit')}
-          </NButton>
-          <NPopconfirm onPositiveClick={() => handleDelete(row.menuId)}>
-            {{
-              default: () => $t('common.confirmDelete'),
-              trigger: () => (
-                <NButton type="error" ghost size="small">
-                  {$t('common.delete')}
-                </NButton>
-              )
-            }}
-          </NPopconfirm>
+          {hasAuth('system:menu:edit') && (
+            <NButton type="primary" ghost size="small" onClick={() => handleEdit(row)}>
+              {$t('common.edit')}
+            </NButton>
+          )}
+          {hasAuth('system:menu:delete') && (
+            <NPopconfirm onPositiveClick={() => handleDelete(row.menuId)}>
+              {{
+                default: () => $t('common.confirmDelete'),
+                trigger: () => (
+                  <NButton type="error" ghost size="small">
+                    {$t('common.delete')}
+                  </NButton>
+                )
+              }}
+            </NPopconfirm>
+          )}
         </div>
       )
     }
@@ -236,6 +242,8 @@ init();
           v-model:columns="columnChecks"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
+          add-auth="system:menu:add"
+          delete-auth="system:menu:batch-delete"
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"

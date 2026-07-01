@@ -155,7 +155,7 @@ async function handleClean() {
     <NCard :title="$t('page.system.jobLog.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <NSpace>
-          <NPopconfirm @positive-click="handleClean">
+          <NPopconfirm v-permission="'system:job-log:clean'" @positive-click="handleClean">
             <template #trigger>
               <NButton type="warning" size="small">
                 {{ $t('page.system.jobLog.clean') }}
@@ -168,6 +168,7 @@ async function handleClean() {
             :disabled-delete="checkedRowKeys.length === 0"
             :loading="loading"
             :show-add="false"
+            delete-auth="system:job-log:batch-delete"
             @delete="handleBatchDelete"
             @refresh="getData"
           />

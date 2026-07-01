@@ -4,11 +4,13 @@ import { useI18n } from 'vue-i18n';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { fetchDeleteProvider, fetchGetProviderList } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
+import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import ProviderOperateDrawer from './modules/provider-operate-drawer.vue';
 
 const { t } = useI18n();
 const appStore = useAppStore();
+const { hasAuth } = useAuth();
 
 const searchParams: Api.Ai.ProviderSearchParams = reactive({
   current: 1,
@@ -75,19 +77,23 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       width: 180,
       render: row => (
         <div class="flex-center gap-8px">
-          <NButton type="primary" ghost size="small" onClick={() => edit(row.providerId)}>
-            {t('common.edit')}
-          </NButton>
-          <NPopconfirm onPositiveClick={() => handleDelete(row.providerId)}>
-            {{
-              default: () => t('common.confirmDelete'),
-              trigger: () => (
-                <NButton type="error" ghost size="small">
-                  {t('common.delete')}
-                </NButton>
-              )
-            }}
-          </NPopconfirm>
+          {hasAuth('ai:provider:edit') && (
+            <NButton type="primary" ghost size="small" onClick={() => edit(row.providerId)}>
+              {t('common.edit')}
+            </NButton>
+          )}
+          {hasAuth('ai:provider:delete') && (
+            <NPopconfirm onPositiveClick={() => handleDelete(row.providerId)}>
+              {{
+                default: () => t('common.confirmDelete'),
+                trigger: () => (
+                  <NButton type="error" ghost size="small">
+                    {t('common.delete')}
+                  </NButton>
+                )
+              }}
+            </NPopconfirm>
+          )}
         </div>
       )
     }
@@ -116,7 +122,14 @@ function edit(id: string) {
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
     <NCard :title="t('page.ai.provider.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
-        <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleAdd" @refresh="getData" />
+        <TableHeaderOperation
+          v-model:columns="columnChecks"
+          :loading="loading"
+          add-auth="ai:provider:add"
+          :show-delete="false"
+          @add="handleAdd"
+          @refresh="getData"
+        />
       </template>
       <NDataTable
         :columns="columns"

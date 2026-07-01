@@ -1196,6 +1196,8 @@ declare namespace App {
         AI_TEST_FAILED: string;
         INVALID_PASSWORD_FORMAT: string;
         INCORRECT_OLD_PASSWORD: string;
+        MISSING_PERMISSION: string;
+        SUPER_ADMIN_ONLY: string;
       };
     };
 
