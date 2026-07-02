@@ -19,7 +19,7 @@ COPY . .
 RUN pnpm build
 
 # --- Production Stage ---
-FROM nginx:alpine
+FROM nginx:1.31.2-alpine
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist /usr/share/nginx/html
