@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.1.4] (2026-07-03)
+
+### Features
+
+- **Marketplace UI** — Browse / detail / installed / developer upload / admin review pages with search, category filter, sort, rating, and full i18n
+- **Lowcode Renderer** — `LowcodeRenderer` dispatching `TablePage` / `FormPage` / `DetailPage`; responsive grid layout; `WidgetArray` (tag-style) + `WidgetObject` (textarea + JSON validate) editors; field-type-aware async-validator declarations
+- **Lowcode belongs_to Widget** — `WidgetSelectBelongsTo` for FK fields (target record lookup, size:100 cap); TablePage columns read `<key>_label` instead of raw FK id; sorter re-enabled on label columns (backend JOIN)
+- **Contributes Sidebar Injection** — Marketplace apps inject menus into sidebar after login; auto-grouped under app-name parent for multi-menu apps (single-menu apps stay flat); live refresh after install / uninstall / enable / disable via `contributesStore.refresh()` + `routeStore.rebuildMenus()`
+- **Table Filter & Sort** — `useTableFilters` derives filter UI from `data_schema` (string→contains, enum→eq select, number/date→gte/lte pair, array→has); `LowcodeTableSearch` collapse component; server-side sort via NaiveUI built-in sorter
+- **Button-Level Permission UI** — `v-permission` directive (slot-safe via watchEffect + display:none), `hasAuth()` for TSX render, `TableHeaderOperation` `addAuth` / `deleteAuth` props; applied across system / ai / marketplace pages
+- **Auth Refresh Token** — Axios interceptor refreshes expired token transparently; logout blacklist prevents reuse
+- **Job Execution Controls UI** — Per-job timeout / retry / next_run_time / run_on_enable form fields
+- **Department Users Modal** — Cascade dept tree in user drawer + dedicated dept users modal
+- **Data Scope Demo Page** — UI with i18n and types matching backend demo seed
+
+### Bug Fixes
+
+- **Log Time Range** — Send ms timestamp (not ISO string) for `NDatePicker` datetimerange to match backend `LocalNaiveDatetime`
+- **Menu Auth Modal** — Recompute indeterminate keys after async checks load; prevent parent menu loss on submit-without-interaction
+- **Menu Operate Modal** — Disable button code editing in edit mode (code is stable business key, cascades role_menus)
+- **Multi-Model Navigation** — `findFormPage` / `findListPage` match current page's model so order_list → order_form → order_list round-trip stays within the same model (was returning first form/table page)
+- **App Route Layout** — `/app/:slug/:pageKey` wrapped in `BaseLayout` (was dropping sidebar/header); auth guard applies
+- **Active Menu Highlight** — `selectedKey` returns route.path (not name) for app routes since contributes share the `app-lowcode` route name
+- **App Navigation** — In-place `router.push` instead of new tab for trusted Phase 1 apps
+- **Category/Sort Preservation** — Route keyword search through `fetchMarketplaceApps` (was switching to dedicated `/search` endpoint and dropping category/sort)
+- **Install Status Query** — Pass `appSlug` to `fetchInstalledApps` (was pulling 100 records then filtering client-side)
+- **Required Validation** — Declare async-validator type from schema field type so numeric `123` passes required check (was defaulting to 'string')
+
+### Improvements
+
+- **i18n** — `MISSING_PERMISSION`, `SUPER_ADMIN_ONLY` errorCode mappings; `rangeMin` / `rangeMax`, `msgFieldRequired`, `msgValidationFailed` form keys
+- **Docker** — Pin nginx base to `1.31.2-alpine` to avoid repulling on every build
+- **Cleanup** — Remove orphan `docker-compose.yml` in favor of hohu-cli deploy template
+
 ## [v0.1.3] (2026-06-11)
 
 ### Features
