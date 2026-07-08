@@ -5,6 +5,8 @@ import { useAiStore } from '@/store/modules/ai';
 import { fetchSaveConversation } from '@/service/api';
 import ChatMessage from './chat-message.vue';
 import ChatInput from './chat-input.vue';
+import ChatToolCall from './chat-tool-call.vue';
+import ChatConfirmationDrawer from './chat-confirmation-drawer.vue';
 
 const { t } = useI18n();
 const aiStore = useAiStore();
@@ -12,6 +14,39 @@ const messageListRef = ref<HTMLElement>();
 const inputText = ref('');
 const isUserAtBottom = ref(true);
 const showScrollBtn = ref(false);
+
+// Phase 3.4: tool-call 卡片 + HITL 抽屉
+/** 按 toolCallId 配对 started / result + 关联 pendingConfirmation（§12 场景 4/5 内联 bar） */
+const toolCallCards = computed(() => {
+  const startedEvents = aiStore.streamEvents.filter(
+    (e): e is Api.Ai.ToolCallStartedEvent => e.type === 'tool_call_started'
+  );
+  return startedEvents.map(s => {
+    const result = aiStore.streamEvents.find(
+      (e): e is Api.Ai.ToolCallResultEvent => e.type === 'tool_call_result' && e.toolCallId === s.toolCallId
+    );
+    // spec §12 场景 4: HITL pending 时卡片嵌入倒计时 + 取消/确认按钮
+    const pending = aiStore.pendingConfirmation;
+    const isPending = pending?.toolCallId === s.toolCallId;
+    return {
+      started: s,
+      result: result ?? null,
+      isPending,
+      pendingExpiresAt: isPending ? pending?.expiresAt : undefined
+    };
+  });
+});
+
+/** HITL 抽屉显示状态：pendingConfirmation 存在时自动弹 */
+const showConfirmDrawer = computed({
+  get: () => aiStore.pendingConfirmation !== null,
+  set: (v: boolean) => {
+    // 关闭抽屉（用户点 X）等价于 reject
+    if (!v && aiStore.pendingConfirmation) {
+      aiStore.rejectTool();
+    }
+  }
+});
 
 const SCROLL_THRESHOLD = 120; // px from bottom to consider "at bottom"
 
@@ -191,8 +226,25 @@ const quickActions = [
             :is-last-assistant-message="false"
           />
 
+          <!-- Phase 3.4: tool-call 卡片列表（与流式文本并列渲染） -->
+          <div v-if="toolCallCards.length > 0" class="tool-call-list">
+            <ChatToolCall
+              v-for="card in toolCallCards"
+              :key="card.started.toolCallId"
+              :started="card.started"
+              :result="card.result"
+              :is-pending="card.isPending"
+              :pending-expires-at="card.pendingExpiresAt"
+              @approve="aiStore.approveTool()"
+              @reject="aiStore.rejectTool()"
+            />
+          </div>
+
           <!-- Thinking indicator -->
-          <div v-if="aiStore.isStreaming && !aiStore.streamingText" class="msg-row msg-row--assistant">
+          <div
+            v-if="aiStore.isStreaming && !aiStore.streamingText && toolCallCards.length === 0"
+            class="msg-row msg-row--assistant"
+          >
             <div class="msg-avatar msg-avatar--ai">
               <IconIcRoundSmartToy class="text-18px" />
             </div>
@@ -211,6 +263,9 @@ const quickActions = [
         @stop="aiStore.stopStreaming()"
       />
     </template>
+
+    <!-- Phase 3.4: HITL 确认抽屉 -->
+    <ChatConfirmationDrawer v-model:show="showConfirmDrawer" />
 
     <!-- Scroll to bottom FAB -->
     <Transition name="fab-fade">
@@ -318,6 +373,15 @@ const quickActions = [
   background: rgba(119, 119, 119, 0.1);
   color: var(--n-text-color-1, var(--n-text-color, #333));
   border-top-left-radius: 4px;
+}
+
+/* tool-call 卡片列表 */
+.tool-call-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 8px;
+  max-width: 75%;
 }
 
 /* Scroll to bottom FAB */

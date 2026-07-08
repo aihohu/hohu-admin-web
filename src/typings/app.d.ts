@@ -992,6 +992,20 @@ declare namespace App {
             quickTranslatePrompt: string;
             quickAnalyzePrompt: string;
             quickArticlePrompt: string;
+            confirmTitle: string;
+            confirmTool: string;
+            confirmSummary: string;
+            confirmImpact: string;
+            confirmAffected: string;
+            confirmArgs: string;
+            confirmSecondsLeft: string;
+            toolRunning: string;
+            toolSuccess: string;
+            toolFailed: string;
+            toolDetails: string;
+            toolArgs: string;
+            toolResult: string;
+            toolError: string;
           };
           provider: {
             title: string;

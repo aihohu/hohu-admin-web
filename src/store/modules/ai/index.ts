@@ -4,22 +4,33 @@ import { SetupStoreId } from '@/enum';
 import { localStg } from '@/utils/storage';
 import { getServiceBaseURL } from '@/utils/service';
 import { fetchGetConversationList, fetchGetConversationDetail, fetchDeleteConversation } from '@/service/api';
-import { fetchGetAvailableModels } from '@/service/api/ai';
+import { fetchAiConfirm, fetchAiOperationLog, fetchGetAvailableModels } from '@/service/api/ai';
 
 export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const conversations = ref<Api.Ai.Conversation[]>([]);
   const currentConversationId = ref<string | null>(null);
   const currentMessages = ref<Api.Ai.Message[]>([]);
   const streamingText = ref('');
+  /** 当前 LLM 推理过程文本（Vercel UI Protocol v4 reasoning-delta 累积；展示位待后续 PR） */
+  const reasoningText = ref('');
   const isStreaming = ref(false);
   const loading = ref(false);
   const availableModels = ref<Api.Ai.AvailableModel[]>([]);
   const selectedModelId = ref<string>('');
   const conversationCurrent = ref(1);
-  const conversationSize = 20;
+  const conversationSize = ref(20);
   const hasMoreConversations = ref(true);
   const searchTitle = ref<string | null>(null);
   const attachedImages = ref<{ fileUrl: string; mediaType: string; fileName: string }[]>([]);
+
+  // ====== Phase 3.4: SSE 5 类事件 + HITL（spec §8.1 / §8.3） ======
+  /** 当前流的 tool 调用事件列表（tool_call_started + tool_call_result，按 toolCallId 配对） */
+  const streamEvents = ref<Api.Ai.AiStreamEvent[]>([]);
+  /** 当前挂起的 HITL 确认（一次只允许一个） */
+  const pendingConfirmation = ref<Api.Ai.ConfirmationRequiredEvent | null>(null);
+  /** confirm 后 30s 轮询的定时器（spec §8.3 SSE 断流兜底） */
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
+
   let abortController: AbortController | null = null;
   let selectSeq = 0;
 
@@ -39,13 +50,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     try {
       const { data, error } = await fetchGetConversationList({
         current: 1,
-        size: conversationSize,
+        size: conversationSize.value,
         status: null,
         title: searchTitle.value
       });
       if (!error && data) {
         conversations.value = data.records;
-        hasMoreConversations.value = data.records.length >= conversationSize;
+        hasMoreConversations.value = data.records.length >= conversationSize.value;
       }
     } finally {
       loading.value = false;
@@ -60,13 +71,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     try {
       const { data, error } = await fetchGetConversationList({
         current: conversationCurrent.value,
-        size: conversationSize,
+        size: conversationSize.value,
         status: null,
         title: searchTitle.value
       });
       if (!error && data) {
         conversations.value.push(...data.records);
-        hasMoreConversations.value = data.records.length >= conversationSize;
+        hasMoreConversations.value = data.records.length >= conversationSize.value;
       } else {
         hasMoreConversations.value = false;
       }
@@ -80,6 +91,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     const seq = ++selectSeq;
     currentConversationId.value = conversationId;
     streamingText.value = '';
+    streamEvents.value = [];
+    pendingConfirmation.value = null;
     currentMessages.value = [];
     const { data, error } = await fetchGetConversationDetail(conversationId);
     if (seq !== selectSeq) return;
@@ -95,6 +108,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     currentConversationId.value = null;
     currentMessages.value = [];
     streamingText.value = '';
+    streamEvents.value = [];
+    pendingConfirmation.value = null;
   }
 
   /** delete conversation */
@@ -106,10 +121,92 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     await loadConversations();
   }
 
+  // ============ SSE 事件分流（spec §8.1） ============
+
+  /** 处理自定义 SSE 事件（非 Vercel 原生 text-delta） */
+  function handleAiStreamEvent(event: Api.Ai.AiStreamEvent) {
+    switch (event.type) {
+      case 'tool_call_started':
+      case 'tool_call_result':
+        streamEvents.value.push(event);
+        break;
+      case 'confirmation_required':
+        // spec §8.3: 一次只允许一个挂起 HITL
+        pendingConfirmation.value = event;
+        streamEvents.value.push(event);
+        break;
+      case 'ai_error':
+        window.$message?.error(`AI 错误: ${event.message || '未知错误'}`);
+        break;
+      case 'done':
+        // 流结束信号（一般由 [DONE] 或 reader.done 处理，这里只清状态）
+        break;
+      default:
+        // 兜底，不处理未知事件
+        break;
+    }
+  }
+
+  /** 解析单个 SSE payload（Vercel UI Protocol v4 + 自定义事件 / [DONE]） */
+  function parseSsePayload(payload: string): boolean {
+    // returns true if stream should end ([DONE] / done event)
+    if (payload === '[DONE]') return true;
+
+    // 所有 v4 事件 + 自定义事件都是 JSON
+    if (!payload.startsWith('{')) return false;
+
+    let event: any;
+    try {
+      event = JSON.parse(payload);
+    } catch {
+      return false;
+    }
+    if (!event || typeof event.type !== 'string') return false;
+
+    // Vercel UI Protocol v4: text-delta / reasoning-delta
+    if (event.type === 'text-delta' && typeof event.delta === 'string') {
+      streamingText.value += event.delta;
+      return false;
+    }
+    if (event.type === 'reasoning-delta' && typeof event.delta === 'string') {
+      reasoningText.value += event.delta;
+      return false;
+    }
+
+    // 自定义事件（spec §8.1 私有命名空间）：done 终止流，其它走分流
+    if (event.type === 'done') return true;
+    if (
+      event.type === 'tool_call_started' ||
+      event.type === 'tool_call_result' ||
+      event.type === 'confirmation_required' ||
+      event.type === 'ai_error'
+    ) {
+      handleAiStreamEvent(event as Api.Ai.AiStreamEvent);
+      return false;
+    }
+
+    // Vercel UI Protocol v4 标准 error 事件（PydanticAI VercelAIAdapter 把
+    // UsageLimitExceeded 等异常内部 catch 后转成 ErrorChunk emit）
+    if (event.type === 'error' && typeof event.errorText === 'string') {
+      const isUsageLimit = event.errorText.includes('request_limit') || event.errorText.includes('tool_calls_limit');
+      window.$message?.error(
+        isUsageLimit ? 'AI 调用次数超限，可能选错了工具或在循环重试，请换种问法' : `AI 错误: ${event.errorText}`
+      );
+      return false;
+    }
+
+    // 其它 v4 流程控制（start / start-step / text-start / text-end /
+    // reasoning-start / reasoning-end / finish-step / finish / error / ...）忽略
+    return false;
+  }
+
   /** core SSE streaming — does NOT touch messages array */
   async function doStream() {
     isStreaming.value = true;
     streamingText.value = '';
+    reasoningText.value = '';
+    streamEvents.value = [];
+    pendingConfirmation.value = null;
     abortController = new AbortController();
     let streamCompleted = false;
 
@@ -161,18 +258,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           if (!line.startsWith('data: ')) continue;
 
           const payload = line.slice(6);
-          if (payload === '[DONE]') continue;
-
-          try {
-            const event = JSON.parse(payload);
-            if (event.type === 'text-delta' && event.delta) {
-              streamingText.value += event.delta;
-            } else if (event.type === 'error') {
-              window.$message?.error(`AI 错误: ${event.errorText || '未知错误'}`);
-            }
-          } catch {
-            // skip malformed
-          }
+          const shouldEnd = parseSsePayload(payload);
+          if (shouldEnd) break;
         }
       }
 
@@ -215,6 +302,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     } finally {
       isStreaming.value = false;
       streamingText.value = '';
+      reasoningText.value = '';
+      // 保留 streamEvents（让用户能看到 tool-call 卡片），下次 sendMessage 时清空
+      // pendingConfirmation 不在此清（confirm 流程独立）
       abortController = null;
 
       // Replace temp messages with real IDs from backend after stream completes normally
@@ -228,6 +318,99 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           // keep local messages as fallback
         }
       }
+    }
+  }
+
+  // ============ HITL 确认 / 拒绝（spec §8.3） ============
+
+  /** 用户在 HITL 抽屉点确认 / 取消，调 /ai/confirm 后启动 30s 轮询兜底 */
+  async function resolveConfirmation(action: 'approved' | 'rejected') {
+    const confirmation = pendingConfirmation.value;
+    if (!confirmation) return;
+
+    pendingConfirmation.value = null;
+
+    try {
+      const { data, error } = await fetchAiConfirm({
+        confirmationId: confirmation.confirmationId,
+        action
+      });
+      if (error || !data) {
+        window.$message?.error('确认失败');
+        return;
+      }
+      // spec §8.3: confirm 后立刻收到 toolCallId + status=queued，
+      // 即使 SSE 已断也能据此轮询结果（30s 兜底）
+      startPollingResult(data.toolCallId);
+    } catch (e: any) {
+      window.$message?.error(`确认失败: ${e.message}`);
+    }
+  }
+
+  /** 用户点确认 */
+  async function approveTool() {
+    await resolveConfirmation('approved');
+  }
+
+  /** 用户点取消 */
+  async function rejectTool() {
+    await resolveConfirmation('rejected');
+  }
+
+  /** spec §8.3: 30s 轮询 GET /ai/operation-log?tool_call_id=...
+   * 终态（success/failed/rejected/expired）停止轮询；
+   * 30s 内无结果提示"操作仍在执行" */
+  function startPollingResult(toolCallId: string) {
+    stopPolling();
+    const deadline = Date.now() + 30_000;
+    pollTimer = setInterval(async () => {
+      if (Date.now() > deadline) {
+        stopPolling();
+        window.$message?.info('操作仍在执行，请稍后到 AI Trace 查看');
+        return;
+      }
+      try {
+        const { data, error } = await fetchAiOperationLog(toolCallId);
+        if (error || !data) return;
+        const terminalStatus = ['success', 'failed', 'rejected', 'expired'];
+        if (terminalStatus.includes(data.status)) {
+          stopPolling();
+          // 找到对应 tool_call_started 事件，附加 result 信息
+          const started = streamEvents.value.find(
+            (e): e is Api.Ai.ToolCallStartedEvent => e.type === 'tool_call_started' && e.toolCallId === toolCallId
+          );
+          if (started) {
+            // 推一个合成的 tool_call_result 事件让 UI 更新
+            streamEvents.value.push({
+              type: 'tool_call_result',
+              tool: started.tool,
+              toolCallId,
+              ok: data.status === 'success',
+              durationMs: data.durationMs ?? 0,
+              errorCode: data.errorCode || undefined,
+              errorMsg: data.errorCode || undefined
+            });
+          }
+          if (data.status === 'success') {
+            window.$message?.success('操作已执行成功');
+          } else if (data.status === 'failed') {
+            window.$message?.error(`操作失败: ${data.errorCode || '未知'}`);
+          } else if (data.status === 'rejected') {
+            window.$message?.info('操作已取消');
+          } else if (data.status === 'expired') {
+            window.$message?.warning('操作已超时');
+          }
+        }
+      } catch {
+        // 网络错误静默，下次重试
+      }
+    }, 1500);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
     }
   }
 
@@ -352,12 +535,16 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     currentConversationId,
     currentMessages,
     streamingText,
+    reasoningText,
     isStreaming,
     loading,
     availableModels,
     selectedModelId,
     hasMoreConversations,
     attachedImages,
+    // Phase 3.4: SSE 事件 + HITL
+    streamEvents,
+    pendingConfirmation,
     loadConversations,
     loadMoreConversations,
     selectConversation,
@@ -370,6 +557,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     addImage,
     removeImage,
     clearImages,
+    approveTool,
+    rejectTool,
     init
   };
 });

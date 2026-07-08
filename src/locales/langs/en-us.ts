@@ -773,7 +773,21 @@ const local: App.I18n.Schema = {
         quickCodePrompt: 'Write code for me: ',
         quickTranslatePrompt: 'Translate the following: ',
         quickAnalyzePrompt: 'Analyze this problem: ',
-        quickArticlePrompt: 'Write an article about '
+        quickArticlePrompt: 'Write an article about ',
+        confirmTitle: 'Action Confirmation Required',
+        confirmTool: 'Tool',
+        confirmSummary: 'Summary',
+        confirmImpact: 'Impact',
+        confirmAffected: 'Affected Rows',
+        confirmArgs: 'Arguments',
+        confirmSecondsLeft: ' s until timeout',
+        toolRunning: 'Running',
+        toolSuccess: 'Success',
+        toolFailed: 'Failed',
+        toolDetails: 'Details',
+        toolArgs: 'Args',
+        toolResult: 'Result',
+        toolError: 'Error'
       },
       provider: {
         title: 'Model Management',

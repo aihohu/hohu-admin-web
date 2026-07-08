@@ -767,7 +767,21 @@ const local: App.I18n.Schema = {
         quickCodePrompt: '帮我写一段代码：',
         quickTranslatePrompt: '帮我翻译以下内容：',
         quickAnalyzePrompt: '帮我分析以下问题：',
-        quickArticlePrompt: '帮我写一篇关于'
+        quickArticlePrompt: '帮我写一篇关于',
+        confirmTitle: '需要确认操作',
+        confirmTool: '工具',
+        confirmSummary: '摘要',
+        confirmImpact: '影响范围',
+        confirmAffected: '影响行数',
+        confirmArgs: '参数详情',
+        confirmSecondsLeft: ' 秒后超时',
+        toolRunning: '执行中',
+        toolSuccess: '已成功',
+        toolFailed: '失败',
+        toolDetails: '详情',
+        toolArgs: '参数',
+        toolResult: '结果',
+        toolError: '错误'
       },
       provider: {
         title: '模型管理',

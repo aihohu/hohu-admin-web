@@ -155,5 +155,105 @@ declare namespace Api {
       conversation: Conversation;
       messages: Message[];
     };
+
+    // ============ HITL + Stream Events（spec §8.1） ============
+
+    /** dry_run 影响范围（HITL 抽屉展示） */
+    type DryRunSummary = {
+      summary: string;
+      affectedCount: number;
+      affectedExamples?: string[];
+    };
+
+    /** spec §8.1: tool_call_started 事件 */
+    type ToolCallStartedEvent = {
+      type: 'tool_call_started';
+      tool: string;
+      toolCallId: string;
+      summary: string;
+      args: Record<string, any>;
+      /** §5.3 风险分级（卡片色条 + chip 标签） */
+      risk: 'low' | 'high' | 'destructive';
+      /** §8.7 chip 跳转用 trace_id */
+      traceId: string;
+    };
+
+    /** spec §8.1: tool_call_result 事件 */
+    type ToolCallResultEvent = {
+      type: 'tool_call_result';
+      tool: string;
+      toolCallId: string;
+      ok: boolean;
+      /** 墙钟耗时（毫秒），含 HITL 等待时间；前端展示「已执行 · 230ms」 */
+      durationMs: number;
+      result?: any;
+      /** 影响行数推断值（dry_run_count 优先；readonly 推断；None 表示隐藏） */
+      affectedRows?: number | null;
+      errorCode?: string;
+      errorMsg?: string;
+    };
+
+    /** spec §8.1: confirmation_required 事件（前端弹 HITL 抽屉） */
+    type ConfirmationRequiredEvent = {
+      type: 'confirmation_required';
+      confirmationId: string;
+      tool: string;
+      toolCallId: string;
+      summary: string;
+      args: Record<string, any>;
+      expiresAt: string; // ISO 8601 UTC
+      dryRun?: DryRunSummary;
+    };
+
+    /** spec §8.1: ai_error 事件（流级错误） */
+    type AiErrorEvent = {
+      type: 'ai_error';
+      errorCode: string;
+      message: string;
+    };
+
+    /** spec §8.1: done 事件（流结束） */
+    type DoneEvent = {
+      type: 'done';
+    };
+
+    /** 所有自定义 SSE 事件联合（Vercel 原生 text-delta 不在此列） */
+    type AiStreamEvent =
+      | ToolCallStartedEvent
+      | ToolCallResultEvent
+      | ConfirmationRequiredEvent
+      | AiErrorEvent
+      | DoneEvent;
+
+    /** /ai/confirm 请求 */
+    type ConfirmRequest = {
+      confirmationId: string;
+      action: 'approved' | 'rejected';
+    };
+
+    /** /ai/confirm 响应 data */
+    type ConfirmResponse = {
+      toolCallId: string;
+      status: 'queued';
+    };
+
+    /** /ai/operation-log?tool_call_id=... 响应（spec §9.3 SSE 断流兜底轮询） */
+    type OperationLog = {
+      toolCallId: string;
+      toolName: string;
+      status: 'running' | 'pending_confirmation' | 'success' | 'failed' | 'rejected' | 'expired';
+      errorCode: string | null;
+      startedAt: string;
+      finishedAt: string | null;
+      durationMs: number | null;
+    };
+
+    /** /ai/query-cache/<trace_id> 响应（spec §8.7 chip 跳转回放） */
+    type QueryCache = {
+      toolName: string;
+      module: string;
+      filters: Record<string, any>;
+      createdAt: string;
+    };
   }
 }

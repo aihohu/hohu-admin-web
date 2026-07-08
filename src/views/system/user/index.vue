@@ -1,5 +1,6 @@
 <script setup lang="tsx">
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord, userGenderRecord } from '@/constants/business';
 import { REG_PWD } from '@/constants/reg';
@@ -9,6 +10,7 @@ import {
   fetchGetUserList,
   fetchResetUserPassword
 } from '@/service/api';
+import { fetchAiQueryCache } from '@/service/api/ai';
 import { useAppStore } from '@/store/modules/app';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { useAuth } from '@/hooks/business/auth';
@@ -18,6 +20,7 @@ import UserSearch from './modules/user-search.vue';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
+const route = useRoute();
 
 const searchParams: Api.SystemManage.UserSearchParams = reactive({
   current: 1,
@@ -182,6 +185,27 @@ const {
   onDeleted
   // closeDrawer
 } = useTableOperate(data, 'userId', getData);
+
+// §8.7 chip 跳转回放：URL 含 ?ai_query_id=<trace_id> 时调 query-cache 应用 filters
+onMounted(async () => {
+  const aiQueryId = route.query.ai_query_id;
+  if (typeof aiQueryId !== 'string' || !aiQueryId) return;
+  const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
+  if (error || !cache) return;
+  // query_cache 返回 filters（snake_case），映射到 searchParams（camelCase）
+  const filters = cache.filters || {};
+  if (filters.status === '1' || filters.status === '2') {
+    searchParams.status = filters.status;
+  }
+  if (filters.user_gender === '0' || filters.user_gender === '1' || filters.user_gender === '2') {
+    searchParams.userGender = filters.user_gender;
+  }
+  if (typeof filters.user_name === 'string') {
+    searchParams.userName = filters.user_name;
+  }
+  // 触发首次查询应用筛选
+  await getData();
+});
 
 async function handleBatchDelete() {
   const { error } = await fetchBatchDeleteUser(checkedRowKeys.value);
