@@ -1,9 +1,11 @@
 <script setup lang="tsx">
-import { reactive, shallowRef } from 'vue';
+import { onMounted, reactive, shallowRef } from 'vue';
+import { useRoute } from 'vue-router';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { enableStatusRecord } from '@/constants/business';
 import { fetchBatchDeleteRole, fetchDeleteRole, fetchGetRoleList } from '@/service/api';
+import { fetchAiQueryCache } from '@/service/api/ai';
 import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
@@ -14,6 +16,7 @@ import MenuAuthModal from './modules/menu-auth-modal.vue';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
+const route = useRoute();
 const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
 
 const currentRoleId = shallowRef<string>('');
@@ -129,6 +132,19 @@ const {
   onDeleted
   // closeDrawer
 } = useTableOperate(data, 'roleId', getData);
+
+// §8.7 chip 跳转回放：URL 含 ?ai_query_id 时调 query-cache 应用 filters
+onMounted(async () => {
+  const aiQueryId = route.query.ai_query_id;
+  if (typeof aiQueryId !== 'string' || !aiQueryId) return;
+  const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
+  if (error || !cache) return;
+  const filters = cache.filters || {};
+  if (filters.status === '1' || filters.status === '2') {
+    searchParams.status = filters.status;
+  }
+  await getData();
+});
 
 async function handleBatchDelete() {
   const { error } = await fetchBatchDeleteRole(checkedRowKeys.value);

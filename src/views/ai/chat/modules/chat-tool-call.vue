@@ -130,7 +130,8 @@ const statsData = computed<StatsGroup[] | null>(() => {
 const CHIP_TARGETS: Record<string, string> = {
   'user.list': '/system/user',
   'user.count': '/system/user',
-  'user.distinct': '/system/user'
+  'user.distinct': '/system/user',
+  'role.count': '/system/role'
 };
 
 const chipTarget = computed<string | null>(() => {
