@@ -255,5 +255,14 @@ declare namespace Api {
       filters: Record<string, any>;
       createdAt: string;
     };
+
+    /** /ai/agents 响应（v1.5+ UI 切换器） */
+    type Agent = {
+      code: string;
+      name: string;
+      description: string;
+      modelPreference: string | null;
+      displayOrder: number;
+    };
   }
 }

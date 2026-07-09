@@ -4,7 +4,7 @@ import { SetupStoreId } from '@/enum';
 import { localStg } from '@/utils/storage';
 import { getServiceBaseURL } from '@/utils/service';
 import { fetchGetConversationList, fetchGetConversationDetail, fetchDeleteConversation } from '@/service/api';
-import { fetchAiConfirm, fetchAiOperationLog, fetchGetAvailableModels } from '@/service/api/ai';
+import { fetchAiAgents, fetchAiConfirm, fetchAiOperationLog, fetchGetAvailableModels } from '@/service/api/ai';
 
 export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const conversations = ref<Api.Ai.Conversation[]>([]);
@@ -22,6 +22,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const hasMoreConversations = ref(true);
   const searchTitle = ref<string | null>(null);
   const attachedImages = ref<{ fileUrl: string; mediaType: string; fileName: string }[]>([]);
+
+  // v1.5+: agent 切换器
+  const availableAgents = ref<Api.Ai.Agent[]>([]);
+  const selectedAgentCode = ref<string>('');
 
   // ====== Phase 3.4: SSE 5 类事件 + HITL（spec §8.1 / §8.3） ======
   /** 当前流的 tool 调用事件列表（tool_call_started + tool_call_result，按 toolCallId 配对） */
@@ -228,7 +232,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             parts: msg.parts && msg.parts.length > 0 ? msg.parts : [{ type: 'text', text: msg.content }]
           })),
           conversationId: currentConversationId.value,
-          modelId: selectedModelId.value || undefined
+          modelId: selectedModelId.value || undefined,
+          agentCode: selectedAgentCode.value || undefined
         }),
         signal: abortController.signal
       });
@@ -525,9 +530,24 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
   }
 
+  /** v1.5+: 加载当前用户可用 agent 列表，默认选第一个 */
+  async function loadAgents() {
+    try {
+      const { data, error } = await fetchAiAgents();
+      if (!error && data) {
+        availableAgents.value = data;
+        if (!selectedAgentCode.value && data.length > 0) {
+          selectedAgentCode.value = data[0].code;
+        }
+      }
+    } catch {
+      // silent fail
+    }
+  }
+
   /** initialize */
   async function init() {
-    await Promise.all([loadConversations(), loadModels()]);
+    await Promise.all([loadConversations(), loadModels(), loadAgents()]);
   }
 
   return {
@@ -540,6 +560,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     loading,
     availableModels,
     selectedModelId,
+    availableAgents,
+    selectedAgentCode,
     hasMoreConversations,
     attachedImages,
     // Phase 3.4: SSE 事件 + HITL

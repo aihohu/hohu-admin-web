@@ -174,3 +174,13 @@ export function fetchAiQueryCache(traceId: string, toolName?: string) {
     params: toolName ? { tool_name: toolName } : undefined
   });
 }
+
+// ==================== AI Agent（v1.5+ UI 切换器） ====================
+
+/** GET /ai/agents — 列当前用户可用的 Agent（超管全开 / 普通用户走 role_ai_agent + shared 直通） */
+export function fetchAiAgents() {
+  return request<Api.Ai.Agent[]>({
+    url: '/ai/agents',
+    method: 'get'
+  });
+}

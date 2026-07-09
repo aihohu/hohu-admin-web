@@ -191,7 +191,15 @@ onMounted(async () => {
   const aiQueryId = route.query.ai_query_id;
   if (typeof aiQueryId !== 'string' || !aiQueryId) return;
   const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
-  if (error || !cache) return;
+  if (error) {
+    window.$message?.error('筛选回放加载失败');
+    return;
+  }
+  if (!cache) {
+    // §8.7 v1.5+：chip 跳转 trace_id TTL 5min 过期后的友好提示
+    window.$message?.info('筛选条件已过期（5 分钟），请重新发起查询');
+    return;
+  }
   // query_cache 返回 filters（snake_case），映射到 searchParams（camelCase）
   const filters = cache.filters || {};
   if (filters.status === '1' || filters.status === '2') {

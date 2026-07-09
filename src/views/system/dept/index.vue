@@ -1,10 +1,12 @@
 <script setup lang="tsx">
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import type { FlatResponseData } from '@sa/axios';
 import { jsonClone } from '@sa/utils';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord } from '@/constants/business';
 import { fetchBatchDeleteDept, fetchDeleteDept, fetchGetDeptTree } from '@/service/api';
+import { fetchAiQueryCache } from '@/service/api/ai';
 import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
 import { useNaiveTable, useTableOperate } from '@/hooks/common/table';
@@ -15,6 +17,7 @@ import DeptUsersModal from './modules/dept-users-modal.vue';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
+const route = useRoute();
 
 const searchParams: Api.SystemManage.DeptSearchParams = reactive({
   deptName: null,
@@ -150,6 +153,26 @@ const {
 /** users modal state */
 const usersModalVisible = ref(false);
 const usersModalDeptId = ref<string>('');
+
+// §8.7 chip 跳转回放：URL 含 ?ai_query_id 时调 query-cache 应用 filters
+onMounted(async () => {
+  const aiQueryId = route.query.ai_query_id;
+  if (typeof aiQueryId !== 'string' || !aiQueryId) return;
+  const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
+  if (error) {
+    window.$message?.error('筛选回放加载失败');
+    return;
+  }
+  if (!cache) {
+    window.$message?.info('筛选条件已过期（5 分钟），请重新发起查询');
+    return;
+  }
+  const filters = cache.filters || {};
+  if (filters.status === '1' || filters.status === '0') {
+    searchParams.status = filters.status;
+  }
+  await getData();
+});
 
 function manageUsers(deptId: string) {
   usersModalDeptId.value = deptId;

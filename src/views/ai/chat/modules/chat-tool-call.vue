@@ -131,7 +131,8 @@ const CHIP_TARGETS: Record<string, string> = {
   'user.list': '/system/user',
   'user.count': '/system/user',
   'user.distinct': '/system/user',
-  'role.count': '/system/role'
+  'role.count': '/system/role',
+  'dept.count': '/system/dept'
 };
 
 const chipTarget = computed<string | null>(() => {

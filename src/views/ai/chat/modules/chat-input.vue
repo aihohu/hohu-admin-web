@@ -21,6 +21,7 @@ const aiStore = useAiStore();
 const textareaRef = ref<HTMLTextAreaElement>();
 const fileInputRef = ref<HTMLInputElement>();
 const showModelMenu = ref(false);
+const showAgentMenu = ref(false);
 
 const canSend = computed(
   () => !props.disabled && !props.isStreaming && (model.value.trim() || aiStore.attachedImages.length > 0)
@@ -47,8 +48,18 @@ function selectModel(modelId: string) {
   showModelMenu.value = false;
 }
 
+const currentAgent = computed(() => {
+  return aiStore.availableAgents.find(a => a.code === aiStore.selectedAgentCode);
+});
+
+function selectAgent(code: string) {
+  aiStore.selectedAgentCode = code;
+  showAgentMenu.value = false;
+}
+
 function handleClickOutside() {
   showModelMenu.value = false;
+  showAgentMenu.value = false;
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -134,6 +145,28 @@ async function handleDrop(e: DragEvent) {
 <template>
   <div class="input-wrapper" @click="handleClickOutside" @dragover="handleDragOver" @drop="handleDrop">
     <div class="input-container">
+      <!-- Agent selector (v1.5+) -->
+      <div v-if="aiStore.availableAgents.length > 0" class="model-bar" @click.stop>
+        <button class="model-selector" @click.stop="showAgentMenu = !showAgentMenu">
+          <span class="model-name">{{ currentAgent?.name || 'AI 助手' }}</span>
+          <IconIcRoundArrowDropDown class="text-16px" />
+        </button>
+        <Transition name="menu-fade">
+          <div v-if="showAgentMenu" class="model-menu" @click.stop>
+            <div
+              v-for="a in aiStore.availableAgents"
+              :key="a.code"
+              class="model-menu-item"
+              :class="{ 'model-menu-item--active': a.code === aiStore.selectedAgentCode }"
+              @click="selectAgent(a.code)"
+            >
+              <div class="model-menu-name">{{ a.name }}</div>
+              <div v-if="a.description" class="model-menu-desc">{{ a.description }}</div>
+            </div>
+          </div>
+        </Transition>
+      </div>
+
       <!-- Model selector -->
       <div v-if="currentModel" class="model-bar" @click.stop>
         <button class="model-selector" @click.stop="showModelMenu = !showModelMenu">
@@ -323,6 +356,13 @@ async function handleDrop(e: DragEvent) {
   font-size: 13px;
   font-weight: 500;
   color: var(--n-text-color, #333);
+}
+
+.model-menu-desc {
+  font-size: 11px;
+  color: var(--n-text-color-3, #999);
+  margin-top: 2px;
+  line-height: 1.4;
 }
 
 .model-menu-model {
