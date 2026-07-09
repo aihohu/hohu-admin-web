@@ -197,7 +197,7 @@ onMounted(async () => {
   }
   if (!cache) {
     // §8.7 v1.5+：chip 跳转 trace_id TTL 5min 过期后的友好提示
-    window.$message?.info('筛选条件已过期（5 分钟），请重新发起查询');
+    window.$message?.info('筛选条件已过期（5 分钟），请重新发起查询', { duration: 8000 });
     return;
   }
   // query_cache 返回 filters（snake_case），映射到 searchParams（camelCase）

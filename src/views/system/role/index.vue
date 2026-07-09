@@ -143,7 +143,7 @@ onMounted(async () => {
     return;
   }
   if (!cache) {
-    window.$message?.info('筛选条件已过期（5 分钟），请重新发起查询');
+    window.$message?.info('筛选条件已过期（5 分钟），请重新发起查询', { duration: 8000 });
     return;
   }
   const filters = cache.filters || {};
