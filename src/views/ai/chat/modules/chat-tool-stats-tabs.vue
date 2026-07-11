@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
+import { useResizeObserver } from '@vueuse/core';
 import * as echarts from 'echarts/core';
 import { BarChart, PieChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
@@ -102,6 +103,30 @@ watch(activeTab, async tab => {
     renderBar();
   } else if (tab === 'pie') {
     await nextTick();
+    renderPie();
+  }
+});
+
+/**
+ * 容器宽度从 0 → 非 0 时重 render 当前 tab（修复父卡片折叠态导致 ECharts
+ * init 时 width=0 → fallback 100px 的 bug）。
+ *
+ * 场景：chat-tool-call.vue 用 v-show 控制折叠，折叠时整个 stats-tabs 容器
+ * display:none → width=0。用户展开卡片时父级从 display:none 变 visible，
+ * ResizeObserver 触发，此时再 render ECharts 才能拿到正确宽度。
+ */
+useResizeObserver(barRef, entries => {
+  const entry = entries[0];
+  const width = entry.contentRect.width;
+  if (width > 0 && activeTab.value === 'bar') {
+    renderBar();
+  }
+});
+
+useResizeObserver(pieRef, entries => {
+  const entry = entries[0];
+  const width = entry.contentRect.width;
+  if (width > 0 && activeTab.value === 'pie') {
     renderPie();
   }
 });
