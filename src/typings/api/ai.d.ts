@@ -142,6 +142,21 @@ declare namespace Api {
       content: string;
       /** structured message parts (images, files, etc.) */
       parts: MessagePart[] | null;
+      /** tool call events (BUG-FE-18: assistant msg 关联的 tool 调用，重连会话时还原卡片) */
+      toolCalls?: Array<{
+        tool: string;
+        tool_call_id: string;
+        summary?: string;
+        args?: Record<string, unknown>;
+        risk?: 'low' | 'high' | 'destructive';
+        trace_id?: string;
+        ok?: boolean;
+        result?: unknown;
+        affected_rows?: number | null;
+        error_code?: string;
+        error_msg?: string;
+        duration_ms?: number;
+      }> | null;
       /** input tokens */
       tokensInput: number | null;
       /** output tokens */

@@ -102,6 +102,36 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     if (seq !== selectSeq) return;
     if (!error && data) {
       currentMessages.value = data.messages;
+      // 修订 BUG-FE-18: 反序列化 assistant message.tool_calls JSON 注入 streamEvents，
+      // 让重连会话时能看到 tool-call 卡片（之前 reload 后只剩文字）
+      const restoredEvents: Api.Ai.AiStreamEvent[] = [];
+      for (const msg of data.messages) {
+        if (msg.role !== 'assistant' || !msg.toolCalls) continue;
+        for (const tc of msg.toolCalls) {
+          if (!tc.tool || !tc.tool_call_id) continue;
+          restoredEvents.push({
+            type: 'tool_call_started',
+            tool: tc.tool,
+            toolCallId: tc.tool_call_id,
+            summary: tc.summary ?? '',
+            args: tc.args ?? {},
+            risk: tc.risk ?? 'low',
+            traceId: tc.trace_id ?? ''
+          });
+          restoredEvents.push({
+            type: 'tool_call_result',
+            tool: tc.tool,
+            toolCallId: tc.tool_call_id,
+            ok: tc.ok ?? false,
+            durationMs: tc.duration_ms ?? 0,
+            result: tc.result,
+            affectedRows: tc.affected_rows ?? null,
+            errorCode: tc.error_code,
+            errorMsg: tc.error_msg
+          });
+        }
+      }
+      streamEvents.value = restoredEvents;
     } else {
       window.$message?.error('加载会话失败');
     }
