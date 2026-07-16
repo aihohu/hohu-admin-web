@@ -218,6 +218,21 @@ declare namespace Api {
       args: Record<string, any>;
       expiresAt: string; // ISO 8601 UTC
       dryRun?: DryRunSummary;
+      /** spec §8.3: 续传场景下回带的恢复时间（仅 ConfirmationResumedEvent 必填） */
+      resumedAt?: string;
+    };
+
+    /** spec §8.3: confirmation_resumed 事件（HITL 续传恢复确认窗口） */
+    type ConfirmationResumedEvent = {
+      type: 'confirmation_resumed';
+      confirmationId: string;
+      tool: string;
+      toolCallId: string;
+      summary: string;
+      args: Record<string, any>;
+      expiresAt: string; // ISO 8601 UTC
+      dryRun?: DryRunSummary;
+      resumedAt: string;
     };
 
     /** spec §8.1: ai_error 事件（流级错误） */
@@ -237,6 +252,7 @@ declare namespace Api {
       | ToolCallStartedEvent
       | ToolCallResultEvent
       | ConfirmationRequiredEvent
+      | ConfirmationResumedEvent
       | AiErrorEvent
       | DoneEvent;
 

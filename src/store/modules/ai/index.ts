@@ -30,8 +30,16 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   // ====== Phase 3.4: SSE 5 类事件 + HITL（spec §8.1 / §8.3） ======
   /** 当前流的 tool 调用事件列表（tool_call_started + tool_call_result，按 toolCallId 配对） */
   const streamEvents = ref<Api.Ai.AiStreamEvent[]>([]);
-  /** 当前挂起的 HITL 确认（一次只允许一个） */
-  const pendingConfirmation = ref<Api.Ai.ConfirmationRequiredEvent | null>(null);
+  /** 当前挂起的 HITL 确认（一次只允许一个；续传时为 ConfirmationResumedEvent） */
+  const pendingConfirmation = ref<Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent | null>(null);
+  /** §8.3 续传：当前挂起确认的 ID（attemptResume 入参 + tool_call_result 清理依据） */
+  const pendingConfirmationId = ref<string | null>(null);
+  /** §8.3 续传：当前挂起确认对应的 toolCallId（410 时 fallback 轮询用） */
+  const pendingToolCallId = ref<string | null>(null);
+  /** §8.3 续传：已尝试次数（上限 3 次） */
+  const resumeAttempts = ref(0);
+  /** §8.3 续传：最近一次 SSE event id（Last-Event-ID 回传用） */
+  let lastEventId: string | null = null;
   /** confirm 后 30s 轮询的定时器（spec §8.3 SSE 断流兜底） */
   let pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -161,12 +169,25 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   function handleAiStreamEvent(event: Api.Ai.AiStreamEvent) {
     switch (event.type) {
       case 'tool_call_started':
-      case 'tool_call_result':
         streamEvents.value.push(event);
         break;
+      case 'tool_call_result':
+        streamEvents.value.push(event);
+        // §8.3 续传：tool 执行完成则无需再续，清掉挂起状态
+        if (event.toolCallId === pendingToolCallId.value) {
+          pendingConfirmationId.value = null;
+          pendingToolCallId.value = null;
+        }
+        break;
       case 'confirmation_required':
-        // spec §8.3: 一次只允许一个挂起 HITL
+      case 'confirmation_resumed':
+        // spec §8.3: 一次只允许一个挂起 HITL（confirmation_resumed 是断流续传回带的）。
+        // ConfirmationResumedEvent 与 ConfirmationRequiredEvent 同形（多一个 resumedAt），
+        // pendingConfirmation 类型是 ConfirmationRequiredEvent，ConfirmationResumedEvent 因
+        // 多了必填字段可直接赋给 ConfirmationRequiredEvent（结构子类型）。
         pendingConfirmation.value = event;
+        pendingConfirmationId.value = event.confirmationId;
+        pendingToolCallId.value = event.toolCallId;
         streamEvents.value.push(event);
         break;
       case 'ai_error':
@@ -213,6 +234,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       event.type === 'tool_call_started' ||
       event.type === 'tool_call_result' ||
       event.type === 'confirmation_required' ||
+      event.type === 'confirmation_resumed' ||
       event.type === 'ai_error'
     ) {
       handleAiStreamEvent(event as Api.Ai.AiStreamEvent);
@@ -289,10 +311,17 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         buffer = parts.pop() || '';
 
         for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith('data: ')) continue;
-
-          const payload = line.slice(6);
+          const lines = part.split('\n');
+          let payload = '';
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              payload = trimmed.slice(6);
+            } else if (trimmed.startsWith('id: ')) {
+              lastEventId = trimmed.slice(4);
+            }
+          }
+          if (!payload) continue;
           const shouldEnd = parseSsePayload(payload);
           if (shouldEnd) break;
         }
@@ -331,6 +360,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             createTime: new Date().toISOString()
           });
         }
+      } else if (pendingConfirmationId.value && resumeAttempts.value < 3) {
+        // §8.3 续传：HITL 等待期间网络中断（非用户主动 abort），自动尝试 resume
+        attemptResume(pendingConfirmationId.value);
       } else {
         window.$message?.error(`发送失败: ${error.message}`);
       }
@@ -357,6 +389,85 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   // ============ HITL 确认 / 拒绝（spec §8.3） ============
+
+  /**
+   * spec §8.3: HITL 等待期间 SSE 断流时自动续传。
+   * - GET /ai/chat/resume（Last-Event-ID 回传）
+   * - 409（并发冲突）：2s 后递归重试（仍受 resumeAttempts < 3 上限）
+   * - 410（已处理）：fallback 轮询 operation-log 拉取结果
+   * - 422（临近超时）：提示用户重新发起
+   * - 其它 !ok：直接报错
+   */
+  async function attemptResume(confirmationId: string) {
+    if (resumeAttempts.value >= 3) {
+      window.$message?.error('续传失败 3 次，请重新发起对话');
+      return;
+    }
+    resumeAttempts.value += 1;
+    isStreaming.value = true;
+    try {
+      const baseUrl = getBaseUrl();
+      const token = localStg.get('token');
+      const response = await fetch(`${baseUrl}/ai/chat/resume`, {
+        method: 'GET',
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+          // 优先用最近一次 SSE event id（更精确），fallback 到入参 confirmationId
+          'Last-Event-ID': lastEventId ?? confirmationId,
+          Accept: 'text/event-stream'
+        }
+      });
+      if (response.status === 409) {
+        // 并发冲突，2s 后递归重试
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return attemptResume(confirmationId);
+      }
+      if (response.status === 410) {
+        // 确认窗口已被处理（approved/rejected/expired），fallback 轮询结果
+        if (pendingToolCallId.value) {
+          window.$message?.info('操作已被处理，正在拉取结果...');
+          startPollingResult(pendingToolCallId.value);
+        } else {
+          window.$message?.error('续传不可用，请重新发起');
+        }
+        return;
+      }
+      if (response.status === 422) {
+        window.$message?.warning('确认窗口已临近超时，请重新发起');
+        return;
+      }
+      if (!response.ok) {
+        window.$message?.error(`续传失败: ${response.status}`);
+        return;
+      }
+      const reader = response.body?.getReader();
+      if (!reader) return;
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+        for (const part of parts) {
+          const lines = part.split('\n');
+          let payload = '';
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) payload = trimmed.slice(6);
+            else if (trimmed.startsWith('id: ')) lastEventId = trimmed.slice(4);
+          }
+          if (!payload) continue;
+          parseSsePayload(payload);
+        }
+      }
+    } catch (error: any) {
+      window.$message?.error(`续传失败: ${error.message}`);
+    } finally {
+      isStreaming.value = false;
+    }
+  }
 
   /** 用户在 HITL 抽屉点确认 / 取消，调 /ai/confirm 后启动 30s 轮询兜底 */
   async function resolveConfirmation(action: 'approved' | 'rejected') {
@@ -597,6 +708,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     // Phase 3.4: SSE 事件 + HITL
     streamEvents,
     pendingConfirmation,
+    pendingConfirmationId,
+    pendingToolCallId,
+    resumeAttempts,
+    attemptResume,
     loadConversations,
     loadMoreConversations,
     selectConversation,
