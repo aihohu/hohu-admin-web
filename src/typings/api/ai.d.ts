@@ -218,8 +218,6 @@ declare namespace Api {
       args: Record<string, any>;
       expiresAt: string; // ISO 8601 UTC
       dryRun?: DryRunSummary;
-      /** spec §8.3: 续传场景下回带的恢复时间（仅 ConfirmationResumedEvent 必填） */
-      resumedAt?: string;
     };
 
     /** spec §8.3: confirmation_resumed 事件（HITL 续传恢复确认窗口） */

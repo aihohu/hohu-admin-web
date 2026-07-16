@@ -105,6 +105,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     streamingText.value = '';
     streamEvents.value = [];
     pendingConfirmation.value = null;
+    pendingConfirmationId.value = null;
+    pendingToolCallId.value = null;
+    resumeAttempts.value = 0;
+    lastEventId = null;
     currentMessages.value = [];
     const { data, error } = await fetchGetConversationDetail(conversationId);
     if (seq !== selectSeq) return;
@@ -152,6 +156,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     streamingText.value = '';
     streamEvents.value = [];
     pendingConfirmation.value = null;
+    pendingConfirmationId.value = null;
+    pendingToolCallId.value = null;
+    resumeAttempts.value = 0;
+    lastEventId = null;
   }
 
   /** delete conversation */
@@ -182,9 +190,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       case 'confirmation_required':
       case 'confirmation_resumed':
         // spec §8.3: 一次只允许一个挂起 HITL（confirmation_resumed 是断流续传回带的）。
-        // ConfirmationResumedEvent 与 ConfirmationRequiredEvent 同形（多一个 resumedAt），
-        // pendingConfirmation 类型是 ConfirmationRequiredEvent，ConfirmationResumedEvent 因
-        // 多了必填字段可直接赋给 ConfirmationRequiredEvent（结构子类型）。
+        // pendingConfirmation 是 ConfirmationRequiredEvent | ConfirmationResumedEvent 的联合类型，
+        // 两者结构同形（后者多一个必填 resumedAt），联合分支按 event.type 自动窄化。
         pendingConfirmation.value = event;
         pendingConfirmationId.value = event.confirmationId;
         pendingToolCallId.value = event.toolCallId;
@@ -263,6 +270,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     reasoningText.value = '';
     streamEvents.value = [];
     pendingConfirmation.value = null;
+    // 新流开始：清空续传重试计数（旧失败不应阻塞新对话的续传）
+    resumeAttempts.value = 0;
     abortController = new AbortController();
     let streamCompleted = false;
 
