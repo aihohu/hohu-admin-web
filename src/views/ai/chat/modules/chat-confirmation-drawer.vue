@@ -18,6 +18,22 @@ const emit = defineEmits<{
 
 const confirmation = computed(() => aiStore.pendingConfirmation);
 
+// 续传重连标记（spec §2.2 v1.5+）
+const isReconnected = computed(
+  () => confirmation.value?.type === 'confirmation_resumed' && Boolean(confirmation.value.resumedAt)
+);
+const reconnectedAt = computed(() => {
+  if (confirmation.value?.type !== 'confirmation_resumed') return '';
+  const ra = confirmation.value.resumedAt;
+  if (!ra) return '';
+  try {
+    const d = new Date(ra);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  } catch {
+    return '';
+  }
+});
+
 // 倒计时（基于 expires_at）
 const remainingSec = ref(0);
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
@@ -89,6 +105,13 @@ const showDrawer = computed({
         <div class="confirm-section">
           <div class="confirm-label">{{ t('page.ai.chat.confirmTool') }}</div>
           <NTag type="warning" size="large">{{ confirmation.tool }}</NTag>
+          <!-- 续传重连标记（spec §2.2 v1.5+） -->
+          <div v-if="isReconnected" class="confirm-reconnect-badge">
+            <NTag type="info" size="small" :bordered="false">
+              <IconIcRoundRefresh class="text-12px" />
+              {{ t('page.ai.chat.resumedAt', { time: reconnectedAt }) }}
+            </NTag>
+          </div>
         </div>
 
         <!-- 摘要 -->
@@ -149,6 +172,12 @@ const showDrawer = computed({
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.confirm-reconnect-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .confirm-label {

@@ -775,6 +775,7 @@ const local: App.I18n.Schema = {
         confirmAffected: '影响行数',
         confirmArgs: '参数详情',
         confirmSecondsLeft: ' 秒后超时',
+        resumedAt: '已重连于 {time}',
         toolRunning: '执行中',
         toolSuccess: '已成功',
         toolFailed: '失败',

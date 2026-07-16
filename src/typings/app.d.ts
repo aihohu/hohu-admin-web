@@ -1006,6 +1006,7 @@ declare namespace App {
             toolArgs: string;
             toolResult: string;
             toolError: string;
+            resumedAt: string;
           };
           provider: {
             title: string;

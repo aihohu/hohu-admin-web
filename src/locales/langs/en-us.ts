@@ -781,6 +781,7 @@ const local: App.I18n.Schema = {
         confirmAffected: 'Affected Rows',
         confirmArgs: 'Arguments',
         confirmSecondsLeft: ' s until timeout',
+        resumedAt: 'Reconnected at {time}',
         toolRunning: 'Running',
         toolSuccess: 'Success',
         toolFailed: 'Failed',
