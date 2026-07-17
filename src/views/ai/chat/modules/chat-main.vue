@@ -37,14 +37,29 @@ const toolCallCards = computed(() => {
   });
 });
 
-/** HITL 抽屉显示状态：pendingConfirmation 存在时自动弹 */
+/**
+ * HITL 抽屉显示状态。
+ *
+ * 抽屉可见性独立于 pendingConfirmation：用户可关闭抽屉而不影响 HITL 状态，
+ * 通过 tool-card 内联「立即确认 / 取消」按钮或重新打开抽屉来决定。
+ * 5min TTL 内无操作后端自动 expired。
+ *
+ * 之前实现把 setter 绑到 rejectTool()，导致用户点 X / ESC / 外部点击误取消。
+ */
+const drawerVisible = ref(false);
+
+watch(
+  () => aiStore.pendingConfirmation,
+  newVal => {
+    drawerVisible.value = newVal !== null;
+  },
+  { immediate: true }
+);
+
 const showConfirmDrawer = computed({
-  get: () => aiStore.pendingConfirmation !== null,
+  get: () => drawerVisible.value,
   set: (v: boolean) => {
-    // 关闭抽屉（用户点 X）等价于 reject
-    if (!v && aiStore.pendingConfirmation) {
-      aiStore.rejectTool();
-    }
+    drawerVisible.value = v;
   }
 });
 
