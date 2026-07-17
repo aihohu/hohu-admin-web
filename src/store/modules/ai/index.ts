@@ -535,15 +535,23 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             (e): e is Api.Ai.ToolCallStartedEvent => e.type === 'tool_call_started' && e.toolCallId === toolCallId
           );
           if (started) {
-            // 推一个合成的 tool_call_result 事件让 UI 更新
+            // 按 status 推导 errorCode：rejected/expired 在 DB 中 errorCode=NULL，
+            // 但前端 chat-tool-call.vue 的 errorCodeFriendly map 需要明确 code
+            // 才能渲染正确文案（否则 fallback 到「内部错误」）。
+            const errorCodeByStatus: Record<string, string> = {
+              failed: data.errorCode || 'AI_INTERNAL_ERROR',
+              rejected: 'USER_REJECTED',
+              expired: 'AI_HITL_EXPIRED'
+            };
+            const derivedErrorCode = data.status === 'success' ? undefined : errorCodeByStatus[data.status];
             streamEvents.value.push({
               type: 'tool_call_result',
               tool: started.tool,
               toolCallId,
               ok: data.status === 'success',
               durationMs: data.durationMs ?? 0,
-              errorCode: data.errorCode || undefined,
-              errorMsg: data.errorCode || undefined
+              errorCode: derivedErrorCode,
+              errorMsg: derivedErrorCode
             });
           }
           if (data.status === 'success') {
