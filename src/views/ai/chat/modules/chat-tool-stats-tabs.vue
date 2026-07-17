@@ -150,19 +150,21 @@ onUnmounted(() => {
     </div>
     <div class="stats-tab-body">
       <table v-if="activeTab === 'table'" class="stats-table">
-        <tr v-for="row in labeled" :key="row.raw">
-          <td class="stats-label">{{ row.label }}</td>
-          <td class="stats-count">
-            <strong>{{ row.count }}</strong>
-            <span class="stats-pct">· {{ row.pct }}%</span>
-          </td>
-        </tr>
-        <tr class="stats-total">
-          <td>合计</td>
-          <td>
-            <strong>{{ total }}</strong>
-          </td>
-        </tr>
+        <tbody>
+          <tr v-for="row in labeled" :key="row.raw">
+            <td class="stats-label">{{ row.label }}</td>
+            <td class="stats-count">
+              <strong>{{ row.count }}</strong>
+              <span class="stats-pct">· {{ row.pct }}%</span>
+            </td>
+          </tr>
+          <tr class="stats-total">
+            <td>合计</td>
+            <td>
+              <strong>{{ total }}</strong>
+            </td>
+          </tr>
+        </tbody>
       </table>
       <div v-show="activeTab === 'bar'" ref="barRef" class="stats-chart-box"></div>
       <div v-show="activeTab === 'pie'" ref="pieRef" class="stats-chart-box"></div>
