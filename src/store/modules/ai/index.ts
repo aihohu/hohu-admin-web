@@ -490,6 +490,14 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           window.$message?.info('操作已被处理，正在拉取结果...');
           startPollingResult(pendingToolCallId.value);
         } else {
+          // §14: 跨会话恢复失败——主动调 confirm(rejected) 让后端清理 DB pending 行
+          // （否则刷新页面 loadPendingConfirmations 又会拉到这条死记录）。memory 模式
+          // 下 Redis pending 还在，confirm 能走通；Redis 没了 confirm 返 404 静默。
+          try {
+            await fetchAiConfirm({ confirmationId, action: 'rejected' });
+          } catch {
+            // 静默：Redis 已 expire 时 confirm 返 404，是预期行为
+          }
           window.$message?.warning('该操作无法恢复（已过期 / 已被处理 / 服务重启），请重新发起相同操作');
         }
         return;
