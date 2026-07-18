@@ -490,7 +490,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           window.$message?.info('操作已被处理，正在拉取结果...');
           startPollingResult(pendingToolCallId.value);
         } else {
-          window.$message?.error('续传不可用，请重新发起');
+          window.$message?.warning('该操作无法恢复（已过期 / 已被处理 / 服务重启），请重新发起相同操作');
         }
         return;
       }

@@ -9,6 +9,7 @@ const showBanner = computed(() => !aiStore.pendingConfirmation && aiStore.pendin
 const pendingCount = computed(() => aiStore.pendingConfirmations.length);
 const firstPending = computed(() => aiStore.pendingConfirmations[0]);
 
+/** 点击恢复：调 attemptResume，410/404 时 store 自动静默移除（提示用户重新发起） */
 async function handleResume() {
   if (!firstPending.value) return;
   await aiStore.attemptResume(firstPending.value.confirmationId);
@@ -16,37 +17,21 @@ async function handleResume() {
 </script>
 
 <template>
-  <div v-if="showBanner" class="pending-banner">
-    <div class="flex items-center gap-8px">
-      <IconIcRoundWarning class="text-18px text-warning" />
-      <span>您有 {{ pendingCount }} 个操作待确认</span>
-      <span v-if="firstPending" class="text-xs opacity-70">（{{ firstPending.toolName }}）</span>
-    </div>
-    <NButton size="small" type="primary" @click="handleResume">查看详情</NButton>
+  <div v-if="showBanner" class="px-16px pt-8px">
+    <NAlert type="warning" :show-icon="true" class="pending-banner-alert">
+      <div class="flex items-center justify-between gap-12px">
+        <div class="flex items-center gap-6px">
+          <span>您有 {{ pendingCount }} 个待确认操作</span>
+          <span v-if="firstPending" class="opacity-70 text-12px">（{{ firstPending.toolName }}）</span>
+        </div>
+        <NButton size="small" type="warning" @click="handleResume">恢复操作</NButton>
+      </div>
+    </NAlert>
   </div>
 </template>
 
 <style scoped>
-.pending-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  margin: 8px 16px;
-  background: var(--warning-color, #f50);
+.pending-banner-alert {
   border-radius: 6px;
-  color: #fff;
-  font-size: 13px;
-  animation: pulse-banner 2s ease-in-out infinite;
-}
-
-@keyframes pulse-banner {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.85;
-  }
 }
 </style>
