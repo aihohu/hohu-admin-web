@@ -283,6 +283,7 @@ declare namespace Api {
       toolCallId: string;
       toolName: string;
       conversationId: string;
+      conversationTitle: string | null;
       traceId: string;
       argsSummary: string;
       riskLevel: string;
