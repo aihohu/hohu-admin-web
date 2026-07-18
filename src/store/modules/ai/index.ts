@@ -44,8 +44,6 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const pendingToolCallId = ref<string | null>(null);
   /** §8.3 续传：已尝试次数（上限 3 次） */
   const resumeAttempts = ref(0);
-  /** §8.3 续传：最近一次 SSE event id（Last-Event-ID 回传用） */
-  let lastEventId: string | null = null;
   /** confirm 后 30s 轮询的定时器（spec §8.3 SSE 断流兜底） */
   let pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -120,7 +118,6 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
     resumeAttempts.value = 0;
-    lastEventId = null;
     currentMessages.value = [];
     const { data, error } = await fetchGetConversationDetail(conversationId);
     if (seq !== selectSeq) return;
@@ -171,7 +168,6 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
     resumeAttempts.value = 0;
-    lastEventId = null;
   }
 
   /** delete conversation */
@@ -338,8 +334,6 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             const trimmed = line.trim();
             if (trimmed.startsWith('data: ')) {
               payload = trimmed.slice(6);
-            } else if (trimmed.startsWith('id: ')) {
-              lastEventId = trimmed.slice(4);
             }
           }
           if (!payload) continue;
@@ -471,8 +465,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         method: 'GET',
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
-          // 优先用最近一次 SSE event id（更精确），fallback 到入参 confirmationId
-          'Last-Event-ID': lastEventId ?? confirmationId,
+          // §14 修复：强制用入参 confirmationId（banner 传入的当前 pending ID）。
+          // lastEventId 是闭包变量，跨会话恢复场景下可能被前次会话残留值污染，
+          // 发给后端会查到错的 pending → 410 ALREADY_RESOLVED / 404 NOT_FOUND。
+          // lastEventId 仅在单会话断流续传（doStream catch 自动调）场景下有意义。
+          'Last-Event-ID': confirmationId,
           Accept: 'text/event-stream'
         }
       });
@@ -533,7 +530,6 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           for (const line of lines) {
             const trimmed = line.trim();
             if (trimmed.startsWith('data: ')) payload = trimmed.slice(6);
-            else if (trimmed.startsWith('id: ')) lastEventId = trimmed.slice(4);
           }
           if (!payload) continue;
           parseSsePayload(payload);
