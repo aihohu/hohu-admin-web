@@ -463,6 +463,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       const token = localStg.get('token');
       const response = await fetch(`${baseUrl}/ai/chat/resume`, {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
           // §14 修复：强制用入参 confirmationId（banner 传入的当前 pending ID）。
