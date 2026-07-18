@@ -458,12 +458,16 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
     resumeAttempts.value += 1;
     isStreaming.value = true;
+    // §14 修复：AbortController 让 catch/finally 主动断开 SSE，后端 finally 块立即
+    // 跑释放 owner 锁（避免 60s TTL 残留导致下次 409 IN_PROGRESS）
+    const resumeAbort = new AbortController();
     try {
       const baseUrl = getBaseUrl();
       const token = localStg.get('token');
       const response = await fetch(`${baseUrl}/ai/chat/resume`, {
         method: 'GET',
         cache: 'no-store',
+        signal: resumeAbort.signal,
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
           // §14 修复：强制用入参 confirmationId（banner 传入的当前 pending ID）。
@@ -537,8 +541,16 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         }
       }
     } catch (error: any) {
-      window.$message?.error(`续传失败: ${error.message}`);
+      if (error.name !== 'AbortError') {
+        window.$message?.error(`续传失败: ${error.message}`);
+      }
     } finally {
+      // §14: 主动 abort 让服务端 finally 块立即跑释放 owner 锁
+      try {
+        resumeAbort.abort();
+      } catch {
+        // 已 abort 静默
+      }
       isStreaming.value = false;
     }
   }
