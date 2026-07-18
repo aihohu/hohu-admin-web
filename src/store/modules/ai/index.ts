@@ -408,8 +408,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
     resumeAttempts.value += 1;
     isStreaming.value = true;
-    // §14 修复：AbortController 让 catch/finally 主动断开 SSE，后端 finally 块立即
-    // 跑释放 owner 锁（避免 60s TTL 残留导致下次 409 IN_PROGRESS）
+    // AbortController 让 catch/finally 主动断开 SSE，后端 finally 块立即跑
+    // 释放 owner 锁（避免 60s TTL 残留导致下次 409 IN_PROGRESS）
     const resumeAbort = new AbortController();
     try {
       const baseUrl = getBaseUrl();
@@ -420,10 +420,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         signal: resumeAbort.signal,
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
-          // §14 修复：强制用入参 confirmationId（banner 传入的当前 pending ID）。
-          // lastEventId 是闭包变量，跨会话恢复场景下可能被前次会话残留值污染，
-          // 发给后端会查到错的 pending → 410 ALREADY_RESOLVED / 404 NOT_FOUND。
-          // lastEventId 仅在单会话断流续传（doStream catch 自动调）场景下有意义。
+          // 强制用入参 confirmationId（doStream catch 自动调时传入）。cache-buster
+          // ?_t 防 vite proxy 缓存 SSE 错误响应（410/409）。
           'Last-Event-ID': confirmationId,
           Accept: 'text/event-stream'
         }
@@ -481,7 +479,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         window.$message?.error(`续传失败: ${error.message}`);
       }
     } finally {
-      // §14: 主动 abort 让服务端 finally 块立即跑释放 owner 锁
+      // 主动 abort 让服务端 finally 块立即跑释放 owner 锁
       try {
         resumeAbort.abort();
       } catch {
