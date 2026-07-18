@@ -164,6 +164,16 @@ export function fetchAiOperationLog(toolCallId: string) {
   });
 }
 
+// ==================== AI Pending Confirmations（spec §14 跨会话恢复） ====================
+
+/** GET /ai/pending-confirmations — 进入 /ai/chat + 30s 心跳拉当前 user 的待确认列表 */
+export function fetchPendingConfirmations() {
+  return request<Api.Ai.PendingConfirmation[]>({
+    url: '/ai/pending-confirmations',
+    method: 'get'
+  });
+}
+
 // ==================== AI Query Cache（spec §8.7 chip 跳转回放） ====================
 
 /** GET /ai/query-cache/<trace_id> — 模块页 mounted 时反查回放筛选 */

@@ -4,7 +4,13 @@ import { SetupStoreId } from '@/enum';
 import { localStg } from '@/utils/storage';
 import { getServiceBaseURL } from '@/utils/service';
 import { fetchGetConversationList, fetchGetConversationDetail, fetchDeleteConversation } from '@/service/api';
-import { fetchAiAgents, fetchAiConfirm, fetchAiOperationLog, fetchGetAvailableModels } from '@/service/api/ai';
+import {
+  fetchAiAgents,
+  fetchAiConfirm,
+  fetchAiOperationLog,
+  fetchGetAvailableModels,
+  fetchPendingConfirmations
+} from '@/service/api/ai';
 
 export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const conversations = ref<Api.Ai.Conversation[]>([]);
@@ -42,6 +48,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   let lastEventId: string | null = null;
   /** confirm 后 30s 轮询的定时器（spec §8.3 SSE 断流兜底） */
   let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+  // ====== Phase §14: 跨会话 HITL 恢复 ======
+  /** 当前 user 的待确认 HITL 列表（DB+Redis 双源；按 queuedAt 降序） */
+  const pendingConfirmations = ref<Api.Ai.PendingConfirmation[]>([]);
+  /** 30s 心跳定时器（spec §14 跨设备感知） */
+  let pendingHeartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
   let abortController: AbortController | null = null;
   let selectSeq = 0;
@@ -399,6 +411,43 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   // ============ HITL 确认 / 拒绝（spec §8.3） ============
 
+  // ====== Phase §14: 跨会话 HITL 恢复（进入页面拉一次 + 30s 心跳） ======
+
+  /** 拉 /ai/pending-confirmations 列表（spec §14 跨会话恢复） */
+  async function loadPendingConfirmations() {
+    // 抽屉已打开时不刷新（避免 banner 抢焦点；当前 pending 由用户处理完再轮到其他）
+    if (pendingConfirmation.value) return;
+    try {
+      const { data, error } = await fetchPendingConfirmations();
+      if (!error && data) {
+        pendingConfirmations.value = data;
+      }
+    } catch {
+      // 网络错误静默（心跳自然重试）
+    }
+  }
+
+  /** 启动 30s 心跳（跨设备感知新 pending） */
+  function startPendingHeartbeat() {
+    if (pendingHeartbeatTimer) return;
+    pendingHeartbeatTimer = setInterval(() => {
+      loadPendingConfirmations();
+    }, 30_000);
+  }
+
+  /** 停止心跳（onUnmounted 时调） */
+  function stopPendingHeartbeat() {
+    if (pendingHeartbeatTimer) {
+      clearInterval(pendingHeartbeatTimer);
+      pendingHeartbeatTimer = null;
+    }
+  }
+
+  /** 从 pendingConfirmations 移除（attemptResume 接管 / approve / reject 后调） */
+  function removePendingConfirmation(confirmationId: string) {
+    pendingConfirmations.value = pendingConfirmations.value.filter(p => p.confirmationId !== confirmationId);
+  }
+
   /**
    * spec §8.3: HITL 等待期间 SSE 断流时自动续传。
    * - GET /ai/chat/resume（Last-Event-ID 回传）
@@ -410,6 +459,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   async function attemptResume(confirmationId: string) {
     if (resumeAttempts.value >= 3) {
       window.$message?.error('续传失败 3 次，请重新发起对话');
+      removePendingConfirmation(confirmationId);
       return;
     }
     resumeAttempts.value += 1;
@@ -432,6 +482,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         return attemptResume(confirmationId);
       }
       if (response.status === 410) {
+        // §14 D6: 确认窗口已不可恢复（已处理 / memory 模式 / 已 expire），
+        // 静默从 pendingConfirmations 移除（避免 banner 卡住）
+        removePendingConfirmation(confirmationId);
         // 确认窗口已被处理（approved/rejected/expired），fallback 轮询结果
         if (pendingToolCallId.value) {
           window.$message?.info('操作已被处理，正在拉取结果...');
@@ -443,6 +496,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       }
       if (response.status === 422) {
         window.$message?.warning('确认窗口已临近超时，请重新发起');
+        removePendingConfirmation(confirmationId);
+        return;
+      }
+      if (response.status === 404) {
+        // pending 不存在（Redis 已 expire / 重启清扫），从 banner 移除
+        removePendingConfirmation(confirmationId);
+        window.$message?.info('该确认已过期，请重新发起');
         return;
       }
       if (!response.ok) {
@@ -484,6 +544,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     if (!confirmation) return;
 
     pendingConfirmation.value = null;
+    // §14: 从跨会话恢复列表移除（避免下次心跳再次提示）
+    removePendingConfirmation(confirmation.confirmationId);
 
     try {
       const { data, error } = await fetchAiConfirm({
@@ -728,7 +790,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingConfirmationId,
     pendingToolCallId,
     resumeAttempts,
+    pendingConfirmations,
     attemptResume,
+    loadPendingConfirmations,
+    startPendingHeartbeat,
+    stopPendingHeartbeat,
     loadConversations,
     loadMoreConversations,
     selectConversation,

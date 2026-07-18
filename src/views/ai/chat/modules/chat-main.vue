@@ -7,6 +7,7 @@ import ChatMessage from './chat-message.vue';
 import ChatInput from './chat-input.vue';
 import ChatToolCall from './chat-tool-call.vue';
 import ChatConfirmationDrawer from './chat-confirmation-drawer.vue';
+import ChatPendingBanner from './chat-pending-banner.vue';
 
 const { t } = useI18n();
 const aiStore = useAiStore();
@@ -174,6 +175,9 @@ const quickActions = [
 
 <template>
   <div class="chat-main h-full flex flex-col">
+    <!-- §14: 跨会话 HITL 恢复 banner（进入页面拉 / 30s 心跳感知新 pending） -->
+    <ChatPendingBanner />
+
     <!-- Empty state: welcome + input -->
     <template v-if="!hasConversation">
       <div class="flex-1 flex flex-col items-center justify-center px-24px">

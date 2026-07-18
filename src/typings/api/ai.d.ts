@@ -277,6 +277,19 @@ declare namespace Api {
       durationMs: number | null;
     };
 
+    /** /ai/pending-confirmations 响应项（spec §14 跨会话 HITL 恢复） */
+    type PendingConfirmation = {
+      confirmationId: string;
+      toolCallId: string;
+      toolName: string;
+      conversationId: string;
+      traceId: string;
+      argsSummary: string;
+      riskLevel: string;
+      queuedAt: string;
+      expiresAt: string;
+    };
+
     /** /ai/query-cache/<trace_id> 响应（spec §8.7 chip 跳转回放） */
     type QueryCache = {
       toolName: string;
