@@ -464,7 +464,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     try {
       const baseUrl = getBaseUrl();
       const token = localStg.get('token');
-      const response = await fetch(`${baseUrl}/ai/chat/resume`, {
+      const response = await fetch(`${baseUrl}/ai/chat/resume?_t=${Date.now()}`, {
         method: 'GET',
         cache: 'no-store',
         signal: resumeAbort.signal,
