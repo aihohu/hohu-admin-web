@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, h, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { NDropdown } from 'naive-ui';
+import type { DropdownOption } from 'naive-ui';
 import { useAiStore } from '@/store/modules/ai';
 import { fetchUploadFile } from '@/service/api';
 
@@ -20,12 +22,39 @@ const emit = defineEmits<{
 const aiStore = useAiStore();
 const textareaRef = ref<HTMLTextAreaElement>();
 const fileInputRef = ref<HTMLInputElement>();
-const showModelMenu = ref(false);
-const showAgentMenu = ref(false);
 
 const canSend = computed(
-  () => !props.disabled && !props.isStreaming && (model.value.trim() || aiStore.attachedImages.length > 0)
+  () =>
+    !props.disabled &&
+    !props.isStreaming &&
+    (model.value.trim() || aiStore.attachedImages.length > 0 || aiStore.attachedFiles.length > 0)
 );
+
+// v1.5+ SR-25: chat 直接上传 Excel/CSV（与 parser 对齐）
+const ACCEPTED_FILE_EXTS = ['.csv', '.xlsx', '.xls'];
+const ACCEPTED_FILE_MIMES = [
+  'text/csv',
+  'text/plain',
+  'application/csv',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+];
+
+function isAcceptedFile(file: File): boolean {
+  if (file.type.startsWith('image/')) return false; // 图片走 addImage
+  if (ACCEPTED_FILE_MIMES.includes(file.type)) return true;
+  const name = file.name.toLowerCase();
+  return ACCEPTED_FILE_EXTS.some(ext => name.endsWith(ext));
+}
+
+async function uploadAsAttachment(file: File) {
+  const { data, error } = await fetchUploadFile(file, 'ai-chat');
+  if (!error && data) {
+    aiStore.addFile(data.fileId, data.originalName || file.name, data.mimeType || file.type, file.size);
+  } else {
+    window.$message?.error(t('page.ai.chat.fileUploadFailed'));
+  }
+}
 
 const currentModel = computed(() => {
   return aiStore.availableModels.find(m => m.modelId === aiStore.selectedModelId);
@@ -43,23 +72,59 @@ const groupedModels = computed(() => {
   return Object.values(groups);
 });
 
-function selectModel(modelId: string) {
-  aiStore.selectedModelId = modelId;
-  showModelMenu.value = false;
-}
-
 const currentAgent = computed(() => {
   return aiStore.availableAgents.find(a => a.code === aiStore.selectedAgentCode);
 });
 
-function selectAgent(code: string) {
-  aiStore.selectedAgentCode = code;
-  showAgentMenu.value = false;
+// NDropdown options（agent 列表，含 desc——用 render-label 自定义渲染，inline style 防 scoped 失效）
+const agentOptions = computed<DropdownOption[]>(() =>
+  aiStore.availableAgents.map(a => ({
+    key: a.code,
+    label: a.name,
+    description: a.description
+  }))
+);
+
+function renderAgentLabel(option: DropdownOption) {
+  const desc = (option as { description?: string }).description;
+  return h('div', { style: 'display: flex; flex-direction: column; padding: 6px 0; max-width: 280px;' }, [
+    h('div', { style: 'font-size: 13px; font-weight: 500; color: var(--n-text-color);' }, String(option.label ?? '')),
+    desc
+      ? h(
+          'div',
+          {
+            style:
+              'font-size: 11px; color: var(--n-text-color-3, #999); margin-top: 2px; line-height: 1.4; white-space: normal;'
+          },
+          desc
+        )
+      : null
+  ]);
 }
 
-function handleClickOutside() {
-  showModelMenu.value = false;
-  showAgentMenu.value = false;
+// NDropdown options（model 按 provider 分组）
+const modelOptions = computed<DropdownOption[]>(() => {
+  const result: DropdownOption[] = [];
+  for (const group of groupedModels.value) {
+    result.push({
+      key: `group-${group.providerName}`,
+      type: 'group',
+      label: group.providerName,
+      children: group.models.map(m => ({
+        key: m.modelId,
+        label: m.model
+      }))
+    });
+  }
+  return result;
+});
+
+function handleAgentSelect(key: string) {
+  aiStore.selectedAgentCode = key;
+}
+
+function handleModelSelect(key: string) {
+  aiStore.selectedModelId = key;
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -95,12 +160,17 @@ async function handleFileSelect(e: Event) {
   const input = e.target as HTMLInputElement;
   if (!input.files) return;
   for (const file of Array.from(input.files)) {
-    if (!file.type.startsWith('image/')) continue;
-    const { data, error } = await fetchUploadFile(file, 'ai-chat');
-    if (!error && data) {
-      aiStore.addImage(data.fileUrl, file.type, file.name);
+    if (file.type.startsWith('image/')) {
+      const { data, error } = await fetchUploadFile(file, 'ai-chat');
+      if (!error && data) {
+        aiStore.addImage(data.fileUrl, file.type, file.name);
+      } else {
+        window.$message?.error(t('page.ai.chat.fileUploadFailed'));
+      }
+    } else if (isAcceptedFile(file)) {
+      await uploadAsAttachment(file);
     } else {
-      window.$message?.error('图片上传失败');
+      window.$message?.warning(t('page.ai.chat.fileTypeUnsupported'));
     }
   }
   input.value = '';
@@ -118,6 +188,14 @@ async function handlePaste(e: ClipboardEvent) {
       if (!error && data) {
         aiStore.addImage(data.fileUrl, file.type, 'pasted-image');
       }
+    } else if (item.kind === 'file') {
+      // Bug fix: 之前漏了文件粘贴，粘贴 Excel/CSV 不处理
+      const file = item.getAsFile();
+      if (!file) continue;
+      if (isAcceptedFile(file)) {
+        e.preventDefault();
+        await uploadAsAttachment(file);
+      }
     }
   }
 }
@@ -133,75 +211,55 @@ async function handleDrop(e: DragEvent) {
   const files = e.dataTransfer?.files;
   if (!files) return;
   for (const file of Array.from(files)) {
-    if (!file.type.startsWith('image/')) continue;
-    const { data, error } = await fetchUploadFile(file, 'ai-chat');
-    if (!error && data) {
-      aiStore.addImage(data.fileUrl, file.type, file.name);
+    if (file.type.startsWith('image/')) {
+      const { data, error } = await fetchUploadFile(file, 'ai-chat');
+      if (!error && data) {
+        aiStore.addImage(data.fileUrl, file.type, file.name);
+      }
+    } else if (isAcceptedFile(file)) {
+      await uploadAsAttachment(file);
+    } else {
+      window.$message?.warning(t('page.ai.chat.fileTypeUnsupported'));
     }
   }
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 </script>
 
 <template>
-  <div class="input-wrapper" @click="handleClickOutside" @dragover="handleDragOver" @drop="handleDrop">
+  <div class="input-wrapper" @dragover="handleDragOver" @drop="handleDrop">
     <div class="input-container">
-      <!-- Agent selector (v1.5+) -->
-      <div v-if="aiStore.availableAgents.length > 0" class="model-bar" @click.stop>
-        <button class="model-selector" @click.stop="showAgentMenu = !showAgentMenu">
-          <span class="model-name">{{ currentAgent?.name || 'AI 助手' }}</span>
-          <IconIcRoundArrowDropDown class="text-16px" />
-        </button>
-        <Transition name="menu-fade">
-          <div v-if="showAgentMenu" class="model-menu" @click.stop>
-            <div
-              v-for="a in aiStore.availableAgents"
-              :key="a.code"
-              class="model-menu-item"
-              :class="{ 'model-menu-item--active': a.code === aiStore.selectedAgentCode }"
-              @click="selectAgent(a.code)"
-            >
-              <div class="model-menu-name">{{ a.name }}</div>
-              <div v-if="a.description" class="model-menu-desc">{{ a.description }}</div>
-            </div>
-          </div>
-        </Transition>
-      </div>
-
-      <!-- Model selector -->
-      <div v-if="currentModel" class="model-bar" @click.stop>
-        <button class="model-selector" @click.stop="showModelMenu = !showModelMenu">
-          <span class="model-name">{{ currentModel.providerName }}</span>
-          <span class="model-tag">{{ currentModel.model }}</span>
-          <IconIcRoundArrowDropDown class="text-16px" />
-        </button>
-
-        <!-- Dropdown grouped by provider -->
-        <Transition name="menu-fade">
-          <div v-if="showModelMenu" class="model-menu" @click.stop>
-            <template v-for="group in groupedModels" :key="group.providerName">
-              <div class="model-group-title">{{ group.providerName }}</div>
-              <div
-                v-for="m in group.models"
-                :key="m.modelId"
-                class="model-menu-item"
-                :class="{ 'model-menu-item--active': m.modelId === aiStore.selectedModelId }"
-                @click="selectModel(m.modelId)"
-              >
-                <span class="model-menu-name">{{ m.model }}</span>
-              </div>
-            </template>
-            <div v-if="aiStore.availableModels.length === 0" class="model-menu-empty">
-              {{ t('page.ai.chat.noModel') }}
-            </div>
-          </div>
-        </Transition>
-      </div>
-
       <!-- Attached images preview -->
-      <div v-if="aiStore.attachedImages.length > 0" class="attach-preview">
-        <div v-for="(img, i) in aiStore.attachedImages" :key="i" class="attach-thumb">
+      <div v-if="aiStore.attachedImages.length > 0 || aiStore.attachedFiles.length > 0" class="attach-preview">
+        <div v-for="(img, i) in aiStore.attachedImages" :key="`img-${i}`" class="attach-thumb">
           <img :src="img.fileUrl" :alt="img.fileName" />
-          <button class="attach-remove" @click="aiStore.removeImage(i)">
+          <button class="attach-remove" :title="t('page.ai.chat.removeFile')" @click="aiStore.removeImage(i)">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div
+          v-for="(file, i) in aiStore.attachedFiles"
+          :key="`file-${i}`"
+          class="attach-file-chip"
+          :title="t('page.ai.chat.attachFileHint')"
+        >
+          <IconIcRoundInsertDriveFile class="text-18px shrink-0" />
+          <div class="attach-file-info">
+            <div class="attach-file-name">{{ file.fileName }}</div>
+            <div class="attach-file-meta">{{ formatFileSize(file.fileSize) }}</div>
+          </div>
+          <button
+            class="attach-remove attach-remove--file"
+            :title="t('page.ai.chat.removeFile')"
+            @click="aiStore.removeFile(i)"
+          >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
             </svg>
@@ -209,15 +267,20 @@ async function handleDrop(e: DragEvent) {
         </div>
       </div>
 
-      <!-- Input box -->
+      <!-- Input box (focal point) -->
       <div class="input-box">
-        <button class="input-attach-btn" :disabled="disabled || isStreaming" title="上传图片" @click="triggerFileInput">
-          <IconIcRoundImage class="text-18px" />
+        <button
+          class="input-attach-btn"
+          :disabled="disabled || isStreaming"
+          :title="t('page.ai.chat.attachFile')"
+          @click="triggerFileInput"
+        >
+          <IconIcRoundAttachFile class="text-18px" />
         </button>
         <input
           ref="fileInputRef"
           type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp"
+          accept="image/jpeg,image/png,image/gif,image/webp,.csv,.xlsx,.xls"
           multiple
           class="hidden-input"
           @change="handleFileSelect"
@@ -257,8 +320,46 @@ async function handleDrop(e: DragEvent) {
           </svg>
         </button>
       </div>
+
+      <!-- Selector bar: agent + model + hint（ChatGPT 风） -->
+      <div class="selector-bar">
+        <!-- Agent selector (NDropdown 自带 click outside 处理，避免手动 document listener) -->
+        <NDropdown
+          v-if="aiStore.availableAgents.length > 0"
+          trigger="click"
+          :options="agentOptions"
+          :value="aiStore.selectedAgentCode"
+          placement="top-start"
+          :render-label="renderAgentLabel"
+          @select="handleAgentSelect"
+        >
+          <button class="selector-btn">
+            <IconIcRoundSmartToy class="text-14px opacity-70" />
+            <span>{{ currentAgent?.name || 'AI 助手' }}</span>
+            <IconIcRoundArrowDropDown class="text-14px opacity-70" />
+          </button>
+        </NDropdown>
+
+        <!-- Model selector -->
+        <NDropdown
+          v-if="currentModel"
+          trigger="click"
+          :options="modelOptions"
+          :value="aiStore.selectedModelId"
+          placement="top-start"
+          @select="handleModelSelect"
+        >
+          <button class="selector-btn">
+            <IconIcRoundMemory class="text-14px opacity-70" />
+            <span>{{ currentModel.model }}</span>
+            <IconIcRoundArrowDropDown class="text-14px opacity-70" />
+          </button>
+        </NDropdown>
+
+        <!-- Hint (右对齐) -->
+        <span class="selector-hint">{{ t('page.ai.chat.inputHint') }}</span>
+      </div>
     </div>
-    <p class="input-hint">{{ t('page.ai.chat.inputHint') }}</p>
   </div>
 </template>
 
@@ -273,48 +374,59 @@ async function handleDrop(e: DragEvent) {
   margin: 0 auto;
 }
 
-/* Model selector */
-.model-bar {
-  position: relative;
-  margin-bottom: 6px;
+/* Selector bar (ChatGPT 风：输入框下方一行水平排列) */
+.selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
   padding: 0 4px;
+  font-size: 13px;
 }
 
-.model-selector {
+.selector-item {
+  position: relative;
+}
+
+.selector-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  gap: 4px;
+  padding: 4px 8px;
   border-radius: 8px;
   border: none;
   background: transparent;
   cursor: pointer;
   transition: background 0.15s;
   color: var(--n-text-color-2, #666);
-}
-
-.model-selector:hover {
-  background: rgba(119, 119, 119, 0.1);
-}
-
-.model-name {
   font-size: 13px;
-  font-weight: 500;
+  white-space: nowrap;
+  max-width: 220px;
 }
 
-.model-tag {
-  font-size: 11px;
-  color: var(--n-text-color-3, #999);
+.selector-btn > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selector-btn:hover {
   background: rgba(119, 119, 119, 0.1);
-  padding: 1px 6px;
-  border-radius: 4px;
 }
 
-.model-menu {
+.selector-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--n-text-color-3, #aaa);
+  opacity: 0.7;
+}
+
+.selector-menu {
   position: absolute;
   bottom: calc(100% + 4px);
-  left: 4px;
-  min-width: 240px;
+  left: 0;
+  min-width: 280px;
+  max-width: 360px;
   max-height: 320px;
   overflow-y: auto;
   background: var(--n-popover-color, var(--n-color, #fff));
@@ -325,7 +437,12 @@ async function handleDrop(e: DragEvent) {
   z-index: 20;
 }
 
-.model-group-title {
+/* agent 菜单带描述需要更宽 */
+.selector-menu--agent {
+  min-width: 320px;
+}
+
+.selector-group-title {
   padding: 8px 12px 4px;
   font-size: 11px;
   font-weight: 600;
@@ -334,7 +451,7 @@ async function handleDrop(e: DragEvent) {
   letter-spacing: 0.5px;
 }
 
-.model-menu-item {
+.selector-menu-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -344,33 +461,28 @@ async function handleDrop(e: DragEvent) {
   transition: background 0.1s;
 }
 
-.model-menu-item:hover {
+.selector-menu-item:hover {
   background: rgba(77, 107, 254, 0.08);
 }
 
-.model-menu-item--active {
+.selector-menu-item--active {
   background: rgba(77, 107, 254, 0.12);
 }
 
-.model-menu-name {
+.selector-menu-name {
   font-size: 13px;
   font-weight: 500;
   color: var(--n-text-color, #333);
 }
 
-.model-menu-desc {
+.selector-menu-desc {
   font-size: 11px;
   color: var(--n-text-color-3, #999);
   margin-top: 2px;
   line-height: 1.4;
 }
 
-.model-menu-model {
-  font-size: 11px;
-  color: var(--n-text-color-3, #999);
-}
-
-.model-menu-empty {
+.selector-menu-empty {
   padding: 12px;
   text-align: center;
   font-size: 13px;
@@ -473,11 +585,7 @@ async function handleDrop(e: DragEvent) {
 }
 
 .input-hint {
-  max-width: 780px;
-  margin: 8px auto 0;
-  text-align: center;
-  font-size: 11px;
-  color: var(--n-text-color-3, #aaa);
+  display: none; /* 已挪到 .selector-bar .selector-hint */
 }
 
 /* Attach button */
@@ -549,6 +657,51 @@ async function handleDrop(e: DragEvent) {
   padding: 0;
 }
 
+/* File attachment chip (Excel/CSV, spec §16 SR-25) */
+.attach-file-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(77, 107, 254, 0.08);
+  border: 1px solid rgba(77, 107, 254, 0.2);
+  color: var(--n-text-color, #333);
+  max-width: 280px;
+}
+
+.attach-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.attach-file-name {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attach-file-meta {
+  font-size: 11px;
+  color: var(--n-text-color-3, #999);
+}
+
+.attach-remove--file {
+  position: static;
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  color: var(--n-text-color-3, #999);
+  flex-shrink: 0;
+}
+
+.attach-remove--file:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--n-text-color, #333);
+}
+
 /* Dark mode */
 html.dark .input-box {
   background: rgba(255, 255, 255, 0.06);
@@ -568,7 +721,20 @@ html.dark .input-action-btn {
   background: rgba(255, 255, 255, 0.15);
 }
 
-html.dark .model-menu {
+html.dark .selector-menu {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+</style>
+
+<!-- 全局 CSS：NDropdown Teleport 到 body 后 scoped style 失效，必须用全局覆盖 option 高度 -->
+<style>
+.n-dropdown-menu .n-dropdown-option {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.n-dropdown-menu .n-dropdown-option-body {
+  height: auto !important;
+  min-height: 0 !important;
 }
 </style>

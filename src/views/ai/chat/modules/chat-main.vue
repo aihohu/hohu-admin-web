@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import IconIcRoundAccessTime from '~icons/ic/round-access-time';
+import IconIcRoundAutoAwesome from '~icons/ic/round-auto-awesome';
+import IconIcRoundInsertDriveFile from '~icons/ic/round-insert-drive-file';
+import IconIcRoundPerson from '~icons/ic/round-person';
 import { useAiStore } from '@/store/modules/ai';
 import { fetchSaveConversation } from '@/service/api';
 import ChatMessage from './chat-message.vue';
@@ -126,11 +130,20 @@ const hasConversation = computed(() => !!aiStore.currentConversationId);
 async function handleSend() {
   const text = inputText.value.trim();
   const hasImages = aiStore.attachedImages.length > 0;
-  if (!text && !hasImages) return;
+  const hasFiles = aiStore.attachedFiles.length > 0;
+  // Bug fix: 之前漏了 attachedFiles，用户只上传 csv 不输文本时无法发送
+  if (!text && !hasImages && !hasFiles) return;
 
   // 没有会话时自动创建
+  let title: string;
+  if (text) {
+    title = text.slice(0, 20) + (text.length > 20 ? '...' : '');
+  } else if (hasFiles) {
+    title = '文件对话';
+  } else {
+    title = '图片对话';
+  }
   if (!hasConversation.value) {
-    const title = text ? text.slice(0, 20) + (text.length > 20 ? '...' : '') : '图片对话';
     const { data, error } = await fetchSaveConversation({
       title,
       modelName: aiStore.selectedModelId || undefined
@@ -170,29 +183,71 @@ const quickActions = [
     prompt: computed(() => t('page.ai.chat.quickArticlePrompt'))
   }
 ];
+void quickActions; // template 已改用 sceneCards，保留 quickActions 防 i18n key 漂移
+
+// 场景卡：点击直接预选 agent + 填示例 prompt（spec §16 SR-26 空状态重设）
+// icon 用 PascalCase 组件引用（unplugin-icons auto-import），避免 kebab 字符串未注册
+const sceneCards = computed(() => [
+  {
+    icon: IconIcRoundAutoAwesome,
+    title: t('page.ai.chat.sceneDataTitle'),
+    desc: t('page.ai.chat.sceneDataDesc'),
+    agentCode: 'user_mgmt',
+    prompt: t('page.ai.chat.sceneDataPrompt')
+  },
+  {
+    icon: IconIcRoundPerson,
+    title: t('page.ai.chat.sceneUserTitle'),
+    desc: t('page.ai.chat.sceneUserDesc'),
+    agentCode: 'user_mgmt',
+    prompt: t('page.ai.chat.sceneUserPrompt')
+  },
+  {
+    icon: IconIcRoundInsertDriveFile,
+    title: t('page.ai.chat.sceneFileTitle'),
+    desc: t('page.ai.chat.sceneFileDesc'),
+    agentCode: 'shared',
+    prompt: t('page.ai.chat.sceneFilePrompt')
+  },
+  {
+    icon: IconIcRoundAccessTime,
+    title: t('page.ai.chat.sceneJobTitle'),
+    desc: t('page.ai.chat.sceneJobDesc'),
+    agentCode: 'job_mgmt',
+    prompt: t('page.ai.chat.sceneJobPrompt')
+  }
+]);
+
+function handleSceneClick(scene: { agentCode: string; prompt: string }) {
+  // 预选 agent（若该 agent 在 availableAgents 中）
+  if (aiStore.availableAgents.some(a => a.code === scene.agentCode)) {
+    aiStore.selectedAgentCode = scene.agentCode;
+  }
+  inputText.value = scene.prompt;
+}
 </script>
 
 <template>
   <div class="chat-main h-full flex flex-col">
     <!-- Empty state: welcome + input -->
     <template v-if="!hasConversation">
-      <div class="flex-1 flex flex-col items-center justify-center px-24px">
+      <div class="flex-1 flex flex-col items-center justify-center px-24px overflow-y-auto">
         <div class="welcome-icon">
           <IconIcRoundSmartToy class="text-36px" />
         </div>
         <h2 class="welcome-title">{{ t('page.ai.chat.welcomeTitle') }}</h2>
         <p class="welcome-desc">{{ t('page.ai.chat.welcomeDesc') }}</p>
 
-        <!-- Quick actions -->
-        <div class="quick-actions">
-          <button
-            v-for="action in quickActions"
-            :key="action.label.value"
-            class="quick-action-card"
-            @click="inputText = action.prompt.value"
-          >
-            <component :is="action.icon" class="text-18px" />
-            <span>{{ action.label.value }}</span>
+        <!-- 场景卡：每个卡含图标 + 标题 + 描述 + 推荐 agent + 示例 prompt -->
+        <div class="scene-grid">
+          <button v-for="scene in sceneCards" :key="scene.title" class="scene-card" @click="handleSceneClick(scene)">
+            <div class="scene-card-icon">
+              <component :is="scene.icon" />
+            </div>
+            <div class="scene-card-body">
+              <div class="scene-card-title">{{ scene.title }}</div>
+              <div class="scene-card-desc">{{ scene.desc }}</div>
+            </div>
           </button>
         </div>
       </div>
@@ -319,6 +374,70 @@ const quickActions = [
   text-align: center;
 }
 
+/* 场景卡：替代 quick-actions，每个卡含图标 + 标题 + 描述（spec §16 SR-26） */
+.scene-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 560px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.scene-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--n-border-color, #e5e5e5);
+  background: var(--n-color, #fff);
+  color: var(--n-text-color, #333);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: left;
+  font-family: inherit;
+}
+
+.scene-card:hover {
+  background: rgba(77, 107, 254, 0.04);
+  border-color: #4d6bfe;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(77, 107, 254, 0.08);
+}
+
+.scene-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(77, 107, 254, 0.12), rgba(16, 185, 129, 0.1));
+  color: #4d6bfe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.scene-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.scene-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--n-text-color, #333);
+  margin-bottom: 4px;
+}
+
+.scene-card-desc {
+  font-size: 12px;
+  color: var(--n-text-color-3, #999);
+  line-height: 1.5;
+}
+
+/* 旧 quick-actions 样式保留以兼容旧引用 */
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

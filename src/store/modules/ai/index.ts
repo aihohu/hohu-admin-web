@@ -23,6 +23,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const searchTitle = ref<string | null>(null);
   const attachedImages = ref<{ fileUrl: string; mediaType: string; fileName: string }[]>([]);
 
+  // v1.5+ SR-25: chat 直接上传的文件（Excel/CSV），发送时把 file_id 注入到消息末尾
+  const attachedFiles = ref<Api.Ai.AttachedFile[]>([]);
+
   // v1.5+: agent 切换器
   const availableAgents = ref<Api.Ai.Agent[]>([]);
   const selectedAgentCode = ref<string>('');
@@ -260,7 +263,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   /** core SSE streaming — does NOT touch messages array */
-  async function doStream() {
+  async function doStream(injectLastMessageText?: string) {
     isStreaming.value = true;
     streamingText.value = '';
     reasoningText.value = '';
@@ -283,11 +286,29 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         body: JSON.stringify({
           trigger: 'submit-message',
           id: `chat-${Date.now()}`,
-          messages: currentMessages.value.map((msg, i) => ({
-            id: `msg-history-${i}`,
-            role: msg.role,
-            parts: msg.parts && msg.parts.length > 0 ? msg.parts : [{ type: 'text', text: msg.content }]
-          })),
+          messages: currentMessages.value.map((msg, i) => {
+            const isLast = i === currentMessages.value.length - 1;
+            // v1.5+ SR-25: attached files 注入 file_id 到最后一条 user 消息末尾，
+            // 仅用于发送 LLM，不污染 UI 渲染（UI 用 msg.content / msg.parts 原始值）
+            if (isLast && injectLastMessageText && msg.role === 'user') {
+              const imgParts = msg.parts?.filter(p => p.type === 'file' && p.mediaType?.startsWith('image/')) || [];
+              return {
+                id: `msg-history-${i}`,
+                role: msg.role,
+                parts: [{ type: 'text', text: injectLastMessageText }, ...imgParts]
+              };
+            }
+            return {
+              id: `msg-history-${i}`,
+              role: msg.role,
+              parts: msg.parts && msg.parts.length > 0 ? msg.parts : [{ type: 'text', text: msg.content }]
+            };
+          }),
+          // v1.5+ SR-25: 后端持久化用 displayContent（用户原始输入），
+          // LLM 仍看注入版（messages 里含 file_id），UI reload 后显示原始
+          displayContent: injectLastMessageText
+            ? currentMessages.value[currentMessages.value.length - 1]?.content
+            : undefined,
           conversationId: currentConversationId.value,
           modelId: selectedModelId.value || undefined,
           agentCode: selectedAgentCode.value || undefined
@@ -590,9 +611,25 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** send a new user message + stream response */
   async function sendMessage(content: string) {
-    if ((!content.trim() && attachedImages.value.length === 0) || isStreaming.value) return;
+    if (
+      (!content.trim() && attachedImages.value.length === 0 && attachedFiles.value.length === 0) ||
+      isStreaming.value
+    ) {
+      return;
+    }
 
-    // build parts
+    // v1.5+ SR-25: attached files (Excel/CSV) 注入到消息末尾，
+    // LLM 看到 file_id 后自动调 file.parse tool，UX 同 OpenAI/Claude 附件 chip
+    // 注意：注入文本仅用于发送 LLM，UI 显示保持原始 content（见 doStream injectLastMessageText）
+    let injectText: string | undefined;
+    if (attachedFiles.value.length > 0) {
+      const fileLines = attachedFiles.value
+        .map(f => `[附件] ${f.fileName} (file_id=${f.fileId}, mime=${f.mimeType})`)
+        .join('\n');
+      injectText = `${content}\n\n${fileLines}`.trim();
+    }
+
+    // build parts — UI 用原始 content（不含注入文本）
     const parts: Api.Ai.MessagePart[] = [];
     if (content.trim()) {
       parts.push({ type: 'text', text: content });
@@ -616,7 +653,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     });
 
     attachedImages.value = [];
-    await doStream();
+    attachedFiles.value = [];
+    await doStream(injectText);
   }
 
   /** stop current streaming */
@@ -641,6 +679,21 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     attachedImages.value = [];
   }
 
+  /** add attached file (Excel/CSV, spec §16 SR-25) */
+  function addFile(fileId: string, fileName: string, mimeType: string, fileSize: number) {
+    attachedFiles.value.push({ fileId, fileName, mimeType, fileSize });
+  }
+
+  /** remove attached file by index */
+  function removeFile(index: number) {
+    attachedFiles.value.splice(index, 1);
+  }
+
+  /** clear all attached files */
+  function clearFiles() {
+    attachedFiles.value = [];
+  }
+
   /** regenerate: remove last assistant message, re-stream with existing user message */
   async function regenerate() {
     if (isStreaming.value) return;
@@ -662,8 +715,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     // truncate messages from this index onward
     currentMessages.value = currentMessages.value.slice(0, messageIndex);
 
-    // clear attached images since editing replaces the message
+    // clear attached images/files since editing replaces the message
     attachedImages.value = [];
+    attachedFiles.value = [];
 
     // send the edited message (text only, no images)
     const parts: Api.Ai.MessagePart[] = [{ type: 'text', text: newContent }];
@@ -733,6 +787,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     selectedAgentCode,
     hasMoreConversations,
     attachedImages,
+    attachedFiles,
     // Phase 3.4: SSE 事件 + HITL
     streamEvents,
     pendingConfirmation,
@@ -752,6 +807,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     addImage,
     removeImage,
     clearImages,
+    addFile,
+    removeFile,
+    clearFiles,
     approveTool,
     rejectTool,
     init

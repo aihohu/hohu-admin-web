@@ -30,9 +30,16 @@ const TOOL_DESC: Record<string, string> = {
   'user.disable': '禁用用户',
   'user.enable': '启用用户',
   'user.distinct': '查询不重复字段值',
+  'user.count': '统计用户数量',
   'user.stats': '按维度分组统计',
+  'role.count': '统计角色数量',
+  'role.list': '查询角色列表',
+  'dept.count': '统计部门数量',
+  'dept.list': '查询部门列表',
   'dept.export_members': '导出部门成员',
-  'role.bind_menus': '给角色绑定菜单'
+  'role.bind_menus': '给角色绑定菜单',
+  'file.parse': '解析文件',
+  'job.update_cron': '更新定时任务 cron'
 };
 
 const toolDesc = computed(() => TOOL_DESC[props.started.tool] || '');
@@ -132,7 +139,9 @@ const CHIP_TARGETS: Record<string, string> = {
   'user.count': '/system/user',
   'user.distinct': '/system/user',
   'role.count': '/system/role',
-  'dept.count': '/system/dept'
+  'role.list': '/system/role',
+  'dept.count': '/system/dept',
+  'dept.list': '/system/dept'
 };
 
 const chipTarget = computed<string | null>(() => {

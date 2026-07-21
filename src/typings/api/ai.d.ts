@@ -76,6 +76,14 @@ declare namespace Api {
       baseUrl: string | null;
     };
 
+    /** file attached to a chat message (Excel/CSV for file.parse tool, spec §16 SR-25) */
+    type AttachedFile = {
+      fileId: string;
+      fileName: string;
+      mimeType: string;
+      fileSize: number;
+    };
+
     /** provider search params */
     type ProviderSearchParams = CommonType.RecordNullable<Pick<Provider, 'name' | 'providerCode'> & CommonSearchParams>;
 
