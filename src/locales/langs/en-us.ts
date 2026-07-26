@@ -805,7 +805,15 @@ const local: App.I18n.Schema = {
         toolDetails: 'Details',
         toolArgs: 'Args',
         toolResult: 'Result',
-        toolError: 'Error'
+        toolError: 'Error',
+        // v1.5+ supervisor routing v4
+        agentAutoName: 'AI Auto Routing',
+        agentAutoDesc: 'AI Supervisor picks the best agent based on your question',
+        routingFeedback: 'Routing Feedback',
+        routingFeedbackTitle: 'Routing Feedback',
+        feedbackCorrect: 'Correct Routing',
+        feedbackWrong: 'Wrong Routing',
+        feedbackPickAgent: 'Please pick the correct agent'
       },
       provider: {
         title: 'Model Management',

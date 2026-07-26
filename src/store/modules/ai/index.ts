@@ -4,7 +4,13 @@ import { SetupStoreId } from '@/enum';
 import { localStg } from '@/utils/storage';
 import { getServiceBaseURL } from '@/utils/service';
 import { fetchGetConversationList, fetchGetConversationDetail, fetchDeleteConversation } from '@/service/api';
-import { fetchAiAgents, fetchAiConfirm, fetchAiOperationLog, fetchGetAvailableModels } from '@/service/api/ai';
+import {
+  fetchAiAgents,
+  fetchAiConfirm,
+  fetchAiOperationLog,
+  fetchGetAvailableModels,
+  fetchRoutingFeedback
+} from '@/service/api/ai';
 
 export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const conversations = ref<Api.Ai.Conversation[]>([]);
@@ -43,6 +49,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const resumeAttempts = ref(0);
   /** confirm 后 30s 轮询的定时器（spec §8.3 SSE 断流兜底） */
   let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+  // v1.5+ supervisor routing v4: clarification 候选卡片
+  /** 当前挂起的 clarification 事件（candidates 列表 + 提示文案），null 表示无 */
+  const pendingClarification = ref<Api.Ai.ClarificationRequiredEvent | null>(null);
 
   let abortController: AbortController | null = null;
   let selectSeq = 0;
@@ -108,6 +118,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingConfirmation.value = null;
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
+    pendingClarification.value = null;
     resumeAttempts.value = 0;
     currentMessages.value = [];
     const { data, error } = await fetchGetConversationDetail(conversationId);
@@ -158,6 +169,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingConfirmation.value = null;
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
+    pendingClarification.value = null;
     resumeAttempts.value = 0;
   }
 
@@ -198,6 +210,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         break;
       case 'ai_error':
         window.$message?.error(`AI 错误: ${event.message || '未知错误'}`);
+        break;
+      case 'clarification_required':
+        // spec §6.2 v4: stateless clarification —— 前端弹候选 Agent 卡片
+        // 用户点选后写入 selectedAgentCode 重发，无需后端 confirmationId
+        pendingClarification.value = event;
         break;
       case 'done':
         // 流结束信号（一般由 [DONE] 或 reader.done 处理，这里只清状态）
@@ -241,6 +258,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       event.type === 'tool_call_result' ||
       event.type === 'confirmation_required' ||
       event.type === 'confirmation_resumed' ||
+      event.type === 'clarification_required' ||
       event.type === 'ai_error'
     ) {
       handleAiStreamEvent(event as Api.Ai.AiStreamEvent);
@@ -269,6 +287,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     reasoningText.value = '';
     streamEvents.value = [];
     pendingConfirmation.value = null;
+    // v1.5+ supervisor routing: 新流开始时清空上轮 clarification 候选
+    pendingClarification.value = null;
     // 新流开始：清空续传重试计数（旧失败不应阻塞新对话的续传）
     resumeAttempts.value = 0;
     abortController = new AbortController();
@@ -753,18 +773,48 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
   }
 
-  /** v1.5+: 加载当前用户可用 agent 列表，默认选第一个 */
+  /** v1.5+: 加载当前用户可用 agent 列表，默认 'auto'（supervisor 自动路由） */
   async function loadAgents() {
     try {
       const { data, error } = await fetchAiAgents();
       if (!error && data) {
         availableAgents.value = data;
-        if (!selectedAgentCode.value && data.length > 0) {
-          selectedAgentCode.value = data[0].code;
+        // v1.5+ supervisor routing v4: 默认 'auto'，让 LLM 自动选 Agent
+        // 后端 supervisor_enabled=false 时会自动 fallback DEFAULT_AGENT_CODE
+        if (!selectedAgentCode.value) {
+          selectedAgentCode.value = 'auto';
         }
       }
     } catch {
       // silent fail
+    }
+  }
+
+  // v1.5+ supervisor routing v4
+  /** 用户从 clarification 候选中选了某个 Agent —— 写入 selectedAgentCode 后清状态 */
+  function pickClarificationAgent(code: string) {
+    selectedAgentCode.value = code;
+    pendingClarification.value = null;
+  }
+
+  /** 用户关闭 clarification 卡片（不选，保留原 agentCode） */
+  function dismissClarification() {
+    pendingClarification.value = null;
+  }
+
+  /** spec §6.4: 提交 routing feedback */
+  async function submitRoutingFeedback(messageId: string, payload: Api.Ai.RoutingFeedbackRequest): Promise<boolean> {
+    try {
+      const { error } = await fetchRoutingFeedback(messageId, payload);
+      if (error) {
+        window.$message?.error(`反馈提交失败: ${error.message}`);
+        return false;
+      }
+      window.$message?.success('反馈已提交，谢谢！');
+      return true;
+    } catch (e: any) {
+      window.$message?.error(`反馈提交失败: ${e.message}`);
+      return false;
     }
   }
 
@@ -794,6 +844,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingConfirmationId,
     pendingToolCallId,
     resumeAttempts,
+    // v1.5+ supervisor routing v4
+    pendingClarification,
+    pickClarificationAgent,
+    dismissClarification,
+    submitRoutingFeedback,
     attemptResume,
     loadConversations,
     loadMoreConversations,
