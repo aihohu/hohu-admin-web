@@ -11,6 +11,7 @@ import ChatMessage from './chat-message.vue';
 import ChatInput from './chat-input.vue';
 import ChatToolCall from './chat-tool-call.vue';
 import ChatConfirmationDrawer from './chat-confirmation-drawer.vue';
+import ChatClarification from './chat-clarification.vue';
 
 const { t } = useI18n();
 const aiStore = useAiStore();
@@ -295,6 +296,9 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
             :is-last-user-message="false"
             :is-last-assistant-message="false"
           />
+
+          <!-- v1.5+ supervisor routing v4: ClarificationRequired 候选卡片 -->
+          <ChatClarification />
 
           <!-- Phase 3.4: tool-call 卡片列表（与流式文本并列渲染） -->
           <div v-if="toolCallCards.length > 0" class="tool-call-list">

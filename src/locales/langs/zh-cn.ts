@@ -799,7 +799,15 @@ const local: App.I18n.Schema = {
         toolDetails: '详情',
         toolArgs: '参数',
         toolResult: '结果',
-        toolError: '错误'
+        toolError: '错误',
+        // v1.5+ supervisor routing v4
+        agentAutoName: 'AI 自动路由',
+        agentAutoDesc: '由 AI Supervisor 根据你的问题自动选择最合适的助手',
+        routingFeedback: '路由反馈',
+        routingFeedbackTitle: '路由结果反馈',
+        feedbackCorrect: '路由正确',
+        feedbackWrong: '路由错误',
+        feedbackPickAgent: '请选择正确的助手'
       },
       provider: {
         title: '模型管理',

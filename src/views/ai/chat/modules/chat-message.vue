@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
+import { useAiStore } from '@/store/modules/ai';
 
 const { t } = useI18n();
 const props = defineProps<{
@@ -17,6 +18,8 @@ const emit = defineEmits<{
   edit: [index: number, newContent: string];
   regenerate: [];
 }>();
+
+const aiStore = useAiStore();
 
 const isEditing = ref(false);
 const editContent = ref('');
@@ -88,6 +91,44 @@ function handleMarkdownClick(e: Event) {
 
 function previewImage(url: string) {
   window.open(url, '_blank');
+}
+
+// v1.5+ supervisor routing v4: 路由反馈（spec §6.4）
+// 仅 assistant 消息显示按钮；temp-XXX / streaming 等无 messageId 的消息不显示
+const canFeedback = computed(
+  () => props.message.role === 'assistant' && !!props.message.messageId && !props.message.messageId.startsWith('temp-')
+);
+
+const feedbackVisible = ref(false);
+const feedbackSubmitting = ref(false);
+const feedbackChoice = ref<'correct' | 'wrong' | ''>('');
+const feedbackCorrectedCode = ref<string>('');
+
+// 用户可选择的候选 Agent（除了 supervisor auto sentinel）
+const feedbackAgentOptions = computed(() => aiStore.availableAgents.map(a => ({ label: a.name, value: a.code })));
+
+function openFeedback() {
+  feedbackChoice.value = '';
+  feedbackCorrectedCode.value = feedbackAgentOptions.value[0]?.value || '';
+  feedbackVisible.value = true;
+}
+
+async function submitFeedback() {
+  if (feedbackChoice.value !== 'correct' && feedbackChoice.value !== 'wrong') return;
+  if (feedbackChoice.value === 'wrong' && !feedbackCorrectedCode.value) {
+    window.$message?.warning(t('page.ai.chat.feedbackPickAgent'));
+    return;
+  }
+  feedbackSubmitting.value = true;
+  try {
+    const ok = await aiStore.submitRoutingFeedback(props.message.messageId, {
+      feedback: feedbackChoice.value,
+      correctedAgentCode: feedbackChoice.value === 'wrong' ? feedbackCorrectedCode.value : undefined
+    });
+    if (ok) feedbackVisible.value = false;
+  } finally {
+    feedbackSubmitting.value = false;
+  }
 }
 </script>
 
@@ -183,6 +224,14 @@ function previewImage(url: string) {
             </template>
             {{ t('page.ai.chat.regenerate') }}
           </NTooltip>
+          <NTooltip v-if="canFeedback" trigger="hover">
+            <template #trigger>
+              <button class="msg-action-btn" @click="openFeedback">
+                <IconIcRoundThumbsUpDown class="text-14px" />
+              </button>
+            </template>
+            {{ t('page.ai.chat.routingFeedback') }}
+          </NTooltip>
           <NTooltip trigger="hover">
             <template #trigger>
               <button class="msg-action-btn" @click="copyMessageContent">
@@ -192,6 +241,36 @@ function previewImage(url: string) {
             {{ t('page.ai.chat.copy') }}
           </NTooltip>
         </div>
+
+        <!-- Routing feedback dialog (spec §6.4) -->
+        <NModal
+          v-model:show="feedbackVisible"
+          preset="dialog"
+          :title="t('page.ai.chat.routingFeedbackTitle')"
+          :positive-text="t('common.confirm')"
+          :negative-text="t('common.cancel')"
+          :positive-button-props="{
+            loading: feedbackSubmitting,
+            disabled: feedbackChoice === '' || (feedbackChoice === 'wrong' && !feedbackCorrectedCode)
+          }"
+          @positive-click="submitFeedback"
+        >
+          <div class="feedback-body">
+            <NRadioGroup v-model:value="feedbackChoice" class="feedback-radio-group">
+              <NRadio value="correct">{{ t('page.ai.chat.feedbackCorrect') }}</NRadio>
+              <NRadio value="wrong">{{ t('page.ai.chat.feedbackWrong') }}</NRadio>
+            </NRadioGroup>
+            <div v-if="feedbackChoice === 'wrong'" class="feedback-corrected">
+              <div class="feedback-corrected-label">{{ t('page.ai.chat.feedbackPickAgent') }}</div>
+              <NSelect
+                v-model:value="feedbackCorrectedCode"
+                :options="feedbackAgentOptions"
+                :placeholder="t('page.ai.chat.feedbackPickAgent')"
+                size="small"
+              />
+            </div>
+          </div>
+        </NModal>
       </template>
     </div>
   </div>
@@ -568,5 +647,29 @@ html.dark .msg-edit-tip {
 
 html.dark .msg-action-btn:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+/* Routing feedback dialog (spec §6.4) */
+.feedback-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.feedback-radio-group {
+  display: flex;
+  gap: 16px;
+}
+
+.feedback-corrected {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feedback-corrected-label {
+  font-size: 12px;
+  color: var(--n-text-color-3, #999);
 }
 </style>

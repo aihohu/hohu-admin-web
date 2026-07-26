@@ -73,17 +73,27 @@ const groupedModels = computed(() => {
 });
 
 const currentAgent = computed(() => {
+  if (aiStore.selectedAgentCode === 'auto') return null;
   return aiStore.availableAgents.find(a => a.code === aiStore.selectedAgentCode);
 });
 
+// v1.5+ supervisor routing v4: agent 列表顶部插入 'auto'（让 LLM 自动选 Agent）
+// sentinel code 'auto' 与后端 stickiness.py §5.3 约定一致
+const AUTO_AGENT_OPTION: DropdownOption = {
+  key: 'auto',
+  label: t('page.ai.chat.agentAutoName'),
+  description: t('page.ai.chat.agentAutoDesc')
+};
+
 // NDropdown options（agent 列表，含 desc——用 render-label 自定义渲染，inline style 防 scoped 失效）
-const agentOptions = computed<DropdownOption[]>(() =>
-  aiStore.availableAgents.map(a => ({
+const agentOptions = computed<DropdownOption[]>(() => [
+  AUTO_AGENT_OPTION,
+  ...aiStore.availableAgents.map(a => ({
     key: a.code,
     label: a.name,
     description: a.description
   }))
-);
+]);
 
 function renderAgentLabel(option: DropdownOption) {
   const desc = (option as { description?: string }).description;
@@ -335,7 +345,13 @@ function formatFileSize(bytes: number): string {
         >
           <button class="selector-btn">
             <IconIcRoundSmartToy class="text-14px opacity-70" />
-            <span>{{ currentAgent?.name || 'AI 助手' }}</span>
+            <span>
+              {{
+                aiStore.selectedAgentCode === 'auto'
+                  ? t('page.ai.chat.agentAutoName')
+                  : currentAgent?.name || t('page.ai.chat.agentAutoName')
+              }}
+            </span>
             <IconIcRoundArrowDropDown class="text-14px opacity-70" />
           </button>
         </NDropdown>

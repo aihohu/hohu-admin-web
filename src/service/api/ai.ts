@@ -184,3 +184,14 @@ export function fetchAiAgents() {
     method: 'get'
   });
 }
+
+// ==================== Routing Feedback（spec §6.4 supervisor routing v4） ====================
+
+/** POST /ai/messages/{messageId}/routing-feedback — 用户对路由结果做反馈 */
+export function fetchRoutingFeedback(messageId: string, data: Api.Ai.RoutingFeedbackRequest) {
+  return request<Api.Ai.RoutingFeedbackResponse>({
+    url: `/ai/messages/${messageId}/routing-feedback`,
+    method: 'post',
+    data
+  });
+}

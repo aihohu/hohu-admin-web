@@ -248,6 +248,19 @@ declare namespace Api {
       message: string;
     };
 
+    /** spec §6.2 v4: clarification_required 事件（无状态，前端弹候选 Agent 卡片重发） */
+    type ClarificationCandidate = {
+      code: string;
+      name: string;
+      description: string;
+    };
+
+    type ClarificationRequiredEvent = {
+      type: 'clarification_required';
+      candidates: ClarificationCandidate[];
+      message: string;
+    };
+
     /** spec §8.1: done 事件（流结束） */
     type DoneEvent = {
       type: 'done';
@@ -259,8 +272,22 @@ declare namespace Api {
       | ToolCallResultEvent
       | ConfirmationRequiredEvent
       | ConfirmationResumedEvent
+      | ClarificationRequiredEvent
       | AiErrorEvent
       | DoneEvent;
+
+    /** spec §6.4: routing feedback request (POST /ai/messages/{id}/routing-feedback) */
+    type RoutingFeedbackRequest = {
+      /** 'correct' | 'wrong' */
+      feedback: 'correct' | 'wrong';
+      /** feedback='wrong' 时必填，用户选择的正确 Agent code */
+      correctedAgentCode?: string;
+    };
+
+    /** spec §6.4: routing feedback response */
+    type RoutingFeedbackResponse = {
+      feedbackId: string;
+    };
 
     /** /ai/confirm 请求 */
     type ConfirmRequest = {

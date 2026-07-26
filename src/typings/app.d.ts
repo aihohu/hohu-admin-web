@@ -1024,6 +1024,14 @@ declare namespace App {
             toolResult: string;
             toolError: string;
             resumedAt: string;
+            // v1.5+ supervisor routing v4
+            agentAutoName: string;
+            agentAutoDesc: string;
+            routingFeedback: string;
+            routingFeedbackTitle: string;
+            feedbackCorrect: string;
+            feedbackWrong: string;
+            feedbackPickAgent: string;
           };
           provider: {
             title: string;
