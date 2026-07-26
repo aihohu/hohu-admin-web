@@ -791,10 +791,19 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   // v1.5+ supervisor routing v4
-  /** 用户从 clarification 候选中选了某个 Agent —— 写入 selectedAgentCode 后清状态 */
-  function pickClarificationAgent(code: string) {
+  /** 用户从 clarification 候选中选了某个 Agent —— 切 agentCode + 自动重发上轮 user message.
+
+   * UX polish：spec §6.2 v4 没明确要求自动重发，但用户点候选就是想"用这个 agent 重试"，
+   * 让他重新输入再发送是多余动作。currentMessages 已有 user message（sendMessage 先
+   * push 再 doStream），直接复用即可。后端拿到新 agentCode（具体业务 code）走
+   * manual_override 路径，正常 save_user_message + 路由 + 响应.
+   */
+  async function pickClarificationAgent(code: string) {
     selectedAgentCode.value = code;
     pendingClarification.value = null;
+    if (currentMessages.value.length > 0) {
+      await doStream();
+    }
   }
 
   /** 用户关闭 clarification 卡片（不选，保留原 agentCode） */
