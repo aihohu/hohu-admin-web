@@ -1057,6 +1057,31 @@ const local: App.I18n.Schema = {
     INCORRECT_OLD_PASSWORD: '当前密码不正确',
     MISSING_PERMISSION: '您没有权限进行此操作，请联系管理员',
     SUPER_ADMIN_ONLY: '该操作仅限超级管理员'
+  },
+  // v1.5+ tool result view registry — referenced by backend UIResult.label_key
+  ai: {
+    tool: {
+      user: {
+        count: { result: '共 {count} 个用户' },
+        stats: { result: '按维度统计用户分布' },
+        distinct: { result: '共 {count} 个不同值' },
+        batch_delete: { result: '已删除 {count} 个用户' }
+      },
+      role: {
+        count: { result: '共 {count} 个角色' },
+        list: { result: '共 {count} 个角色' }
+      },
+      dept: {
+        count: { result: '共 {count} 个部门' },
+        list: { result: '共 {count} 个部门' }
+      },
+      job: {
+        update_cron: { result: '定时任务 cron 已更新' }
+      },
+      file: {
+        parse: { result: '已解析 {rows} 行' }
+      }
+    }
   }
 };
 

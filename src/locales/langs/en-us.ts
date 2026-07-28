@@ -1063,6 +1063,31 @@ const local: App.I18n.Schema = {
     INCORRECT_OLD_PASSWORD: 'Current password is incorrect',
     MISSING_PERMISSION: 'You do not have permission to perform this action. Please contact the administrator.',
     SUPER_ADMIN_ONLY: 'This action is restricted to super admins'
+  },
+  // v1.5+ tool result view registry — referenced by backend UIResult.label_key
+  ai: {
+    tool: {
+      user: {
+        count: { result: '{count} users in total' },
+        stats: { result: 'User distribution by dimension' },
+        distinct: { result: '{count} distinct values' },
+        batch_delete: { result: 'Deleted {count} users' }
+      },
+      role: {
+        count: { result: '{count} roles in total' },
+        list: { result: '{count} roles' }
+      },
+      dept: {
+        count: { result: '{count} departments in total' },
+        list: { result: '{count} departments' }
+      },
+      job: {
+        update_cron: { result: 'Job cron expression updated' }
+      },
+      file: {
+        parse: { result: 'Parsed {rows} rows' }
+      }
+    }
   }
 };
 

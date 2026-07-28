@@ -158,12 +158,16 @@ declare namespace Api {
         args?: Record<string, unknown>;
         risk?: 'low' | 'high' | 'destructive';
         trace_id?: string;
+        /** v1.6+ SR-13: readonly tool chip 跳转目标（声明式），reload 后还原卡片 chip */
+        chip_target?: string | null;
         ok?: boolean;
         result?: unknown;
         affected_rows?: number | null;
         error_code?: string;
         error_msg?: string;
         duration_ms?: number;
+        /** v1.6+ SR-13: UI 层结果，重连后按 viewType 路由标准组件（缺失则 fallback PlainJsonView） */
+        ui?: UIResult;
       }> | null;
       /** input tokens */
       tokensInput: number | null;
@@ -188,6 +192,44 @@ declare namespace Api {
       affectedExamples?: string[];
     };
 
+    /** spec 2026-07-16 §2.3: 5 种标准 view_type */
+    type ViewType = 'rows_affected' | 'data_list' | 'stats_chart' | 'detail_card' | 'plain_json';
+
+    /** rows_affected view_data schema */
+    type RowsAffectedViewData = {
+      count: number;
+      ids?: string[];
+    };
+
+    /** data_list view_data schema */
+    type DataListViewData = {
+      columns: Array<{ key: string; label: string }>;
+      rows: Array<Record<string, unknown>>;
+    };
+
+    /** stats_chart view_data schema */
+    type StatsChartViewData = {
+      rows: Array<{ group: string; count: number }>;
+    };
+
+    /** detail_card view_data schema */
+    type DetailCardViewData = {
+      title: string;
+      fields: Array<{ label: string; value: string }>;
+    };
+
+    /** plain_json view_data schema（自由 dict） */
+    type PlainJsonViewData = Record<string, unknown>;
+
+    /** UIResult（spec §2.2）— 前端按 viewType 路由标准组件 */
+    type UIResult = {
+      viewType: ViewType;
+      viewData: RowsAffectedViewData | DataListViewData | StatsChartViewData | DetailCardViewData | PlainJsonViewData;
+      audit?: Record<string, unknown>;
+      labelKey?: string;
+      labelParams?: Record<string, unknown>;
+    };
+
     /** spec §8.1: tool_call_started 事件 */
     type ToolCallStartedEvent = {
       type: 'tool_call_started';
@@ -199,6 +241,8 @@ declare namespace Api {
       risk: 'low' | 'high' | 'destructive';
       /** §8.7 chip 跳转用 trace_id */
       traceId: string;
+      /** v1.6+ SR-13: chip 跳转目标（声明式，替代前端 CHIP_TARGETS map） */
+      chipTarget?: string | null;
     };
 
     /** spec §8.1: tool_call_result 事件 */
@@ -214,6 +258,8 @@ declare namespace Api {
       affectedRows?: number | null;
       errorCode?: string;
       errorMsg?: string;
+      /** v1.6+ SR-13: UI 层结果，前端按 ui.viewType 路由标准组件 */
+      ui?: UIResult;
     };
 
     /** spec §8.1: confirmation_required 事件（前端弹 HITL 抽屉） */

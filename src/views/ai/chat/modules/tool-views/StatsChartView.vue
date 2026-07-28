@@ -8,20 +8,23 @@ import { CanvasRenderer } from 'echarts/renderers';
 
 echarts.use([GridComponent, LegendComponent, TooltipComponent, BarChart, PieChart, CanvasRenderer]);
 
-type StatsGroup = { group: string; count: number };
-
 const props = defineProps<{
-  /** spec §2.9 stats 返回结构 [{group, count}] */
-  data: StatsGroup[];
+  data: Api.Ai.UIResult;
 }>();
+
+const viewData = computed(() => props.data.viewData as Api.Ai.StatsChartViewData);
+
+type StatsGroup = { group: string; count: number };
+/** spec §2.9 stats 返回结构 [{group, count}] */
+const groups = computed<StatsGroup[]>(() => viewData.value.rows);
 
 type TabKey = 'table' | 'bar' | 'pie';
 const activeTab = ref<TabKey>('table');
 
-const total = computed(() => props.data.reduce((sum, x) => sum + x.count, 0));
+const total = computed(() => groups.value.reduce((sum, x) => sum + x.count, 0));
 
 const labeled = computed(() =>
-  props.data.map(d => ({
+  groups.value.map(d => ({
     raw: d.group,
     label: formatLabel(d.group),
     count: d.count,
