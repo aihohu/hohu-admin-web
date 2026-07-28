@@ -139,7 +139,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             summary: tc.summary ?? '',
             args: tc.args ?? {},
             risk: tc.risk ?? 'low',
-            traceId: tc.trace_id ?? ''
+            traceId: tc.trace_id ?? '',
+            chipTarget: tc.chip_target ?? null
           });
           restoredEvents.push({
             type: 'tool_call_result',
@@ -150,7 +151,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             result: tc.result,
             affectedRows: tc.affected_rows ?? null,
             errorCode: tc.error_code,
-            errorMsg: tc.error_msg
+            errorMsg: tc.error_msg,
+            ui: tc.ui
           });
         }
       }

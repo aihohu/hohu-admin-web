@@ -158,12 +158,16 @@ declare namespace Api {
         args?: Record<string, unknown>;
         risk?: 'low' | 'high' | 'destructive';
         trace_id?: string;
+        /** v1.6+ SR-13: readonly tool chip 跳转目标（声明式），reload 后还原卡片 chip */
+        chip_target?: string | null;
         ok?: boolean;
         result?: unknown;
         affected_rows?: number | null;
         error_code?: string;
         error_msg?: string;
         duration_ms?: number;
+        /** v1.6+ SR-13: UI 层结果，重连后按 viewType 路由标准组件（缺失则 fallback PlainJsonView） */
+        ui?: UIResult;
       }> | null;
       /** input tokens */
       tokensInput: number | null;
