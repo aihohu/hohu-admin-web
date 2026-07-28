@@ -142,6 +142,7 @@ src/typings/api/ai.d.ts     # Api.Ai namespace
 - **Model ID format:** `{providerCode}:{modelName}` (e.g., `openai:gpt-4o`)
 - **API Key:** Backend Fernet encryption; list/edit returns masked value; leave empty in edit form to keep unchanged
 - **Provider test:** `POST /ai/provider/test-model`, supports saved and unsaved providers
+- **Tool Result View:** `chat-tool-call.vue` 用 `<component :is="resolveToolView(result.ui.viewType)" :data="result.ui" />` 渲染，按 `viewType` 路由到 `tool-views/` 目录下 5 个标准组件之一（rows_affected / data_list / stats_chart / detail_card / plain_json）。新增 tool 时后端声明 `meta.result_view` + `meta.chip_target`，前端无需改动。chip 跳转从 `started.chipTarget` 读（声明式，已删 CHIP_TARGETS 硬编码 map）。
 
 ## Environment Variables
 
