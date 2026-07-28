@@ -1256,6 +1256,31 @@ declare namespace App {
         MISSING_PERMISSION: string;
         SUPER_ADMIN_ONLY: string;
       };
+      // v1.5+ tool result view registry — referenced by backend UIResult.label_key
+      ai: {
+        tool: {
+          user: {
+            count: { result: string };
+            stats: { result: string };
+            distinct: { result: string };
+            batch_delete: { result: string };
+          };
+          role: {
+            count: { result: string };
+            list: { result: string };
+          };
+          dept: {
+            count: { result: string };
+            list: { result: string };
+          };
+          job: {
+            update_cron: { result: string };
+          };
+          file: {
+            parse: { result: string };
+          };
+        };
+      };
     };
 
     type GetI18nKey<T extends Record<string, unknown>, K extends keyof T = keyof T> = K extends string
