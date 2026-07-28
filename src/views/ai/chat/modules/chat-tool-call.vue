@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import type { Component } from 'vue';
 import { computed, onUnmounted, ref, watch } from 'vue';
-import ChatToolStatsTabs from './chat-tool-stats-tabs.vue';
+import { PlainJsonView, resolveToolView } from './tool-views';
 
 const props = defineProps<{
   /** tool_call_started 事件（含 tool/toolCallId/summary/args/risk） */
@@ -110,51 +111,34 @@ function formatValue(v: unknown): string {
   }
 }
 
-const resultJson = computed(() => {
-  if (!props.result?.result) return '';
+// spec 2026-07-16 §3: 按 result.ui.viewType 路由标准组件
+const viewComponent = computed<Component>(() => {
+  if (!props.result?.ok) return PlainJsonView;
+  if (!props.result.ui) return PlainJsonView;
+  return resolveToolView(props.result.ui.viewType);
+});
+
+const viewProps = computed<Api.Ai.UIResult | null>(() => {
+  if (!props.result?.ok || !props.result.ui) return null;
+  return props.result.ui;
+});
+
+// spec 2026-07-16 §3 决策 2: chip 从 started.chipTarget 读（不再硬编码 CHIP_TARGETS）
+const chipHref = computed<string | null>(() => {
+  if (!props.result?.ok) return null;
+  if (!props.started.traceId) return null;
+  if (!props.started.chipTarget) return null;
+  return `${props.started.chipTarget}?ai_query_id=${encodeURIComponent(props.started.traceId)}`;
+});
+
+// 兜底：result.ok=True 但 ui=None（老 tool 未迁移 / executor fallback）
+const fallbackJson = computed(() => {
+  if (!props.result?.ok || props.result.ui) return '';
   try {
     return JSON.stringify(props.result.result, null, 2);
   } catch {
     return String(props.result.result);
   }
-});
-
-// §12 场景 13: stats tool 返回 [{group, count}]，渲染三 tab 图表
-type StatsGroup = { group: string; count: number };
-
-const statsData = computed<StatsGroup[] | null>(() => {
-  if (props.started.tool !== 'user.stats') return null;
-  if (!props.result?.ok) return null;
-  const data = props.result.result;
-  if (!Array.isArray(data)) return null;
-  return data.filter(
-    (x): x is StatsGroup =>
-      x != null && typeof x === 'object' && 'group' in x && 'count' in x && typeof x.count === 'number'
-  );
-});
-
-// §8.7 chip 跳转：readonly tool 成功后展示 chip，跳到模块页带 ai_query_id
-const CHIP_TARGETS: Record<string, string> = {
-  'user.list': '/system/user',
-  'user.count': '/system/user',
-  'user.distinct': '/system/user',
-  'role.count': '/system/role',
-  'role.list': '/system/role',
-  'dept.count': '/system/dept',
-  'dept.list': '/system/dept'
-};
-
-const chipTarget = computed<string | null>(() => {
-  if (!props.result?.ok) return null;
-  if (!props.started.traceId) return null;
-  // stats tool 不显示 chip（数据已在卡片内）
-  if (props.started.tool === 'user.stats') return null;
-  return CHIP_TARGETS[props.started.tool] ?? null;
-});
-
-const chipHref = computed(() => {
-  if (!chipTarget.value || !props.started.traceId) return null;
-  return `${chipTarget.value}?ai_query_id=${encodeURIComponent(props.started.traceId)}`;
 });
 
 // §12 场景 4/5: HITL 倒计时（基于 expiresAt，每秒更新）
@@ -242,19 +226,21 @@ function onReject() {
           </tr>
         </table>
       </div>
-      <div v-if="result && result.ok && statsData" class="tool-section">
+      <!-- spec 2026-07-16 §3: 按 viewType 路由标准组件 -->
+      <div v-if="result && result.ok && viewProps" class="tool-section">
         <div class="tool-section-title">
           数据视图
-          <span class="hint">· §2.9 stats 例外</span>
+          <span class="hint">· {{ viewProps.viewType }}</span>
         </div>
-        <ChatToolStatsTabs :data="statsData" />
+        <component :is="viewComponent" :data="viewProps" />
       </div>
-      <div v-else-if="result && result.ok" class="tool-section">
+      <!-- 兜底：result.ok 但 ui=None（老 tool 未迁移 / executor fallback 包装） -->
+      <div v-else-if="result && result.ok && fallbackJson" class="tool-section">
         <div class="tool-section-title">
           结果摘要
           <span class="hint">· result</span>
         </div>
-        <pre class="tool-pre">{{ resultJson }}</pre>
+        <pre class="tool-pre">{{ fallbackJson }}</pre>
       </div>
       <div v-if="result && !result.ok" class="tool-section tool-error">
         <div class="tool-section-title">错误</div>
@@ -263,10 +249,10 @@ function onReject() {
       </div>
     </div>
 
-    <!-- §8.7 chip 跳转：readonly tool 成功后展示 -->
+    <!-- spec 2026-07-16 §3 决策 2: chip 从 started.chipTarget 读 -->
     <div v-if="chipHref" class="chip-row">
       <a class="chip-link" :href="chipHref">📊 查看完整数据 →</a>
-      <span class="chip-hint">跳转到「用户管理」页（已带筛选回放）</span>
+      <span class="chip-hint">跳转到模块页（已带筛选回放）</span>
     </div>
 
     <!-- §12 场景 4/5: HITL pending 内联倒计时 bar -->
