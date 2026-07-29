@@ -249,9 +249,9 @@ function onReject() {
       </div>
     </div>
 
-    <!-- spec 2026-07-16 §3 决策 2: chip 从 started.chipTarget 读 -->
+    <!-- spec 2026-07-16 §3 决策 2: chip 从 started.chipTarget 读；决策 N: 用 router-link 避免 SPA 整页刷新 -->
     <div v-if="chipHref" class="chip-row">
-      <a class="chip-link" :href="chipHref">📊 查看完整数据 →</a>
+      <RouterLink class="chip-link" :to="chipHref">📊 查看完整数据 →</RouterLink>
       <span class="chip-hint">跳转到模块页（已带筛选回放）</span>
     </div>
 
