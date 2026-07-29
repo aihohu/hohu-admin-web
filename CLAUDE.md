@@ -125,7 +125,7 @@ export function createItem(data: Api.Module.Create) {
 10. **API Key editing:** Leave `apiKey` field empty when editing (don't send masked value); validation not required in edit mode
 11. **AI streaming:** Chat uses native `fetch` + `ReadableStream` (not axios request wrapper)
 12. **Dark theme:** Custom components use `var(--n-*)` CSS variables + `html.dark` overrides
-13. **Permission in slot:** Don't use `v-if="hasAuth('xxx')"` inside `<TableHeaderOperation>` default slot — slot children evaluating to `v-if=false` triggers Vue slot fallback and renders the component's default buttons (no auth check). Use `v-permission="'xxx'"` or `<TableHeaderOperation add-auth="xxx">` props. See [按钮级权限指南](../../hohu-admin/docs/button-permission-guide.md).
+13. **Permission in slot:** Don't use `v-if="hasAuth('xxx')"` inside `<TableHeaderOperation>` default slot — slot children evaluating to `v-if=false` triggers Vue slot fallback and renders the component's default buttons (no auth check). Use `v-permission="'xxx'"` or `<TableHeaderOperation add-auth="xxx">` props. See [Button-level Permission Guide](../../hohu-admin/docs/button-permission-guide.md).
 
 ## AI Module
 
@@ -142,7 +142,7 @@ src/typings/api/ai.d.ts     # Api.Ai namespace
 - **Model ID format:** `{providerCode}:{modelName}` (e.g., `openai:gpt-4o`)
 - **API Key:** Backend Fernet encryption; list/edit returns masked value; leave empty in edit form to keep unchanged
 - **Provider test:** `POST /ai/provider/test-model`, supports saved and unsaved providers
-- **Tool Result View:** `chat-tool-call.vue` 用 `<component :is="resolveToolView(result.ui.viewType)" :data="result.ui" />` 渲染，按 `viewType` 路由到 `tool-views/` 目录下 5 个标准组件之一（rows_affected / data_list / stats_chart / detail_card / plain_json）。新增 tool 时后端声明 `meta.result_view` + `meta.chip_target`，前端无需改动。chip 跳转从 `started.chipTarget` 读（声明式，已删 CHIP_TARGETS 硬编码 map）。
+- **Tool Result View:** `chat-tool-call.vue` renders via `<component :is="resolveToolView(result.ui.viewType)" :data="result.ui" />`, dispatching by `viewType` to one of 5 standard components under `tool-views/` (rows_affected / data_list / stats_chart / detail_card / plain_json). When adding a new tool, the backend declares `meta.result_view` + `meta.chip_target` and the frontend needs no changes. Chip navigation reads from `started.chipTarget` (declarative; the hardcoded `CHIP_TARGETS` map has been removed).
 
 ## Environment Variables
 
