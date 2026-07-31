@@ -13,13 +13,16 @@ import { $t } from '@/locales';
 import RoleOperateDrawer from './modules/role-operate-drawer.vue';
 import RoleSearch from './modules/role-search.vue';
 import MenuAuthModal from './modules/menu-auth-modal.vue';
+import AiAgentAuthModal from './modules/ai-agent-auth-modal.vue';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
 const route = useRoute();
 const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
+const { bool: aiAgentAuthVisible, setTrue: openAiAgentAuthModal } = useBoolean();
 
 const currentRoleId = shallowRef<string>('');
+const aiAgentAuthRoleId = shallowRef<string>('');
 
 const searchParams: Api.SystemManage.RoleSearchParams = reactive({
   current: 1,
@@ -90,12 +93,17 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       key: 'operate',
       title: $t('common.operate'),
       align: 'center',
-      width: 260,
+      width: 360,
       render: row => (
         <div class="flex-center gap-8px">
           {hasAuth('system:role:menu-auth') && (
             <NButton type="info" ghost size="small" onClick={() => onMenuAuthClick(row.roleId)}>
               {$t('page.system.role.menuAuth')}
+            </NButton>
+          )}
+          {hasAuth('system:role:ai-agent-auth') && (
+            <NButton type="primary" ghost size="small" onClick={() => onAiAgentAuthClick(row.roleId)}>
+              AI Agent 授权
             </NButton>
           )}
           {hasAuth('system:role:edit') && (
@@ -175,6 +183,11 @@ function onMenuAuthClick(id: string) {
   currentRoleId.value = id;
   openMenuAuthModal();
 }
+
+function onAiAgentAuthClick(id: string) {
+  aiAgentAuthRoleId.value = id;
+  openAiAgentAuthModal();
+}
 </script>
 
 <template>
@@ -199,7 +212,7 @@ function onMenuAuthClick(id: string) {
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
-        :scroll-x="702"
+        :scroll-x="802"
         :loading="loading"
         remote
         :row-key="row => row.roleId"
@@ -215,6 +228,7 @@ function onMenuAuthClick(id: string) {
     </NCard>
 
     <MenuAuthModal v-model:visible="menuAuthVisible" :role-id="currentRoleId" />
+    <AiAgentAuthModal v-model:visible="aiAgentAuthVisible" :role-id="aiAgentAuthRoleId" />
   </div>
 </template>
 
