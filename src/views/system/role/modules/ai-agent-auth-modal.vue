@@ -49,6 +49,8 @@ watch(visible, val => {
     loadBinding();
   }
 });
+
+defineExpose({ handleSubmit, checkedIds, allAgents });
 </script>
 
 <template>
