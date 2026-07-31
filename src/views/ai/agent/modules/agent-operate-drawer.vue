@@ -103,6 +103,9 @@ watch(
     }
   }
 );
+
+// exposed for vitest component tests (descInvalid / model / handleSubmit)
+defineExpose({ descInvalid, model, handleSubmit });
 </script>
 
 <template>
