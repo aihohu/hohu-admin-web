@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue';
-import type { FormInst } from 'naive-ui';
 import { fetchAgentAdminDetail, fetchUpdateAgentAdmin } from '@/service/api';
 import { fetchGetAvailableModels } from '@/service/api/ai';
 import { $t } from '@/locales';
@@ -21,7 +20,6 @@ const visible = computed({
   set: v => emit('update:visible', v)
 });
 
-const formRef = ref<FormInst | null>(null);
 const submitting = ref(false);
 const detailLoading = ref(false);
 
@@ -37,45 +35,40 @@ const descInvalid = computed(() => {
   return descLen.value < 50 || descLen.value > 200;
 });
 
-const formRules = computed(() => ({
-  name: {
-    required: true,
-    message: $t('common.modifySuccess'),
-    trigger: 'blur'
-  }
-}));
-
 async function loadDetail() {
   if (!props.editRow) return;
   detailLoading.value = true;
-  const { data } = await fetchAgentAdminDetail(props.editRow.agentId);
-  const d = data ?? null;
-  detail.value = d;
-  if (d) {
+  const { error, data } = await fetchAgentAdminDetail(props.editRow.agentId);
+  if (!error && data) {
+    detail.value = data;
     model.value = {
-      name: d.name,
-      description: d.description,
-      enabled: d.enabled,
-      displayOrder: d.displayOrder,
-      systemPrompt: d.systemPrompt,
-      modelPreference: d.modelPreference,
-      dailyQuotaPerUser: d.dailyQuotaPerUser,
-      riskAppetite: d.riskAppetite
+      name: data.name,
+      description: data.description,
+      enabled: data.enabled,
+      displayOrder: data.displayOrder,
+      systemPrompt: data.systemPrompt,
+      modelPreference: data.modelPreference,
+      dailyQuotaPerUser: data.dailyQuotaPerUser,
+      riskAppetite: data.riskAppetite
     };
-    model.value.code = d.code;
+    model.value.code = data.code;
+  } else {
+    window.$message?.error?.('加载失败');
   }
   detailLoading.value = false;
 }
 
 async function loadModelOptions() {
   // reuse GET /ai/provider/models — flat list of all available models
-  const { data } = await fetchGetAvailableModels();
-  const list = data ?? [];
-  const opts = list.map(m => ({
-    label: `${m.providerName} / ${m.model}`,
-    value: `${m.providerCode}:${m.model}`
-  }));
-  modelPreferenceOptions.value = [{ label: '用全局默认', value: '' }, ...opts];
+  const { error, data } = await fetchGetAvailableModels();
+  if (!error && data) {
+    const opts = data.map(m => ({
+      label: `${m.providerName} / ${m.model}`,
+      value: `${m.providerCode}:${m.model}`
+    }));
+    modelPreferenceOptions.value = [{ label: '用全局默认', value: '' }, ...opts];
+  }
+  // silent fail — modelPreference select keeps default option
 }
 
 async function handleSubmit() {
@@ -115,7 +108,7 @@ watch(
 <template>
   <NDrawer v-model:show="visible" :width="600">
     <NDrawerContent title="编辑 Agent" closable>
-      <NForm ref="formRef" :model="model" :rules="formRules" label-placement="top" :disabled="detailLoading">
+      <NForm :model="model" label-placement="top" :disabled="detailLoading">
         <NFormItem label="Code">
           <NInput :value="model.code" disabled />
         </NFormItem>

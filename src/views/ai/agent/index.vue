@@ -9,11 +9,7 @@ import { useAuth } from '@/hooks/business/auth';
 import AgentOperateDrawer from './modules/agent-operate-drawer.vue';
 
 defineOptions({
-  name: 'AiAgent',
-  meta: {
-    title: 'AI Agent 管理',
-    i18nKey: 'route.ai_agent'
-  }
+  name: 'AiAgent'
 });
 
 const { t } = useI18n();
