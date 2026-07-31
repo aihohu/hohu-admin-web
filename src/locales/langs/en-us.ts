@@ -257,6 +257,7 @@ const local: App.I18n.Schema = {
     ai: 'AI Assistant',
     ai_chat: 'AI Chat',
     ai_provider: 'Model Manage',
+    ai_agent: 'AI Agent',
     app: 'App Page',
     marketplace: 'Marketplace',
     'marketplace-detail': 'App Detail',

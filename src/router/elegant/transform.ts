@@ -167,6 +167,7 @@ const routeMap: RouteMap = {
   "404": "/404",
   "500": "/500",
   "ai": "/ai",
+  "ai_agent": "/ai/agent",
   "ai_chat": "/ai/chat",
   "ai_provider": "/ai/provider",
   "app": "/app",
