@@ -254,6 +254,7 @@ const local: App.I18n.Schema = {
     ai_chat: 'AI 对话',
     ai_provider: '模型管理',
     ai_agent: 'AI Agent 管理',
+    'ai_routing-feedback': 'AI 路由反馈分析',
     app: '应用页面',
     marketplace: '应用市场',
     'marketplace-detail': '应用详情',

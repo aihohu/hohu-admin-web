@@ -170,6 +170,7 @@ const routeMap: RouteMap = {
   "ai_agent": "/ai/agent",
   "ai_chat": "/ai/chat",
   "ai_provider": "/ai/provider",
+  "ai_routing-feedback": "/ai/routing-feedback",
   "app": "/app",
   "home": "/home",
   "iframe-page": "/iframe-page/:url",
