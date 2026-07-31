@@ -254,7 +254,7 @@ const local: App.I18n.Schema = {
     ai_chat: 'AI 对话',
     ai_provider: '模型管理',
     ai_agent: 'AI Agent 管理',
-    'ai_routing-feedback': 'AI 路由反馈分析',
+    'ai_routing-feedback': '路由反馈分析',
     app: '应用页面',
     marketplace: '应用市场',
     'marketplace-detail': '应用详情',
@@ -848,6 +848,50 @@ const local: App.I18n.Schema = {
         testNoModel: '请先输入模型名称',
         testNoCode: '请先填写提供商编码',
         modelTestSuccess: '模型 {name} 连通性测试成功'
+      },
+      agent: {
+        title: 'AI Agent 管理',
+        description: '描述',
+        descriptionHint: '50-200 字（中英文统一按字符计）',
+        systemPrompt: 'System Prompt',
+        riskAppetite: '风险偏好',
+        dailyQuotaPerUser: '每日配额/用户',
+        modelPreference: '模型偏好',
+        useGlobalDefault: '用全局默认',
+        code: 'Code',
+        name: '名称',
+        enabled: '启用',
+        isBuiltin: '内置',
+        displayOrder: '排序',
+        keyword: '关键字',
+        enabledFilter: '启用状态',
+        all: '全部',
+        enabledValue: '启用',
+        disabled: '禁用',
+        yes: '是',
+        no: '否'
+      },
+      routingFeedback: {
+        title: '路由反馈分析',
+        last7Days: '近 7 天',
+        last30Days: '近 30 天',
+        total: '总反馈',
+        correct: '正确反馈',
+        wrong: '错路由',
+        wrongRate: '错路由率',
+        topWrongAgents: '错路由 Agent 排行',
+        detail: '明细',
+        originalAgent: '原 Agent',
+        correctedAgent: '纠正 Agent',
+        agentFlow: '原 Agent → 纠正 Agent',
+        traceId: 'TraceId',
+        time: '时间',
+        user: '用户'
+      },
+      aiAgentAuth: {
+        title: 'AI Agent 授权',
+        sharedHint: 'shared Agent 直通所有用户，无需勾选',
+        sharedTag: 'shared 直通'
       }
     },
     marketplace: {
@@ -1058,7 +1102,14 @@ const local: App.I18n.Schema = {
     INVALID_PASSWORD_FORMAT: '密码必须为6-20位，且包含大写字母、小写字母和数字',
     INCORRECT_OLD_PASSWORD: '当前密码不正确',
     MISSING_PERMISSION: '您没有权限进行此操作，请联系管理员',
-    SUPER_ADMIN_ONLY: '该操作仅限超级管理员'
+    SUPER_ADMIN_ONLY: '该操作仅限超级管理员',
+    AI_AGENT_NOT_FOUND: 'Agent 不存在',
+    AI_AGENT_DESC_LENGTH_INVALID: '描述长度必须在 50-200 字之间',
+    AI_AGENT_MODEL_PREFERENCE_INVALID: 'model_preference 必须为 provider:model 格式',
+    AI_AGENT_QUOTA_INVALID: 'daily_quota_per_user 必须 ≥ 1 或 null',
+    AI_AGENT_ID_INVALID: 'agent_id 必须为数字字符串',
+    AI_ROLE_NOT_FOUND: '角色不存在',
+    AI_ROLE_AGENT_BIND_SHARED_FORBIDDEN: 'shared Agent 直通所有用户，无需绑定'
   },
   // v1.5+ tool result view registry — referenced by backend UIResult.label_key
   ai: {

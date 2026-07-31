@@ -257,8 +257,8 @@ const local: App.I18n.Schema = {
     ai: 'AI Assistant',
     ai_chat: 'AI Chat',
     ai_provider: 'Model Manage',
-    ai_agent: 'AI Agent',
-    'ai_routing-feedback': 'Routing Feedback',
+    ai_agent: 'AI Agent Management',
+    'ai_routing-feedback': 'Routing Feedback Analytics',
     app: 'App Page',
     marketplace: 'Marketplace',
     'marketplace-detail': 'App Detail',
@@ -854,6 +854,50 @@ const local: App.I18n.Schema = {
         testNoModel: 'Please enter model name first',
         testNoCode: 'Please enter provider code first',
         modelTestSuccess: 'Model {name} connectivity test successful'
+      },
+      agent: {
+        title: 'AI Agent Management',
+        description: 'Description',
+        descriptionHint: '50-200 characters (counted uniformly for both zh and en)',
+        systemPrompt: 'System Prompt',
+        riskAppetite: 'Risk Appetite',
+        dailyQuotaPerUser: 'Daily Quota / User',
+        modelPreference: 'Model Preference',
+        useGlobalDefault: 'Use Global Default',
+        code: 'Code',
+        name: 'Name',
+        enabled: 'Enabled',
+        isBuiltin: 'Built-in',
+        displayOrder: 'Sort Order',
+        keyword: 'Keyword',
+        enabledFilter: 'Enabled Status',
+        all: 'All',
+        enabledValue: 'Enabled',
+        disabled: 'Disabled',
+        yes: 'Yes',
+        no: 'No'
+      },
+      routingFeedback: {
+        title: 'Routing Feedback Analytics',
+        last7Days: 'Last 7 days',
+        last30Days: 'Last 30 days',
+        total: 'Total Feedback',
+        correct: 'Correct Feedback',
+        wrong: 'Wrong Routing',
+        wrongRate: 'Wrong Routing Rate',
+        topWrongAgents: 'Top Wrong-Routed Agents',
+        detail: 'Detail',
+        originalAgent: 'Original Agent',
+        correctedAgent: 'Corrected Agent',
+        agentFlow: 'Original Agent → Corrected Agent',
+        traceId: 'TraceId',
+        time: 'Time',
+        user: 'User'
+      },
+      aiAgentAuth: {
+        title: 'AI Agent Authorization',
+        sharedHint: 'Shared Agent is granted to all users automatically, no need to select',
+        sharedTag: 'Shared Pass-through'
       }
     },
     marketplace: {
@@ -1064,7 +1108,14 @@ const local: App.I18n.Schema = {
     INVALID_PASSWORD_FORMAT: 'Password must be 6-20 characters with uppercase, lowercase and digit',
     INCORRECT_OLD_PASSWORD: 'Current password is incorrect',
     MISSING_PERMISSION: 'You do not have permission to perform this action. Please contact the administrator.',
-    SUPER_ADMIN_ONLY: 'This action is restricted to super admins'
+    SUPER_ADMIN_ONLY: 'This action is restricted to super admins',
+    AI_AGENT_NOT_FOUND: 'AI Agent not found',
+    AI_AGENT_DESC_LENGTH_INVALID: 'Description must be 50-200 characters',
+    AI_AGENT_MODEL_PREFERENCE_INVALID: 'model_preference must be in provider:model format',
+    AI_AGENT_QUOTA_INVALID: 'daily_quota_per_user must be >= 1 or null',
+    AI_AGENT_ID_INVALID: 'agent_id must be a numeric string',
+    AI_ROLE_NOT_FOUND: 'AI role not found',
+    AI_ROLE_AGENT_BIND_SHARED_FORBIDDEN: 'Shared Agent is granted to all users, no binding required'
   },
   // v1.5+ tool result view registry — referenced by backend UIResult.label_key
   ai: {

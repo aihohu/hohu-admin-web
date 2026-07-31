@@ -1071,6 +1071,50 @@ declare namespace App {
             testNoCode: string;
             modelTestSuccess: string;
           };
+          agent: {
+            title: string;
+            description: string;
+            descriptionHint: string;
+            systemPrompt: string;
+            riskAppetite: string;
+            dailyQuotaPerUser: string;
+            modelPreference: string;
+            useGlobalDefault: string;
+            code: string;
+            name: string;
+            enabled: string;
+            isBuiltin: string;
+            displayOrder: string;
+            keyword: string;
+            enabledFilter: string;
+            all: string;
+            enabledValue: string;
+            disabled: string;
+            yes: string;
+            no: string;
+          };
+          routingFeedback: {
+            title: string;
+            last7Days: string;
+            last30Days: string;
+            total: string;
+            correct: string;
+            wrong: string;
+            wrongRate: string;
+            topWrongAgents: string;
+            detail: string;
+            originalAgent: string;
+            correctedAgent: string;
+            agentFlow: string;
+            traceId: string;
+            time: string;
+            user: string;
+          };
+          aiAgentAuth: {
+            title: string;
+            sharedHint: string;
+            sharedTag: string;
+          };
         };
         marketplace: {
           browse: {
@@ -1255,6 +1299,13 @@ declare namespace App {
         INCORRECT_OLD_PASSWORD: string;
         MISSING_PERMISSION: string;
         SUPER_ADMIN_ONLY: string;
+        AI_AGENT_NOT_FOUND: string;
+        AI_AGENT_DESC_LENGTH_INVALID: string;
+        AI_AGENT_MODEL_PREFERENCE_INVALID: string;
+        AI_AGENT_QUOTA_INVALID: string;
+        AI_AGENT_ID_INVALID: string;
+        AI_ROLE_NOT_FOUND: string;
+        AI_ROLE_AGENT_BIND_SHARED_FORBIDDEN: string;
       };
       // v1.5+ tool result view registry — referenced by backend UIResult.label_key
       ai: {
