@@ -117,6 +117,8 @@ onMounted(() => {
   loadSummary();
   loadList();
 });
+
+defineExpose({ days });
 </script>
 
 <template>
