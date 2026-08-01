@@ -1,124 +1,129 @@
 <script setup lang="tsx">
-import { computed, h, onMounted, ref, shallowRef } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { computed, onMounted, reactive, shallowRef } from 'vue';
 import { NButton, NSwitch, NTag, NTooltip } from 'naive-ui';
-import type { DataTableColumns, SelectOption } from 'naive-ui';
 import { fetchAgentAdminList } from '@/service/api';
-import { $t } from '@/locales';
+import { useNaiveTable } from '@/hooks/common/table';
 import { useAuth } from '@/hooks/business/auth';
+import { $t } from '@/locales';
 import AgentOperateDrawer from './modules/agent-operate-drawer.vue';
+import AgentSearch from './modules/agent-search.vue';
 
 defineOptions({
   name: 'AiAgent'
 });
 
-const { t } = useI18n();
 const { hasAuth } = useAuth();
 
-const allAgents = shallowRef<Api.AiAgent.AdminListItem[]>([]);
-const loading = shallowRef(false);
+// §决策 #23：list 端点无分页，返回全量。useNaiveTable 走非分页模式（pagination: false），
+// 服务器全量取回后前端按 keyword / enabledFilter 二次筛选。
+const searchParams: Api.AiAgent.AdminListSearchParams = reactive({
+  keyword: null,
+  enabledFilter: 'all'
+});
 
-async function loadList() {
-  loading.value = true;
-  const { error, data } = await fetchAgentAdminList();
-  if (!error) {
-    allAgents.value = data;
-  }
-  loading.value = false;
-}
+const { columns, columnChecks, data, getData, loading, scrollX } = useNaiveTable({
+  api: fetchAgentAdminList,
+  // 非分页模式：transform 直接返回数组（GetApiData<ApiData, false> = ApiData[]）
+  transform: response => response.data ?? [],
+  immediate: false,
+  columns: () => [
+    {
+      key: 'index',
+      title: $t('common.index'),
+      align: 'center',
+      width: 64,
+      render: (_, index) => index + 1
+    },
+    {
+      key: 'code',
+      title: $t('page.ai.agent.code'),
+      align: 'center',
+      width: 140
+    },
+    {
+      key: 'name',
+      title: $t('page.ai.agent.name'),
+      align: 'center',
+      minWidth: 120
+    },
+    {
+      key: 'description',
+      title: $t('page.ai.agent.description'),
+      minWidth: 240,
+      render: row => (
+        <NTooltip style="max-width: 480px">
+          {{
+            trigger: () => <span class="truncate inline-block max-w-300px align-bottom">{row.description}</span>,
+            default: () => row.description
+          }}
+        </NTooltip>
+      )
+    },
+    {
+      key: 'enabled',
+      title: $t('page.ai.agent.enabled'),
+      align: 'center',
+      width: 80,
+      render: row => (
+        <NSwitch
+          value={row.enabled}
+          size="small"
+          onUpdateValue={() => {
+            // read-only display; toggle goes through drawer edit (ensures audit + validation)
+          }}
+        />
+      )
+    },
+    {
+      key: 'isBuiltin',
+      title: $t('page.ai.agent.isBuiltin'),
+      align: 'center',
+      width: 80,
+      render: row => (
+        <NTag type={row.isBuiltin ? 'info' : 'default'} size="small">
+          {row.isBuiltin ? $t('page.ai.agent.yes') : $t('page.ai.agent.no')}
+        </NTag>
+      )
+    },
+    {
+      key: 'displayOrder',
+      title: $t('page.ai.agent.displayOrder'),
+      align: 'center',
+      width: 80
+    },
+    {
+      key: 'operate',
+      title: $t('common.operate'),
+      align: 'center',
+      width: 100,
+      fixed: 'right',
+      render: row =>
+        hasAuth('ai:agent:edit') ? (
+          <NButton size="small" type="primary" text onClick={() => openEdit(row)}>
+            {$t('common.edit')}
+          </NButton>
+        ) : null
+    }
+  ]
+});
 
-const keyword = ref('');
-// 'all' | 'enabled' | 'disabled' — avoid tri-typed boolean union that NSelect can't type
-const enabledFilter = ref<'all' | 'enabled' | 'disabled'>('all');
-
-const enabledFilterOptions: SelectOption[] = [
-  { label: '全部', value: 'all' },
-  { label: '启用', value: 'enabled' },
-  { label: '禁用', value: 'disabled' }
-];
-
+// 前端二次筛选 — searchParams 改变即触发 computed 重算
 const filtered = computed(() => {
-  return allAgents.value.filter(a => {
-    if (keyword.value) {
-      const kw = keyword.value.toLowerCase();
+  return data.value.filter(a => {
+    const kw = searchParams.keyword?.trim().toLowerCase();
+    if (kw) {
       if (!a.code.toLowerCase().includes(kw) && !a.name.toLowerCase().includes(kw)) {
         return false;
       }
     }
-    if (enabledFilter.value === 'enabled' && !a.enabled) return false;
-    if (enabledFilter.value === 'disabled' && a.enabled) return false;
+    if (searchParams.enabledFilter === 'enabled' && !a.enabled) return false;
+    if (searchParams.enabledFilter === 'disabled' && a.enabled) return false;
     return true;
   });
 });
 
-const columns = computed<DataTableColumns<Api.AiAgent.AdminListItem>>(() => [
-  { title: 'Code', key: 'code', width: 140 },
-  { title: '名称', key: 'name', width: 140 },
-  {
-    title: '描述',
-    key: 'description',
-    minWidth: 200,
-    render: row =>
-      h(
-        NTooltip,
-        {},
-        {
-          trigger: () => h('span', { class: 'truncate inline-block max-w-300px align-bottom' }, row.description),
-          default: () => row.description
-        }
-      )
-  },
-  {
-    title: '启用',
-    key: 'enabled',
-    width: 80,
-    align: 'center',
-    render: row =>
-      h(NSwitch, {
-        value: row.enabled,
-        size: 'small',
-        // read-only display; toggle goes through drawer edit (ensures audit + validation)
-        onUpdateValue: () => {
-          // no-op
-        }
-      })
-  },
-  {
-    title: '内置',
-    key: 'isBuiltin',
-    width: 80,
-    align: 'center',
-    render: row =>
-      h(
-        NTag,
-        { type: row.isBuiltin ? 'info' : 'default', size: 'small' },
-        { default: () => (row.isBuiltin ? '是' : '否') }
-      )
-  },
-  { title: '排序', key: 'displayOrder', width: 80, align: 'center' },
-  {
-    title: t('common.operate'),
-    key: 'actions',
-    width: 100,
-    fixed: 'right',
-    render: row =>
-      hasAuth('ai:agent:edit')
-        ? h(
-            NButton,
-            {
-              size: 'small',
-              type: 'primary',
-              text: true,
-              onClick: () => openEdit(row)
-            },
-            { default: () => $t('common.edit') }
-          )
-        : null
-  }
-]);
-
 // drawer state (read-only listing — no add, no useTableOperate pagination plumbing)
-const drawerVisible = ref(false);
+const drawerVisible = shallowRef(false);
 const editingData = shallowRef<Api.AiAgent.AdminListItem | null>(null);
 
 function openEdit(row: Api.AiAgent.AdminListItem) {
@@ -126,32 +131,35 @@ function openEdit(row: Api.AiAgent.AdminListItem) {
   drawerVisible.value = true;
 }
 
-onMounted(loadList);
+// searchParams 是客户端筛选，无需重取；保留 API 与 system 页一致
+function handleSearch() {}
+
+onMounted(getData);
 </script>
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <NCard title="AI Agent 管理" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
+    <AgentSearch v-model:model="searchParams" @search="handleSearch" />
+    <NCard :title="$t('page.ai.agent.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
-        <NButton size="small" @click="loadList">{{ $t('common.refresh') }}</NButton>
+        <TableHeaderOperation
+          v-model:columns="columnChecks"
+          :loading="loading"
+          :show-add="false"
+          :show-delete="false"
+          @refresh="getData"
+        />
       </template>
-      <NForm inline>
-        <NFormItem label="关键字">
-          <NInput v-model:value="keyword" placeholder="code / name" clearable />
-        </NFormItem>
-        <NFormItem label="启用状态">
-          <NSelect v-model:value="enabledFilter" :options="enabledFilterOptions" class="w-120px" />
-        </NFormItem>
-      </NForm>
       <NDataTable
         :columns="columns"
         :data="filtered"
         size="small"
         :loading="loading"
         :row-key="(row: Api.AiAgent.AdminListItem) => row.agentId"
-        :scroll-x="840"
+        :scroll-x="scrollX"
+        :pagination="false"
       />
-      <AgentOperateDrawer v-model:visible="drawerVisible" :edit-row="editingData" @submitted="loadList" />
+      <AgentOperateDrawer v-model:visible="drawerVisible" :edit-row="editingData" @submitted="getData" />
     </NCard>
   </div>
 </template>

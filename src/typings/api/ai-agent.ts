@@ -32,6 +32,12 @@ declare namespace Api {
       riskAppetite?: RiskAppetite;
     }
 
+    /** 前端筛选模型 — 'all' | 'enabled' | 'disabled'，避免 NSelect 三态 boolean union */
+    interface AdminListSearchParams {
+      keyword: string | null;
+      enabledFilter: 'all' | 'enabled' | 'disabled' | null;
+    }
+
     interface AgentRow {
       agentId: string;
       code: string;
