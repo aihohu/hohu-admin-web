@@ -112,41 +112,41 @@ defineExpose({ descInvalid, model, handleSubmit });
   <NDrawer v-model:show="visible" :width="600">
     <NDrawerContent title="编辑 Agent" closable>
       <NForm :model="model" label-placement="top" :disabled="detailLoading">
-        <NFormItem label="Code">
+        <NFormItem :label="$t('page.ai.agent.code')">
           <NInput :value="model.code" disabled />
         </NFormItem>
-        <NFormItem label="名称" path="name">
+        <NFormItem :label="$t('page.ai.agent.name')" path="name">
           <NInput v-model:value="model.name" />
         </NFormItem>
-        <NFormItem label="启用">
+        <NFormItem :label="$t('page.ai.agent.enabled')">
           <NSwitch v-model:value="model.enabled" />
         </NFormItem>
-        <NFormItem label="排序">
+        <NFormItem :label="$t('page.ai.agent.displayOrder')">
           <NInputNumber v-model:value="model.displayOrder" :min="0" class="w-full" />
         </NFormItem>
-        <NFormItem label="风险偏好">
+        <NFormItem :label="$t('page.ai.agent.riskAppetite')">
           <NSelect
             v-model:value="model.riskAppetite"
             :options="[
-              { label: 'Conservative', value: 'conservative' },
-              { label: 'Balanced', value: 'balanced' },
-              { label: 'Aggressive', value: 'aggressive' }
+              { label: $t('page.ai.agent.riskAppetiteConservative'), value: 'conservative' },
+              { label: $t('page.ai.agent.riskAppetiteBalanced'), value: 'balanced' },
+              { label: $t('page.ai.agent.riskAppetiteAggressive'), value: 'aggressive' }
             ]"
           />
         </NFormItem>
-        <NFormItem label="每日配额/用户（空=仅全局 L2）">
+        <NFormItem :label="`${$t('page.ai.agent.dailyQuotaPerUser')}（${$t('page.ai.agent.dailyQuotaHint')}）`">
           <NInputNumber v-model:value="model.dailyQuotaPerUser" :min="1" clearable class="w-full" />
         </NFormItem>
-        <NFormItem label="模型偏好">
+        <NFormItem :label="$t('page.ai.agent.modelPreference')">
           <NSelect v-model:value="model.modelPreference" :options="modelPreferenceOptions" />
         </NFormItem>
-        <NFormItem label="描述">
+        <NFormItem :label="$t('page.ai.agent.description')">
           <NInput v-model:value="model.description" type="textarea" :autosize="{ minRows: 3 }" />
           <template #feedback>
             <span :class="{ 'text-red-500': descInvalid }">{{ descLen }} / 50-200</span>
           </template>
         </NFormItem>
-        <NFormItem label="System Prompt">
+        <NFormItem :label="$t('page.ai.agent.systemPrompt')">
           <NInput v-model:value="model.systemPrompt" type="textarea" :autosize="{ minRows: 6 }" />
         </NFormItem>
       </NForm>

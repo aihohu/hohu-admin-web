@@ -1077,7 +1077,11 @@ declare namespace App {
             descriptionHint: string;
             systemPrompt: string;
             riskAppetite: string;
+            riskAppetiteConservative: string;
+            riskAppetiteBalanced: string;
+            riskAppetiteAggressive: string;
             dailyQuotaPerUser: string;
+            dailyQuotaHint: string;
             modelPreference: string;
             useGlobalDefault: string;
             code: string;
