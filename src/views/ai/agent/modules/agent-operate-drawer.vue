@@ -161,3 +161,9 @@ defineExpose({ descInvalid, model, handleSubmit });
     </NDrawerContent>
   </NDrawer>
 </template>
+
+<style scoped>
+:deep(.n-input__textarea-el) {
+  resize: vertical;
+}
+</style>

@@ -853,7 +853,7 @@ const local: App.I18n.Schema = {
         title: 'AI Agent 管理',
         description: '描述',
         descriptionHint: '50-200 字（中英文统一按字符计）',
-        systemPrompt: 'System Prompt',
+        systemPrompt: '系统提示词',
         riskAppetite: '风险偏好',
         riskAppetiteConservative: '保守',
         riskAppetiteBalanced: '平衡',
