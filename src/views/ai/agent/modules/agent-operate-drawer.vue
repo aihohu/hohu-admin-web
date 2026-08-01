@@ -141,13 +141,13 @@ defineExpose({ descInvalid, model, handleSubmit });
           <NSelect v-model:value="model.modelPreference" :options="modelPreferenceOptions" />
         </NFormItem>
         <NFormItem :label="$t('page.ai.agent.description')">
-          <NInput v-model:value="model.description" type="textarea" :autosize="{ minRows: 3 }" />
+          <NInput v-model:value="model.description" type="textarea" :rows="4" />
           <template #feedback>
             <span :class="{ 'text-red-500': descInvalid }">{{ descLen }} / 50-200</span>
           </template>
         </NFormItem>
         <NFormItem :label="$t('page.ai.agent.systemPrompt')">
-          <NInput v-model:value="model.systemPrompt" type="textarea" :autosize="{ minRows: 6 }" />
+          <NInput v-model:value="model.systemPrompt" type="textarea" :rows="8" />
         </NFormItem>
       </NForm>
       <template #footer>
@@ -161,9 +161,3 @@ defineExpose({ descInvalid, model, handleSubmit });
     </NDrawerContent>
   </NDrawer>
 </template>
-
-<style scoped>
-:deep(.n-input__textarea-el) {
-  resize: vertical;
-}
-</style>
