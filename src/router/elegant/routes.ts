@@ -49,6 +49,15 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
+        name: 'ai_agent',
+        path: '/ai/agent',
+        component: 'view.ai_agent',
+        meta: {
+          title: 'ai_agent',
+          i18nKey: 'route.ai_agent'
+        }
+      },
+      {
         name: 'ai_chat',
         path: '/ai/chat',
         component: 'view.ai_chat',
@@ -64,6 +73,15 @@ export const generatedRoutes: GeneratedRoute[] = [
         meta: {
           title: 'ai_provider',
           i18nKey: 'route.ai_provider'
+        }
+      },
+      {
+        name: 'ai_routing-feedback',
+        path: '/ai/routing-feedback',
+        component: 'view.ai_routing-feedback',
+        meta: {
+          title: 'ai_routing-feedback',
+          i18nKey: 'route.ai_routing-feedback'
         }
       }
     ]
