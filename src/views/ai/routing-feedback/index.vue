@@ -2,6 +2,7 @@
 import { computed, h, onMounted, ref, shallowRef, watch } from 'vue';
 import { NCard, NDataTable, NInput, NRadio, NRadioGroup, NSpace, NStatistic, NGrid, NGridItem } from 'naive-ui';
 import type { DataTableColumn } from 'naive-ui';
+import dayjs from 'dayjs';
 import { fetchRoutingFeedbackList, fetchRoutingFeedbackSummary } from '@/service/api';
 
 defineOptions({
@@ -48,7 +49,13 @@ async function loadList() {
 }
 
 const columns = computed<DataTableColumn<Api.AiRoutingFeedback.ListItem>[]>(() => [
-  { title: '时间', key: 'createTime', width: 180 },
+  {
+    title: '时间',
+    key: 'createTime',
+    width: 180,
+    render: (row: Api.AiRoutingFeedback.ListItem) =>
+      row.createTime ? dayjs(row.createTime).format('YYYY-MM-DD HH:mm:ss') : '-'
+  },
   { title: '用户', key: 'userName', width: 120 },
   {
     title: '原 Agent → 纠正 Agent',
