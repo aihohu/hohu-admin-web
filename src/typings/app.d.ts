@@ -413,6 +413,64 @@ declare namespace App {
             NO_BATCH_ID: string;
           };
         };
+        importHistory: string;
+        exportModal: {
+          title: string;
+          reasonLabel: string;
+          reasonPlaceholder: string;
+          confirmExport: string;
+          exporting: string;
+          exportSuccess: string;
+          exportFailed: string;
+          asyncRequiredHint: string;
+          filterAppliedHint: string;
+          errorCode: {
+            REASON_REQUIRED: string;
+            ASYNC_REQUIRED: string;
+            EXPORT_FAILED: string;
+          };
+        };
+        importHistoryDrawer: {
+          title: string;
+          refresh: string;
+          openDetail: string;
+          cancelBatch: string;
+          noBatches: string;
+          filterStatusPlaceholder: string;
+          detailDrawerTitle: string;
+          logsTabTitle: string;
+          summaryTabTitle: string;
+          cancelReasonLabel: string;
+          cancelReasonPlaceholder: string;
+          batchIdLabel: string;
+          previewTokenLabel: string;
+          filenameLabel: string;
+          operatorLabel: string;
+          totalRowsLabel: string;
+          createdAtLabel: string;
+          finishedAtLabel: string;
+          statusLabel: string;
+          expiresAtLabel: string;
+          summaryNewLabel: string;
+          summaryExistsLabel: string;
+          summaryConflictLabel: string;
+          summaryOutOfScopeLabel: string;
+          successCountLabel: string;
+          skippedCountLabel: string;
+          overwrittenCountLabel: string;
+          failedCountLabel: string;
+          logsEventLabel: string;
+          logsFromLabel: string;
+          logsToLabel: string;
+          logsOperatorLabel: string;
+          logsTimeLabel: string;
+          logsDetailLabel: string;
+          errorCode: {
+            BATCH_NOT_CANCELLABLE: string;
+            BATCH_NOT_FOUND: string;
+            CANCEL_FAILED: string;
+          };
+        };
         yesOrNo: {
           yes: string;
           no: string;
@@ -1379,7 +1437,20 @@ declare namespace App {
         AI_IMPORT_FIELD_ERRORS: string;
         AI_IMPORT_REASON_TOO_LONG: string;
         AI_IMPORT_RECORDS_HASH_MISMATCH: string;
+        AI_IMPORT_DEPT_PATH_NOT_FOUND: string;
+        AI_IMPORT_DEPT_DUPLICATE: string;
+        AI_IMPORT_ROLE_NOT_FOUND: string;
+        AI_IMPORT_DEPT_OUT_OF_SCOPE: string;
+        AI_IMPORT_ROLE_OUT_OF_SCOPE: string;
+        AI_IMPORT_USERNAME_DUPLICATE: string;
+        AI_IMPORT_EMPLOYEE_NO_EXISTS: string;
+        AI_IMPORT_EMPLOYEE_NO_DUPLICATE: string;
+        AI_IMPORT_BATCH_NOT_FOUND: string;
+        AI_IMPORT_BATCH_NOT_CANCELLABLE: string;
+        AI_IMPORT_DEFAULT_PASSWORD_NOT_SET: string;
+        AI_IMPORT_REASON_REQUIRED: string;
         AI_EXPORT_ASYNC_REQUIRED: string;
+        AI_EXPORT_TASK_NOT_FOUND: string;
       };
       // v1.5+ tool result view registry — referenced by backend UIResult.label_key
       ai: {

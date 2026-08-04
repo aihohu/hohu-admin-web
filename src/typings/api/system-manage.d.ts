@@ -233,6 +233,113 @@ declare namespace Api {
       idempotentReplay: boolean;
     };
 
+    /** user import batch status (spec §2.26 state machine) */
+    type UserImportBatchStatus =
+      | 'CREATED'
+      | 'PREVIEW_DONE'
+      | 'RUNNING'
+      | 'SUCCESS'
+      | 'PARTIAL_SUCCESS'
+      | 'FAILED'
+      | 'EXPIRED'
+      | 'CANCELLED';
+
+    /** batch summary record returned by GET /import (list) + GET /import/{batch_id} (detail) (spec §5.4) */
+    type UserImportBatch = {
+      batchId: string;
+      status: UserImportBatchStatus;
+      filename: string | null;
+      operatorId: string;
+      operatorName: string | null;
+      totalRows: number;
+      summaryNew: number;
+      summaryExists: number;
+      summaryConflict: number;
+      summaryOutOfScope: number;
+      successCount: number;
+      skippedCount: number;
+      overwrittenCount: number;
+      failedCount: number;
+      failedRowsFile: string | null;
+      onConflict: UserImportConflictStrategy;
+      syncMode: UserImportSyncMode;
+      createdAt: string;
+      startedAt: string | null;
+      finishedAt: string | null;
+      expiresAt: string | null;
+    };
+
+    /** batch list query params (spec §5.4 GET /import line 2275) */
+    type UserImportBatchQuery = CommonSearchParams & {
+      status?: UserImportBatchStatus | null;
+      operatorId?: string | null;
+      startTime?: number | null;
+      endTime?: number | null;
+    };
+
+    /** paginated batch list (spec §5.4) */
+    type UserImportBatchList = Common.PaginatingQueryRecord<UserImportBatch>;
+
+    /** batch log entry (spec §2.28 + §5.5 GET /import/{batch_id}/logs) */
+    type UserImportBatchLog = {
+      logId: string;
+      batchId: string;
+      event: string;
+      fromStatus: UserImportBatchStatus | null;
+      toStatus: UserImportBatchStatus | null;
+      detail: Record<string, unknown> | null;
+      operatorId: string | null;
+      operatorName: string | null;
+      createdAt: string;
+    };
+
+    /** batch log list query params (spec §5.5) */
+    type UserImportBatchLogQuery = CommonSearchParams & {
+      event?: string | null;
+    };
+
+    /** paginated batch log list */
+    type UserImportBatchLogList = Common.PaginatingQueryRecord<UserImportBatchLog>;
+
+    /** user export POST body (spec §5.2) — filter + reason */
+    type UserExportRequest = {
+      userName?: string | null;
+      nickname?: string | null;
+      userEmail?: string | null;
+      userPhone?: string | null;
+      deptId?: string | null;
+      status?: Api.Common.EnableStatus | null;
+      reason: string;
+    };
+
+    /** user export task status (spec §2.31) */
+    type UserExportTaskStatus = 'CREATED' | 'SUCCESS' | 'FAILED';
+
+    /** user export task record (spec §2.31 GET /export) */
+    type UserExportTask = {
+      exportId: string;
+      operatorId: string;
+      operatorName: string | null;
+      status: UserExportTaskStatus;
+      filterSnapshot: Record<string, unknown> | null;
+      rowCount: number;
+      fileUrl: string | null;
+      reason: string;
+      errorMessage: string | null;
+      createdAt: string;
+      finishedAt: string | null;
+      expiresAt: string | null;
+    };
+
+    /** export task query params (spec §2.31 GET /export) */
+    type UserExportTaskQuery = CommonSearchParams & {
+      status?: UserExportTaskStatus | null;
+      operatorId?: string | null;
+    };
+
+    /** paginated export task list */
+    type UserExportTaskList = Common.PaginatingQueryRecord<UserExportTask>;
+
     /** user profile */
     type UserProfile = {
       userId: string;

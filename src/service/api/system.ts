@@ -172,6 +172,42 @@ export function fetchDownloadImportTemplate() {
   });
 }
 
+/** list import batches (paginated, filter by status/operator/time window) (spec §5.4 GET /import) */
+export function fetchGetImportBatchList(params?: Api.SystemManage.UserImportBatchQuery) {
+  return request<Api.SystemManage.UserImportBatchList>({
+    url: '/system/user/import',
+    method: 'get',
+    params
+  });
+}
+
+/** get import batch detail (spec §5.4 GET /import/{batch_id}) */
+export function fetchGetImportBatchDetail(batchId: string) {
+  return request<Api.SystemManage.UserImportBatch>({
+    url: `/system/user/import/${batchId}`,
+    method: 'get'
+  });
+}
+
+/** list batch logs (spec §5.5 GET /import/{batch_id}/logs) */
+export function fetchGetImportBatchLogs(batchId: string, params?: Api.SystemManage.UserImportBatchLogQuery) {
+  return request<Api.SystemManage.UserImportBatchLogList>({
+    url: `/system/user/import/${batchId}/logs`,
+    method: 'get',
+    params
+  });
+}
+
+/** export users to xlsx (spec §5.2 POST /export — body filter + reason, returns Blob) */
+export function fetchExportUsers(data: Api.SystemManage.UserExportRequest) {
+  return request<Blob>({
+    url: '/system/user/export',
+    method: 'post',
+    data,
+    responseType: 'blob' as any
+  });
+}
+
 export function fetchGetUserProfile() {
   return request<Api.SystemManage.UserProfile>({
     url: '/system/user/profile',
