@@ -166,6 +166,73 @@ declare namespace Api {
     /** user list */
     type UserList = Common.PaginatingQueryRecord<User>;
 
+    /** user import conflict strategy (spec §2.7 on_conflict) */
+    type UserImportConflictStrategy = 'skip' | 'overwrite' | 'fail_fast';
+
+    /** user import employee_no sync mode (spec §2.24) */
+    type UserImportSyncMode = 'CREATE_ONLY' | 'UPDATE_PROFILE' | 'FULL_SYNC';
+
+    /** user import row record (spec §3.1, one Excel row) */
+    type UserImportRecord = {
+      rowNum: number;
+      userName: string;
+      employeeNo: string | null;
+      nickname: string | null;
+      userEmail: string | null;
+      userPhone: string | null;
+      deptInput: string;
+      roleInput: string | null;
+      userGender: '0' | '1' | '2';
+      status: '0' | '1';
+    };
+
+    /** user import failed row (spec §3.4) */
+    type UserImportFailedRow = {
+      rowNum: number;
+      field: string;
+      value: string;
+      reason: string;
+      errorCode: string;
+    };
+
+    /** user import dry-run result (spec §3.2 + §5.1 dry_run=true response) */
+    type UserImportDryRunResult = {
+      total: number;
+      newRecords: UserImportRecord[];
+      existsRecords: UserImportRecord[];
+      conflictRecords: UserImportFailedRow[];
+      outOfScopeRecords: UserImportFailedRow[];
+      newRecordsTruncated: boolean;
+      existsRecordsTruncated: boolean;
+      conflictRecordsTruncated: boolean;
+      outOfScopeRecordsTruncated: boolean;
+      conflictRecordsFile: string | null;
+      outOfScopeRecordsFile: string | null;
+      /** API layer merges batch.summary_* into response (spec §5.1 line 553-565) */
+      newCount: number;
+      existsCount: number;
+      conflictCount: number;
+      outOfScopeCount: number;
+      /** spec §2.21 line 773: dry_run 响应必含 batchId（供 cancel 调用）.
+       *  NOTE: 后端目前缺这字段（Task 22c 待补）；前端 cancelImport 会 defensive 缺字段时禁用按钮。 */
+      batchId?: string;
+      previewToken: string;
+      expiresAt: string;
+    };
+
+    /** user import execute result (spec §3.3 + §5.1 dry_run=false response) */
+    type UserImportExecuteResult = {
+      batchId: string;
+      status: 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED';
+      successCount: number;
+      skippedCount: number;
+      overwrittenCount: number;
+      failedCount: number;
+      failedRowsFile: string | null;
+      failedRowsPreview: UserImportFailedRow[];
+      idempotentReplay: boolean;
+    };
+
     /** user profile */
     type UserProfile = {
       userId: string;

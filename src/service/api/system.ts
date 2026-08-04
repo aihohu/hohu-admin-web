@@ -115,6 +115,63 @@ export function fetchResetUserPassword(userId: string, data: { newPassword: stri
   });
 }
 
+/** dry-run user import: parse Excel + classify records + return preview_token (spec §5.1 dry_run=true) */
+export function fetchDryRunImportUsers(
+  file: File,
+  reason: string,
+  onConflict: Api.SystemManage.UserImportConflictStrategy = 'skip'
+) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('reason', reason);
+  formData.append('on_conflict', onConflict);
+  formData.append('dry_run', 'true');
+  return request<Api.SystemManage.UserImportDryRunResult>({
+    url: '/system/user/import',
+    method: 'post',
+    data: formData
+  });
+}
+
+/** execute user import: writes users with preview_token + sync_mode (spec §5.1 dry_run=false) */
+export function fetchExecuteImportUsers(
+  file: File,
+  reason: string,
+  previewToken: string,
+  onConflict: Api.SystemManage.UserImportConflictStrategy = 'skip',
+  syncMode: Api.SystemManage.UserImportSyncMode = 'CREATE_ONLY'
+) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('reason', reason);
+  formData.append('preview_token', previewToken);
+  formData.append('on_conflict', onConflict);
+  formData.append('sync_mode', syncMode);
+  return request<Api.SystemManage.UserImportExecuteResult>({
+    url: '/system/user/import',
+    method: 'post',
+    data: formData
+  });
+}
+
+/** cancel import batch (spec §5.6 PREVIEW_DONE → CANCELLED / RUNNING → set Redis cancel flag) */
+export function fetchCancelImportBatch(batchId: string, reason?: string) {
+  return request<{ cancelledAt: string }>({
+    url: `/system/user/import/${batchId}/cancel`,
+    method: 'post',
+    data: reason ? { reason } : undefined
+  });
+}
+
+/** download user import Excel template (4 sheet xlsx with DataValidation, spec §5.3) */
+export function fetchDownloadImportTemplate() {
+  return request<Blob>({
+    url: '/system/user/import/template',
+    method: 'get',
+    responseType: 'blob' as any
+  });
+}
+
 export function fetchGetUserProfile() {
   return request<Api.SystemManage.UserProfile>({
     url: '/system/user/profile',

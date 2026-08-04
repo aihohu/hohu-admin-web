@@ -362,6 +362,57 @@ declare namespace App {
         export: string;
         import: string;
         userCenter: string;
+        downloadTemplate: string;
+        importModal: {
+          title: string;
+          step1Title: string;
+          step2Title: string;
+          step3Title: string;
+          reasonLabel: string;
+          reasonPlaceholder: string;
+          uploadHint: string;
+          uploadDesc: string;
+          downloadTemplate: string;
+          previewTitle: string;
+          previewNew: string;
+          previewExists: string;
+          previewConflict: string;
+          previewOutOfScope: string;
+          conflictRecordsTruncatedHint: string;
+          outOfScopeRecordsTruncatedHint: string;
+          onConflictLabel: string;
+          onConflictSkip: string;
+          onConflictOverwrite: string;
+          onConflictFailFast: string;
+          syncModeLabel: string;
+          syncModeCreateOnly: string;
+          syncModeUpdateProfile: string;
+          syncModeFullSync: string;
+          previewTokenLabel: string;
+          confirmImport: string;
+          cancelling: string;
+          fullErrorListHint: string;
+          downloadConflictRecords: string;
+          downloadOutOfScopeRecords: string;
+          downloadFailedRows: string;
+          resultTitle: string;
+          resultSuccess: string;
+          resultSkipped: string;
+          resultOverwritten: string;
+          resultFailed: string;
+          idempotentReplayHint: string;
+          cancelImport: string;
+          errorCode: {
+            INVALID_MIME: string;
+            FILE_TOO_LARGE: string;
+            REASON_REQUIRED: string;
+            DRY_RUN_FAILED: string;
+            EXECUTE_FAILED: string;
+            CANCEL_FAILED: string;
+            TEMPLATE_FAILED: string;
+            NO_BATCH_ID: string;
+          };
+        };
         yesOrNo: {
           yes: string;
           no: string;
@@ -633,6 +684,7 @@ declare namespace App {
             };
             addUser: string;
             editUser: string;
+            defaultPasswordHint: string;
             gender: {
               unknown: string;
               male: string;
@@ -1310,6 +1362,24 @@ declare namespace App {
         AI_AGENT_ID_INVALID: string;
         AI_ROLE_NOT_FOUND: string;
         AI_ROLE_AGENT_BIND_SHARED_FORBIDDEN: string;
+        AI_IMPORT_FILE_TOO_LARGE: string;
+        AI_IMPORT_INVALID_MIME: string;
+        AI_IMPORT_TOO_MANY_ROWS: string;
+        AI_IMPORT_USERNAME_INVALID: string;
+        AI_IMPORT_EMAIL_INVALID: string;
+        AI_IMPORT_PHONE_INVALID: string;
+        AI_IMPORT_DEPT_NOT_FOUND: string;
+        AI_IMPORT_EMPTY: string;
+        AI_IMPORT_PREVIEW_INVALID: string;
+        AI_IMPORT_BATCH_RUNNING: string;
+        AI_IMPORT_ALREADY_EXECUTED: string;
+        AI_IMPORT_BATCH_CANCELLED: string;
+        AI_IMPORT_BATCH_EXPIRED: string;
+        AI_IMPORT_ILLEGAL_TRANSITION: string;
+        AI_IMPORT_FIELD_ERRORS: string;
+        AI_IMPORT_REASON_TOO_LONG: string;
+        AI_IMPORT_RECORDS_HASH_MISMATCH: string;
+        AI_EXPORT_ASYNC_REQUIRED: string;
       };
       // v1.5+ tool result view registry — referenced by backend UIResult.label_key
       ai: {
