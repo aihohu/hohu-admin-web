@@ -131,7 +131,7 @@ describe('useExportFlow', () => {
       status: null
     });
     expect(createObjectURLSpy).toHaveBeenCalledWith(blob);
-    expect(anchorEl.download).toMatch(/^users_\d{8}\.xlsx$/);
+    expect(anchorEl.download).toMatch(/^hohu_users_\d{8}_\d{6}\.xlsx$/);
     expect(clickSpy).toHaveBeenCalled();
     expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:export-url');
     expect(messageSpy.success).toHaveBeenCalledWith('common.exportModal.exportSuccess');

@@ -362,6 +362,7 @@ declare namespace App {
         export: string;
         import: string;
         userCenter: string;
+        download: string;
         downloadTemplate: string;
         importModal: {
           title: string;

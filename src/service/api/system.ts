@@ -208,6 +208,18 @@ export function fetchExportUsers(data: Api.SystemManage.UserExportRequest) {
   });
 }
 
+/**
+ * download already-exported file by export_id (Task 33 / spec §2.31 line 1626).
+ * AI 对话内 detail_card 下载按钮调本接口；与 POST /export 同等权限 system:user:export。
+ */
+export function fetchDownloadExportFile(exportId: string) {
+  return request<Blob>({
+    url: `/system/user/export/${exportId}/download`,
+    method: 'get',
+    responseType: 'blob' as any
+  });
+}
+
 export function fetchGetUserProfile() {
   return request<Api.SystemManage.UserProfile>({
     url: '/system/user/profile',

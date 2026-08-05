@@ -55,6 +55,7 @@ const local: App.I18n.Schema = {
     export: 'Export',
     import: 'Import',
     importHistory: 'Import History',
+    download: 'Download',
     downloadTemplate: 'Download Template',
     exportModal: {
       title: 'Export Users',

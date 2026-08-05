@@ -2,7 +2,7 @@ import { computed, ref } from 'vue';
 import { fetchExportUsers } from '@/service/api';
 import { $t } from '@/locales';
 
-const EXPORT_FILENAME_PREFIX = 'users_';
+const EXPORT_FILENAME_PREFIX = 'hohu_users_';
 const EXPORT_FILENAME_SUFFIX = '.xlsx';
 
 export type ExportFlowErrorCode = 'REASON_REQUIRED' | 'ASYNC_REQUIRED' | 'EXPORT_FAILED';
@@ -21,9 +21,10 @@ export interface ExportPayload {
 }
 
 function buildFilename(): string {
-  const today = new Date();
-  const ymd = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-  return `${EXPORT_FILENAME_PREFIX}${ymd}${EXPORT_FILENAME_SUFFIX}`;
+  const now = new Date();
+  const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const hms = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+  return `${EXPORT_FILENAME_PREFIX}${ymd}_${hms}${EXPORT_FILENAME_SUFFIX}`;
 }
 
 export function buildExportPayload(reason: string, filter?: Api.SystemManage.UserSearchParams | null): ExportPayload {

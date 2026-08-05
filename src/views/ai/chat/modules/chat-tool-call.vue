@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
 import { computed, onUnmounted, ref, watch } from 'vue';
+import { request } from '@/service/request';
 import { PlainJsonView, resolveToolView } from './tool-views';
 
 const props = defineProps<{
@@ -131,6 +132,49 @@ const chipHref = computed<string | null>(() => {
   return `${props.started.chipTarget}?ai_query_id=${encodeURIComponent(props.started.traceId)}`;
 });
 
+// Task 33：detail_card 携带 downloadUrl 时，在卡片底部渲染常显下载 chip
+// （与 chipHref 跳转 chip 同级），用户无需展开 body 即可下载。
+// 区分：chipHref 是 SPA 路由跳转（router-link），downloadAction 是 Blob 下载（button）。
+const downloadAction = computed<{ url: string; filename: string } | null>(() => {
+  if (!props.result?.ok) return null;
+  const ui = props.result.ui;
+  if (!ui || ui.viewType !== 'detail_card') return null;
+  const viewData = ui.viewData as Api.Ai.DetailCardViewData;
+  if (!viewData.downloadUrl) return null;
+  return {
+    url: viewData.downloadUrl,
+    filename: viewData.downloadFilename || 'download.xlsx'
+  };
+});
+
+const downloading = ref(false);
+async function handleDownload() {
+  const action = downloadAction.value;
+  if (!action || downloading.value) return;
+  downloading.value = true;
+  try {
+    const { data, error } = await request<Blob>({
+      url: action.url,
+      method: 'get',
+      responseType: 'blob' as any
+    });
+    if (error || !data) {
+      window.$message?.error('下载失败');
+      return;
+    }
+    const blobUrl = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = action.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } finally {
+    downloading.value = false;
+  }
+}
+
 // 兜底：result.ok=True 但 ui=None（老 tool 未迁移 / executor fallback）
 const fallbackJson = computed(() => {
   if (!props.result?.ok || props.result.ui) return '';
@@ -253,6 +297,14 @@ function onReject() {
     <div v-if="chipHref" class="chip-row">
       <RouterLink class="chip-link" :to="chipHref">📊 查看完整数据 →</RouterLink>
       <span class="chip-hint">跳转到模块页（已带筛选回放）</span>
+    </div>
+
+    <!-- Task 33：下载 chip 常显（不依赖 expanded），与 chipHref 跳转 chip 同级 -->
+    <div v-if="downloadAction" class="chip-row">
+      <button class="chip-link chip-link--download" :disabled="downloading" @click="handleDownload">
+        {{ downloading ? '⏳ 下载中…' : '⬇ 下载文件' }}
+      </button>
+      <span class="chip-hint">{{ downloadAction.filename }}</span>
     </div>
 
     <!-- §12 场景 4/5: HITL pending 内联倒计时 bar -->
@@ -566,6 +618,22 @@ function onReject() {
 .chip-link:hover {
   background: #4d6bfe;
   color: #fff;
+}
+/* Task 33：下载 chip 用 button 元素（Blob 下载，非 router-link），
+   视觉与 .chip-link 一致但用绿色区分「拿文件」vs「跳转」动作 */
+.chip-link--download {
+  border-color: #10b981;
+  color: #10b981;
+  cursor: pointer;
+  font-family: inherit;
+}
+.chip-link--download:hover:not(:disabled) {
+  background: #10b981;
+  color: #fff;
+}
+.chip-link--download:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .chip-hint {
   font-size: 11px;

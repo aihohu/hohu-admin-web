@@ -55,6 +55,7 @@ const local: App.I18n.Schema = {
     export: '导出',
     import: '导入',
     importHistory: '导入历史',
+    download: '下载',
     downloadTemplate: '下载模板',
     exportModal: {
       title: '导出用户列表',

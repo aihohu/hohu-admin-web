@@ -216,6 +216,15 @@ declare namespace Api {
     type DetailCardViewData = {
       title: string;
       fields: Array<{ label: string; value: string }>;
+      /**
+       * Task 33 / spec §2.31 line 1626：可选下载链接（相对 baseURL 的 API 路径，
+       * 例如 `/system/user/export/{export_id}/download`）。设置后 DetailCardView
+       * 在 fields 下方渲染「下载」按钮，点击调 fetchDownloadFile 走 Authorization
+       * 下载 blob 触发浏览器保存。
+       */
+      downloadUrl?: string;
+      /** 下载文件名（决策 30.6 规范：hohu_xxx_YYYYMMDD_HHmmss.xlsx） */
+      downloadFilename?: string;
     };
 
     /** plain_json view_data schema（自由 dict） */
