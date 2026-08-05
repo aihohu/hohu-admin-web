@@ -1460,6 +1460,12 @@ declare namespace App {
             stats: { result: string };
             distinct: { result: string };
             batch_delete: { result: string };
+            list: { result: string };
+            lookup: { result: string };
+            update: { result: string };
+            import_preview: { result: string };
+            import_execute: { result: string };
+            export: { result: string };
           };
           role: {
             count: { result: string };

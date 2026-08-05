@@ -1270,7 +1270,13 @@ const local: App.I18n.Schema = {
         count: { result: '{count} users in total' },
         stats: { result: 'User distribution by dimension' },
         distinct: { result: '{count} distinct values' },
-        batch_delete: { result: 'Deleted {count} users' }
+        batch_delete: { result: 'Deleted {count} users' },
+        list: { result: '{count} users' },
+        lookup: { result: 'User details' },
+        update: { result: 'Updated user {userName}' },
+        import_preview: { result: 'Preview done, {total} rows affected' },
+        import_execute: { result: 'Import done, {count} users created' },
+        export: { result: 'Export ready ({count} rows)' }
       },
       role: {
         count: { result: '{count} roles in total' },

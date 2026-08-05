@@ -1263,7 +1263,13 @@ const local: App.I18n.Schema = {
         count: { result: '共 {count} 个用户' },
         stats: { result: '按维度统计用户分布' },
         distinct: { result: '共 {count} 个不同值' },
-        batch_delete: { result: '已删除 {count} 个用户' }
+        batch_delete: { result: '已删除 {count} 个用户' },
+        list: { result: '共 {count} 个用户' },
+        lookup: { result: '用户详情' },
+        update: { result: '已更新用户 {userName}' },
+        import_preview: { result: '预检完成，共影响 {total} 行' },
+        import_execute: { result: '导入完成，成功 {count} 个用户' },
+        export: { result: '已生成导出文件（{count} 行）' }
       },
       role: {
         count: { result: '共 {count} 个角色' },
