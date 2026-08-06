@@ -310,14 +310,16 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           id: `chat-${Date.now()}`,
           messages: currentMessages.value.map((msg, i) => {
             const isLast = i === currentMessages.value.length - 1;
-            // v1.5+ SR-25: attached files 注入 file_id 到最后一条 user 消息末尾，
-            // 仅用于发送 LLM，不污染 UI 渲染（UI 用 msg.content / msg.parts 原始值）
+            // 后端 chat.py 在 build_run_input 前 filter 非 image 文件 part（避免 PydanticAI 422），
+            // 前端发完整 parts（含 Excel）让后端持久化保留文件元数据用于 UI chip 渲染
             if (isLast && injectLastMessageText && msg.role === 'user') {
-              const imgParts = msg.parts?.filter(p => p.type === 'file' && p.mediaType?.startsWith('image/')) || [];
+              // 注入文本给 LLM（含 file_id），同时保留所有非 text parts（含 Excel/image）
+              // 让后端持久化保留文件元数据；后端 chat.py 在 build_run_input 前 filter 非 image
+              const otherParts = msg.parts?.filter(p => p.type !== 'text') || [];
               return {
                 id: `msg-history-${i}`,
                 role: msg.role,
-                parts: [{ type: 'text', text: injectLastMessageText }, ...imgParts]
+                parts: [{ type: 'text', text: injectLastMessageText }, ...otherParts]
               };
             }
             return {
@@ -658,6 +660,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
     for (const img of attachedImages.value) {
       parts.push({ type: 'file', url: img.fileUrl, mediaType: img.mediaType });
+    }
+    // attachedFiles（Excel/CSV）也注入 parts，让 chat-message 渲染文件 chip
+    // url 用空串（非 image 文件无预览 URL，chip 只展示 fileName + fileSize）
+    for (const f of attachedFiles.value) {
+      parts.push({ type: 'file', url: '', mediaType: f.mimeType, filename: f.fileName, fileSize: f.fileSize });
     }
 
     // add user message locally
