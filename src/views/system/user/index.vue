@@ -7,6 +7,7 @@ import { REG_PWD } from '@/constants/reg';
 import {
   fetchBatchDeleteUser,
   fetchDeleteUser,
+  fetchGetConfigList,
   fetchGetUserList,
   fetchResetUserPassword
 } from '@/service/api';
@@ -17,10 +18,18 @@ import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
 import UserOperateDrawer from './modules/user-operate-drawer.vue';
 import UserSearch from './modules/user-search.vue';
+import UserImportModal from './modules/user-import-modal.vue';
+import UserExportModal from './modules/user-export-modal.vue';
+import UserImportHistory from './modules/user-import-history.vue';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
 const route = useRoute();
+
+const userImportModalRef = ref();
+const userExportModalRef = ref();
+const userImportHistoryRef = ref();
+const defaultPassword = ref<string>('');
 
 const searchParams: Api.SystemManage.UserSearchParams = reactive({
   current: 1,
@@ -188,6 +197,7 @@ const {
 
 // §8.7 chip 跳转回放：URL 含 ?ai_query_id=<trace_id> 时调 query-cache 应用 filters
 onMounted(async () => {
+  loadDefaultPassword();
   const aiQueryId = route.query.ai_query_id;
   if (typeof aiQueryId !== 'string' || !aiQueryId) return;
   const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
@@ -259,6 +269,39 @@ async function confirmResetPassword() {
   }
   return !error;
 }
+
+function openImportModal() {
+  userImportModalRef.value?.open();
+}
+
+function openExportModal() {
+  userExportModalRef.value?.open();
+}
+
+function openImportHistory() {
+  userImportHistoryRef.value?.open();
+}
+
+async function loadDefaultPassword() {
+  const { data: cfgData, error } = await fetchGetConfigList({
+    current: 1,
+    size: 1,
+    configKey: 'auth:default_password'
+  });
+  if (error || !cfgData || cfgData.records.length === 0) return;
+  const cfg = cfgData.records[0];
+  if (cfg && typeof cfg.configValue === 'string' && cfg.configValue) {
+    defaultPassword.value = cfg.configValue;
+  }
+}
+
+function handleImportCompleted() {
+  getData();
+}
+
+function handleExported() {
+  // spec §5.2: 同步导出已直接触发 Blob 下载；列表不需要刷新（export 不影响 user 表）
+}
 </script>
 
 <template>
@@ -275,7 +318,28 @@ async function confirmResetPassword() {
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"
-        />
+        >
+          <template #prefix>
+            <NButton v-if="hasAuth('system:user:import')" size="small" ghost type="primary" @click="openImportModal">
+              <template #icon>
+                <IconIcRoundUpload class="text-icon" />
+              </template>
+              {{ $t('common.import') }}
+            </NButton>
+            <NButton v-if="hasAuth('system:user:export')" size="small" ghost type="primary" @click="openExportModal">
+              <template #icon>
+                <IconIcRoundDownload class="text-icon" />
+              </template>
+              {{ $t('common.export') }}
+            </NButton>
+            <NButton size="small" quaternary @click="openImportHistory">
+              <template #icon>
+                <IconIcRoundHistory class="text-icon" />
+              </template>
+              {{ $t('common.importHistory') }}
+            </NButton>
+          </template>
+        </TableHeaderOperation>
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
@@ -313,6 +377,9 @@ async function confirmResetPassword() {
         :placeholder="$t('page.system.user.form.password')"
       />
     </NModal>
+    <UserImportModal ref="userImportModalRef" :default-password="defaultPassword" @completed="handleImportCompleted" />
+    <UserExportModal ref="userExportModalRef" :filter="searchParams" @exported="handleExported" />
+    <UserImportHistory ref="userImportHistoryRef" />
   </div>
 </template>
 

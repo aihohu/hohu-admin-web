@@ -25,6 +25,10 @@ const title = computed(() => {
         <code class="value">{{ f.value }}</code>
       </template>
     </div>
+    <!--
+ Task 33: downloadUrl 渲染在 chat-tool-call.vue 卡片底部 chip-row（常显），
+         不在本组件内 — 本组件只负责字段 grid，动作按钮属于卡片级 UX 
+-->
   </div>
 </template>
 

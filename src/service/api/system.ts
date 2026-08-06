@@ -115,6 +115,111 @@ export function fetchResetUserPassword(userId: string, data: { newPassword: stri
   });
 }
 
+/** dry-run user import: parse Excel + classify records + return preview_token (spec §5.1 dry_run=true) */
+export function fetchDryRunImportUsers(
+  file: File,
+  reason: string,
+  onConflict: Api.SystemManage.UserImportConflictStrategy = 'skip'
+) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('reason', reason);
+  formData.append('on_conflict', onConflict);
+  formData.append('dry_run', 'true');
+  return request<Api.SystemManage.UserImportDryRunResult>({
+    url: '/system/user/import',
+    method: 'post',
+    data: formData
+  });
+}
+
+/** execute user import: writes users with preview_token + sync_mode (spec §5.1 dry_run=false) */
+export function fetchExecuteImportUsers(
+  file: File,
+  reason: string,
+  previewToken: string,
+  onConflict: Api.SystemManage.UserImportConflictStrategy = 'skip',
+  syncMode: Api.SystemManage.UserImportSyncMode = 'CREATE_ONLY'
+) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('reason', reason);
+  formData.append('preview_token', previewToken);
+  formData.append('on_conflict', onConflict);
+  formData.append('sync_mode', syncMode);
+  return request<Api.SystemManage.UserImportExecuteResult>({
+    url: '/system/user/import',
+    method: 'post',
+    data: formData
+  });
+}
+
+/** cancel import batch (spec §5.6 PREVIEW_DONE → CANCELLED / RUNNING → set Redis cancel flag) */
+export function fetchCancelImportBatch(batchId: string, reason?: string) {
+  return request<{ cancelledAt: string }>({
+    url: `/system/user/import/${batchId}/cancel`,
+    method: 'post',
+    data: reason ? { reason } : undefined
+  });
+}
+
+/** download user import Excel template (4 sheet xlsx with DataValidation, spec §5.3) */
+export function fetchDownloadImportTemplate() {
+  return request<Blob>({
+    url: '/system/user/import/template',
+    method: 'get',
+    responseType: 'blob' as any
+  });
+}
+
+/** list import batches (paginated, filter by status/operator/time window) (spec §5.4 GET /import) */
+export function fetchGetImportBatchList(params?: Api.SystemManage.UserImportBatchQuery) {
+  return request<Api.SystemManage.UserImportBatchList>({
+    url: '/system/user/import',
+    method: 'get',
+    params
+  });
+}
+
+/** get import batch detail (spec §5.4 GET /import/{batch_id}) */
+export function fetchGetImportBatchDetail(batchId: string) {
+  return request<Api.SystemManage.UserImportBatch>({
+    url: `/system/user/import/${batchId}`,
+    method: 'get'
+  });
+}
+
+/** list batch logs (spec §5.5 GET /import/{batch_id}/logs) */
+export function fetchGetImportBatchLogs(batchId: string, params?: Api.SystemManage.UserImportBatchLogQuery) {
+  return request<Api.SystemManage.UserImportBatchLogList>({
+    url: `/system/user/import/${batchId}/logs`,
+    method: 'get',
+    params
+  });
+}
+
+/** export users to xlsx (spec §5.2 POST /export — body filter + reason, returns Blob) */
+export function fetchExportUsers(data: Api.SystemManage.UserExportRequest) {
+  return request<Blob>({
+    url: '/system/user/export',
+    method: 'post',
+    data,
+    responseType: 'blob' as any
+  });
+}
+
+/**
+ * download already-exported file by export_id (Task 33 / spec §2.31 line 1626).
+ * AI 对话内 detail_card 下载按钮调本接口；与 POST /export 同等权限 system:user:export。
+ */
+export function fetchDownloadExportFile(exportId: string) {
+  return request<Blob>({
+    url: `/system/user/export/${exportId}/download`,
+    method: 'get',
+    responseType: 'blob' as any
+  });
+}
+
 export function fetchGetUserProfile() {
   return request<Api.SystemManage.UserProfile>({
     url: '/system/user/profile',

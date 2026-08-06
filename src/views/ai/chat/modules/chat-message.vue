@@ -93,6 +93,34 @@ function previewImage(url: string) {
   window.open(url, '_blank');
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getFileExtension(filename?: string): string {
+  if (!filename) return '文件';
+  const parts = filename.split('.');
+  return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : '文件';
+}
+
+// 非 image 文件 parts（独立附件块，渲染在气泡外，与文字分离形成视觉层级）
+const nonImageFileParts = computed(() => {
+  if (!props.message.parts) return [];
+  return props.message.parts.filter(
+    (p): p is Extract<Api.Ai.MessagePart, { type: 'file' }> => p.type === 'file' && !p.mediaType?.startsWith('image/')
+  );
+});
+
+// 是否有文字或图片（决定气泡是否渲染；纯文件消息不显示气泡）
+const hasTextOrImage = computed(() => {
+  if (!props.message.parts || props.message.parts.length === 0) {
+    return !!props.message.content?.trim();
+  }
+  return props.message.parts.some(p => p.type === 'text' || (p.type === 'file' && p.mediaType?.startsWith('image/')));
+});
+
 // v1.5+ supervisor routing v4: 路由反馈（spec §6.4）
 // 仅 assistant 消息显示按钮；temp-XXX / streaming 等无 messageId 的消息不显示
 const canFeedback = computed(
@@ -173,7 +201,22 @@ async function submitFeedback() {
 
         <!-- Display mode -->
         <template v-else>
-          <div class="msg-bubble msg-bubble--user">
+          <!-- 计算非 image 文件 parts（独立附件块，渲染在气泡外） -->
+          <template v-for="(part, pi) in nonImageFileParts" :key="`file-${pi}`">
+            <div class="msg-file-card">
+              <div class="msg-file-icon">
+                <IconIcRoundUpload class="text-18px" />
+              </div>
+              <div class="msg-file-info">
+                <div class="msg-file-name">{{ part.filename || '附件' }}</div>
+                <div v-if="part.fileSize" class="msg-file-meta">
+                  {{ formatFileSize(part.fileSize) }} · {{ getFileExtension(part.filename) }}
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div v-if="hasTextOrImage" class="msg-bubble msg-bubble--user">
             <template v-if="message.parts && message.parts.length > 0">
               <template v-for="(part, pi) in message.parts" :key="pi">
                 <img
@@ -185,7 +228,7 @@ async function submitFeedback() {
                 <div v-else-if="part.type === 'text'" class="whitespace-pre-wrap">{{ part.text }}</div>
               </template>
             </template>
-            <div v-else class="whitespace-pre-wrap">{{ message.content }}</div>
+            <div v-else-if="message.content" class="whitespace-pre-wrap">{{ message.content }}</div>
           </div>
           <!-- Actions: hover show -->
           <div class="msg-actions">
@@ -347,6 +390,73 @@ async function submitFeedback() {
 
 .msg-image:last-child {
   margin-bottom: 0;
+}
+
+.msg-file-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--n-color, #fff);
+  border: 1px solid var(--n-border-color, #e5e7eb);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  max-width: 280px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.msg-file-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(77, 107, 254, 0.1);
+  color: #4d6bfe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.msg-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.msg-file-card .msg-file-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--n-text-color, #1f1f1f);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.msg-file-meta {
+  font-size: 11px;
+  color: var(--n-text-color-3, #9ca3af);
+}
+
+html.dark .msg-file-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+html.dark .msg-file-card .msg-file-name {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+html.dark .msg-file-card .msg-file-meta {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+html.dark .msg-file-icon {
+  background: rgba(77, 107, 254, 0.2);
+  color: #8ea3ff;
 }
 
 .msg-bubble--ai {
