@@ -544,7 +544,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   /** 用户在 HITL 抽屉点确认 / 取消，调 /ai/confirm 后启动 30s 轮询兜底 */
-  async function resolveConfirmation(action: 'approved' | 'rejected') {
+  async function resolveConfirmation(action: 'approve' | 'reject') {
     const confirmation = pendingConfirmation.value;
     if (!confirmation) return;
 
@@ -569,12 +569,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** 用户点确认 */
   async function approveTool() {
-    await resolveConfirmation('approved');
+    await resolveConfirmation('approve');
   }
 
   /** 用户点取消 */
   async function rejectTool() {
-    await resolveConfirmation('rejected');
+    await resolveConfirmation('reject');
   }
 
   /** spec §8.3: 30s 轮询 GET /ai/operation-log?tool_call_id=...

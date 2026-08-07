@@ -357,7 +357,7 @@ declare namespace Api {
     /** /ai/confirm 请求 */
     type ConfirmRequest = {
       confirmationId: string;
-      action: 'approved' | 'rejected';
+      action: 'approve' | 'reject';
     };
 
     /** /ai/confirm 响应 data */
