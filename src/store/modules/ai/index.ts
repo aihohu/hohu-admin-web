@@ -12,6 +12,12 @@ import {
   fetchRoutingFeedback
 } from '@/service/api/ai';
 
+export function createChatTraceId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  return `tr_${hex}`;
+}
+
 export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const conversations = ref<Api.Ai.Conversation[]>([]);
   const currentConversationId = ref<string | null>(null);
@@ -284,6 +290,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** core SSE streaming — does NOT touch messages array */
   async function doStream(injectLastMessageText?: string) {
+    const traceId = createChatTraceId();
     isStreaming.value = true;
     streamingText.value = '';
     reasoningText.value = '';
@@ -306,6 +313,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           Authorization: token ? `Bearer ${token}` : ''
         },
         body: JSON.stringify({
+          action: 'send',
+          traceId,
           trigger: 'submit-message',
           id: `chat-${Date.now()}`,
           messages: currentMessages.value.map((msg, i) => {

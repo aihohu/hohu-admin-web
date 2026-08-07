@@ -169,6 +169,12 @@ declare namespace Api {
         /** v1.6+ SR-13: UI 层结果，重连后按 viewType 路由标准组件（缺失则 fallback PlainJsonView） */
         ui?: UIResult;
       }> | null;
+      /** ChatCommand run reconciliation key */
+      traceId?: string | null;
+      /** active history projection */
+      isActive?: boolean;
+      /** revision lineage; current send path is null */
+      supersedesMessageId?: string | null;
       /** input tokens */
       tokensInput: number | null;
       /** output tokens */
@@ -319,6 +325,10 @@ declare namespace Api {
     /** spec §8.1: done 事件（流结束） */
     type DoneEvent = {
       type: 'done';
+      traceId?: string;
+      messageId?: string;
+      persistence?: 'committed' | 'failed' | 'not_applicable';
+      projection?: 'updated' | 'unchanged';
     };
 
     /** 所有自定义 SSE 事件联合（Vercel 原生 text-delta 不在此列） */
@@ -353,7 +363,7 @@ declare namespace Api {
     /** /ai/confirm 响应 data */
     type ConfirmResponse = {
       toolCallId: string;
-      status: 'queued';
+      status: 'queued' | 'stream_gone';
     };
 
     /** /ai/operation-log?tool_call_id=... 响应（spec §9.3 SSE 断流兜底轮询） */
