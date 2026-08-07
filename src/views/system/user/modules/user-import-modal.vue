@@ -144,7 +144,7 @@ defineExpose({ open });
           <NUpload
             :show-file-list="false"
             :default-upload="false"
-            accept=".xlsx,.xls,.csv"
+            accept=".xlsx,.csv"
             :max="1"
             :disabled="loading"
             @change="handleFileChange"

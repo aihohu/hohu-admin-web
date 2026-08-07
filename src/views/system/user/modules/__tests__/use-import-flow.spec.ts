@@ -111,6 +111,16 @@ describe('useImportFlow', () => {
     expect(flow.errorCode.value).toBe('INVALID_MIME');
   });
 
+  it('uploadFile rejects legacy xls until a safe parser is available', async () => {
+    const flow = useImportFlow();
+    flow.reason.value = '导入测试用户';
+
+    await flow.uploadFile(new File(['legacy'], 'users.xls'));
+
+    expect(fetchDryRunImportUsers).not.toHaveBeenCalled();
+    expect(flow.errorCode.value).toBe('INVALID_MIME');
+  });
+
   it('uploadFile requires non-empty reason', async () => {
     const flow = useImportFlow();
     const file = new File(['x'], 'users.xlsx');

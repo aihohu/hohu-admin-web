@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
+import { AI_MESSAGE_REVISION_ACTIONS_ENABLED } from '@/constants/ai';
 import { useAiStore } from '@/store/modules/ai';
 
 const { t } = useI18n();
@@ -232,7 +233,7 @@ async function submitFeedback() {
           </div>
           <!-- Actions: hover show -->
           <div class="msg-actions">
-            <NTooltip v-if="isLastUserMessage" trigger="hover">
+            <NTooltip v-if="AI_MESSAGE_REVISION_ACTIONS_ENABLED && isLastUserMessage" trigger="hover">
               <template #trigger>
                 <button class="msg-action-btn" @click="startEdit">
                   <IconIcRoundEdit class="text-14px" />
@@ -259,7 +260,7 @@ async function submitFeedback() {
           <div class="markdown-body" @click="handleMarkdownClick" v-html="renderedContent" />
         </div>
         <div class="msg-actions">
-          <NTooltip v-if="isLastAssistantMessage" trigger="hover">
+          <NTooltip v-if="AI_MESSAGE_REVISION_ACTIONS_ENABLED && isLastAssistantMessage" trigger="hover">
             <template #trigger>
               <button class="msg-action-btn" @click="emit('regenerate')">
                 <IconIcRoundRefresh class="text-14px" />

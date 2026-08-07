@@ -723,47 +723,14 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     attachedFiles.value = [];
   }
 
-  /** regenerate: remove last assistant message, re-stream with existing user message */
-  async function regenerate() {
-    if (isStreaming.value) return;
-
-    const msgs = currentMessages.value;
-    // remove last assistant message
-    if (msgs.length > 0 && msgs[msgs.length - 1].role === 'assistant') {
-      msgs.pop();
-    }
-
-    // stream directly — user message is already in the array
-    await doStream();
+  /** Safety Gate: regenerate is disabled until the server owns revision semantics. */
+  async function regenerate(): Promise<boolean> {
+    return false;
   }
 
-  /** edit message: truncate from given index, replace content, resend */
-  async function editAndResend(messageIndex: number, newContent: string) {
-    if (!newContent.trim() || isStreaming.value) return;
-
-    // truncate messages from this index onward
-    currentMessages.value = currentMessages.value.slice(0, messageIndex);
-
-    // clear attached images/files since editing replaces the message
-    attachedImages.value = [];
-    attachedFiles.value = [];
-
-    // send the edited message (text only, no images)
-    const parts: Api.Ai.MessagePart[] = [{ type: 'text', text: newContent }];
-    currentMessages.value.push({
-      messageId: `temp-${Date.now()}`,
-      conversationId: currentConversationId.value || '',
-      parentMessageId: null,
-      role: 'user',
-      messageType: 'text',
-      content: newContent,
-      parts,
-      tokensInput: null,
-      tokensOutput: null,
-      createTime: new Date().toISOString()
-    });
-
-    await doStream();
+  /** Safety Gate: edit is disabled until the server owns revision semantics. */
+  async function editAndResend(_messageIndex: number, _newContent: string): Promise<boolean> {
+    return false;
   }
 
   /** load available models from enabled providers */

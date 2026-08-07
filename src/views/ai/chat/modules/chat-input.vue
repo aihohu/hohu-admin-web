@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { NDropdown } from 'naive-ui';
 import type { DropdownOption } from 'naive-ui';
 import { useAiStore } from '@/store/modules/ai';
-import { fetchUploadFile } from '@/service/api';
+import { uploadChatFile } from './chat-upload';
 
 const { t } = useI18n();
 const model = defineModel<string>('modelValue', { required: true });
@@ -31,12 +31,11 @@ const canSend = computed(
 );
 
 // v1.5+ SR-25: chat 直接上传 Excel/CSV（与 parser 对齐）
-const ACCEPTED_FILE_EXTS = ['.csv', '.xlsx', '.xls'];
+const ACCEPTED_FILE_EXTS = ['.csv', '.xlsx'];
 const ACCEPTED_FILE_MIMES = [
   'text/csv',
   'text/plain',
   'application/csv',
-  'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 ];
 
@@ -48,7 +47,7 @@ function isAcceptedFile(file: File): boolean {
 }
 
 async function uploadAsAttachment(file: File) {
-  const { data, error } = await fetchUploadFile(file, 'ai-chat');
+  const { data, error } = await uploadChatFile(file);
   if (!error && data) {
     aiStore.addFile(data.fileId, data.originalName || file.name, data.mimeType || file.type, file.size);
   } else {
@@ -171,7 +170,7 @@ async function handleFileSelect(e: Event) {
   if (!input.files) return;
   for (const file of Array.from(input.files)) {
     if (file.type.startsWith('image/')) {
-      const { data, error } = await fetchUploadFile(file, 'ai-chat');
+      const { data, error } = await uploadChatFile(file);
       if (!error && data) {
         aiStore.addImage(data.fileUrl, file.type, file.name);
       } else {
@@ -194,7 +193,7 @@ async function handlePaste(e: ClipboardEvent) {
       e.preventDefault();
       const file = item.getAsFile();
       if (!file) continue;
-      const { data, error } = await fetchUploadFile(file, 'ai-chat');
+      const { data, error } = await uploadChatFile(file);
       if (!error && data) {
         aiStore.addImage(data.fileUrl, file.type, 'pasted-image');
       }
@@ -222,7 +221,7 @@ async function handleDrop(e: DragEvent) {
   if (!files) return;
   for (const file of Array.from(files)) {
     if (file.type.startsWith('image/')) {
-      const { data, error } = await fetchUploadFile(file, 'ai-chat');
+      const { data, error } = await uploadChatFile(file);
       if (!error && data) {
         aiStore.addImage(data.fileUrl, file.type, file.name);
       }
@@ -290,7 +289,7 @@ function formatFileSize(bytes: number): string {
         <input
           ref="fileInputRef"
           type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp,.csv,.xlsx,.xls"
+          accept="image/jpeg,image/png,image/gif,image/webp,.csv,.xlsx"
           multiple
           class="hidden-input"
           @change="handleFileSelect"

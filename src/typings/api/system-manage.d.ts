@@ -527,10 +527,6 @@ declare namespace Api {
       fileId: string;
       /** original filename */
       originalName: string;
-      /** stored filename */
-      fileName: string;
-      /** relative path */
-      filePath: string;
       /** access url */
       fileUrl: string;
       /** file size in bytes */

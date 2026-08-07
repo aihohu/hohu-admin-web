@@ -8,7 +8,7 @@ import {
 import { $t } from '@/locales';
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = ['.xlsx', '.xls', '.csv'];
+const ALLOWED_EXTENSIONS = ['.xlsx', '.csv'];
 const TEMPLATE_DOWNLOAD_FILENAME = 'user_import_template.xlsx';
 
 export type ImportFlowErrorCode =
