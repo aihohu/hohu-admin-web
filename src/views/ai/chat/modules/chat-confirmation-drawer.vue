@@ -72,14 +72,15 @@ onUnmounted(() => {
   if (countdownTimer) clearInterval(countdownTimer);
 });
 
-const argsJson = computed(() => {
-  if (!confirmation.value) return '';
-  try {
-    return JSON.stringify(confirmation.value.args, null, 2);
-  } catch {
-    return String(confirmation.value.args);
-  }
-});
+const displaySummary = computed(
+  () =>
+    confirmation.value?.presentation?.summary ||
+    confirmation.value?.presentation?.title ||
+    confirmation.value?.summary ||
+    ''
+);
+const presentationFields = computed(() => Object.entries(confirmation.value?.presentation?.fields || {}));
+const presentationWarnings = computed(() => confirmation.value?.presentation?.warnings || []);
 
 function handleApprove() {
   emit('update:show', false);
@@ -117,7 +118,7 @@ const showDrawer = computed({
         <!-- 摘要 -->
         <div class="confirm-section">
           <div class="confirm-label">{{ t('page.ai.chat.confirmSummary') }}</div>
-          <div class="confirm-summary">{{ confirmation.summary }}</div>
+          <div class="confirm-summary">{{ displaySummary }}</div>
         </div>
 
         <!-- 影响范围（dry_run） -->
@@ -137,10 +138,18 @@ const showDrawer = computed({
           </div>
         </div>
 
-        <!-- 参数详情 -->
-        <div class="confirm-section">
+        <div v-if="presentationFields.length > 0" class="confirm-section">
           <div class="confirm-label">{{ t('page.ai.chat.confirmArgs') }}</div>
-          <pre class="confirm-args">{{ argsJson }}</pre>
+          <div class="confirm-fields">
+            <div v-for="[key, value] in presentationFields" :key="key" class="confirm-field">
+              <span>{{ key }}</span>
+              <strong>{{ value }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="presentationWarnings.length > 0" class="confirm-section confirm-warnings">
+          <div v-for="warning in presentationWarnings" :key="warning">{{ warning }}</div>
         </div>
 
         <!-- 倒计时 -->
@@ -217,18 +226,25 @@ const showDrawer = computed({
   flex-direction: column;
 }
 
-.confirm-args {
-  margin: 0;
+.confirm-fields {
   padding: 12px;
-  background: #1a1b26;
-  color: #a9b1d6;
+  background: var(--n-color-embedded-modal, #f4f4f5);
   border-radius: 8px;
-  font-family: 'Menlo', 'Consolas', monospace;
-  font-size: 12px;
-  line-height: 1.6;
-  overflow-x: auto;
-  max-height: 240px;
-  overflow-y: auto;
+}
+
+.confirm-field {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+
+.confirm-warnings {
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #d97706;
+  background: rgba(245, 158, 11, 0.1);
 }
 
 .confirm-countdown {

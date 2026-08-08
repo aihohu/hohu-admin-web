@@ -187,6 +187,7 @@ declare namespace Api {
     type ConversationDetail = {
       conversation: Conversation;
       messages: Message[];
+      pendingActions: PendingAction[];
     };
 
     // ============ HITL + Stream Events（spec §8.1） ============
@@ -196,6 +197,26 @@ declare namespace Api {
       summary: string;
       affectedCount: number;
       affectedExamples?: string[];
+    };
+
+    type ConfirmationPresentation = {
+      title?: string;
+      summary?: string;
+      fields?: Record<string, string | number>;
+      warnings?: string[];
+    };
+
+    type PendingAction = {
+      actionId: string;
+      confirmationId: string;
+      sourceUserMessageId: string;
+      traceId: string;
+      tool: string;
+      toolCallId: string;
+      sourceToolCallId?: string | null;
+      interactionFlow: 'prepared';
+      presentation: ConfirmationPresentation;
+      expiresAt: string;
     };
 
     /** spec 2026-07-16 §2.3: 5 种标准 view_type */
@@ -287,6 +308,10 @@ declare namespace Api {
       args: Record<string, any>;
       expiresAt: string; // ISO 8601 UTC
       dryRun?: DryRunSummary;
+      actionId?: string;
+      sourceToolCallId?: string | null;
+      interactionFlow?: 'direct' | 'prepared';
+      presentation?: ConfirmationPresentation;
     };
 
     /** spec §8.3: confirmation_resumed 事件（HITL 续传恢复确认窗口） */
@@ -300,6 +325,10 @@ declare namespace Api {
       expiresAt: string; // ISO 8601 UTC
       dryRun?: DryRunSummary;
       resumedAt: string;
+      actionId?: string;
+      sourceToolCallId?: string | null;
+      interactionFlow?: 'direct' | 'prepared';
+      presentation?: ConfirmationPresentation;
     };
 
     /** spec §8.1: ai_error 事件（流级错误） */
@@ -362,8 +391,9 @@ declare namespace Api {
 
     /** /ai/confirm 响应 data */
     type ConfirmResponse = {
+      actionId?: string | null;
       toolCallId: string;
-      status: 'queued' | 'stream_gone';
+      status: 'queued' | 'stream_gone' | 'running' | 'succeeded' | 'failed' | 'rejected' | 'expired';
     };
 
     /** /ai/operation-log?tool_call_id=... 响应（spec §9.3 SSE 断流兜底轮询） */

@@ -47,6 +47,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const streamEvents = ref<Api.Ai.AiStreamEvent[]>([]);
   /** 当前挂起的 HITL 确认（一次只允许一个；续传时为 ConfirmationResumedEvent） */
   const pendingConfirmation = ref<Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent | null>(null);
+  /** Durable prepared confirmations keyed by actionId; detail/SSE reconcile into this map. */
+  const pendingActionsById = ref<Record<string, Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent>>(
+    {}
+  );
   /** §8.3 续传：当前挂起确认的 ID（attemptResume 入参 + tool_call_result 清理依据） */
   const pendingConfirmationId = ref<string | null>(null);
   /** §8.3 续传：当前挂起确认对应的 toolCallId（410 时 fallback 轮询用） */
@@ -62,6 +66,58 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   let abortController: AbortController | null = null;
   let selectSeq = 0;
+
+  function focusPendingConfirmation() {
+    const values = Object.values(pendingActionsById.value);
+    pendingConfirmation.value = values[0] ?? null;
+    pendingConfirmationId.value = pendingConfirmation.value?.confirmationId ?? null;
+    pendingToolCallId.value = pendingConfirmation.value?.toolCallId ?? null;
+  }
+
+  function upsertPendingConfirmation(event: Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent) {
+    const key = event.actionId || `legacy:${event.confirmationId}`;
+    pendingActionsById.value = { ...pendingActionsById.value, [key]: event };
+    focusPendingConfirmation();
+  }
+
+  function reconcilePendingActions(actions: Api.Ai.PendingAction[]) {
+    pendingActionsById.value = Object.fromEntries(
+      actions.map(action => [
+        action.actionId,
+        {
+          type: 'confirmation_required' as const,
+          confirmationId: action.confirmationId,
+          actionId: action.actionId,
+          tool: action.tool,
+          toolCallId: action.toolCallId,
+          sourceToolCallId: action.sourceToolCallId,
+          interactionFlow: 'prepared' as const,
+          summary: action.presentation.summary || action.presentation.title || action.tool,
+          args: {},
+          presentation: action.presentation,
+          expiresAt: action.expiresAt
+        }
+      ])
+    );
+    focusPendingConfirmation();
+  }
+
+  function removePendingByToolCallId(toolCallId: string) {
+    pendingActionsById.value = Object.fromEntries(
+      Object.entries(pendingActionsById.value).filter(([, item]) => item.toolCallId !== toolCallId)
+    );
+    focusPendingConfirmation();
+  }
+
+  async function refreshCurrentConversationDetail(): Promise<boolean> {
+    const conversationId = currentConversationId.value;
+    if (!conversationId) return false;
+    const detail = await fetchGetConversationDetail(conversationId);
+    if (currentConversationId.value !== conversationId || detail.error || !detail.data) return false;
+    currentMessages.value = detail.data.messages;
+    reconcilePendingActions(detail.data.pendingActions || []);
+    return true;
+  }
 
   /** get base URL for SSE fetch */
   function getBaseUrl(): string {
@@ -122,6 +178,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     streamingText.value = '';
     streamEvents.value = [];
     pendingConfirmation.value = null;
+    pendingActionsById.value = {};
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
     pendingClarification.value = null;
@@ -163,6 +220,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         }
       }
       streamEvents.value = restoredEvents;
+      reconcilePendingActions(data.pendingActions || []);
     } else {
       window.$message?.error('加载会话失败');
     }
@@ -175,6 +233,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     streamingText.value = '';
     streamEvents.value = [];
     pendingConfirmation.value = null;
+    pendingActionsById.value = {};
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
     pendingClarification.value = null;
@@ -202,8 +261,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         streamEvents.value.push(event);
         // §8.3 续传：tool 执行完成则无需再续，清掉挂起状态
         if (event.toolCallId === pendingToolCallId.value) {
-          pendingConfirmationId.value = null;
-          pendingToolCallId.value = null;
+          removePendingByToolCallId(event.toolCallId);
         }
         break;
       case 'confirmation_required':
@@ -211,9 +269,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         // spec §8.3: 一次只允许一个挂起 HITL（confirmation_resumed 是断流续传回带的）。
         // pendingConfirmation 是 ConfirmationRequiredEvent | ConfirmationResumedEvent 的联合类型，
         // 两者结构同形（后者多一个必填 resumedAt），联合分支按 event.type 自动窄化。
-        pendingConfirmation.value = event;
-        pendingConfirmationId.value = event.confirmationId;
-        pendingToolCallId.value = event.toolCallId;
+        upsertPendingConfirmation(event);
         streamEvents.value.push(event);
         break;
       case 'ai_error':
@@ -295,7 +351,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     streamingText.value = '';
     reasoningText.value = '';
     streamEvents.value = [];
-    pendingConfirmation.value = null;
+    focusPendingConfirmation();
     // v1.5+ supervisor routing: 新流开始时清空上轮 clarification 候选
     pendingClarification.value = null;
     // 新流开始：清空续传重试计数（旧失败不应阻塞新对话的续传）
@@ -437,6 +493,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           const { data, error } = await fetchGetConversationDetail(currentConversationId.value);
           if (!error && data) {
             currentMessages.value = data.messages;
+            reconcilePendingActions(data.pendingActions || []);
           }
         } catch {
           // keep local messages as fallback
@@ -548,8 +605,6 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     const confirmation = pendingConfirmation.value;
     if (!confirmation) return;
 
-    pendingConfirmation.value = null;
-
     try {
       const { data, error } = await fetchAiConfirm({
         confirmationId: confirmation.confirmationId,
@@ -557,10 +612,20 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       });
       if (error || !data) {
         window.$message?.error('确认失败');
+        await refreshCurrentConversationDetail();
         return;
       }
-      // spec §8.3: confirm 后立刻收到 toolCallId + status=queued，
-      // 即使 SSE 已断也能据此轮询结果（30s 兜底）
+      const terminalStatuses = ['succeeded', 'failed', 'rejected', 'expired'];
+      if (terminalStatuses.includes(data.status)) {
+        removePendingByToolCallId(data.toolCallId);
+        await refreshCurrentConversationDetail();
+        if (data.status === 'succeeded') window.$message?.success('操作已执行成功');
+        else if (data.status === 'rejected') window.$message?.info('操作已取消');
+        else if (data.status === 'expired') window.$message?.warning('操作已过期');
+        else window.$message?.error('操作执行失败');
+        return;
+      }
+      if (!data.actionId) removePendingByToolCallId(data.toolCallId);
       startPollingResult(data.toolCallId);
     } catch (e: any) {
       window.$message?.error(`确认失败: ${e.message}`);
@@ -595,6 +660,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         const terminalStatus = ['success', 'failed', 'rejected', 'expired'];
         if (terminalStatus.includes(data.status)) {
           stopPolling();
+          removePendingByToolCallId(toolCallId);
+          await refreshCurrentConversationDetail();
           // 找到对应 tool_call_started 事件，附加 result 信息
           const started = streamEvents.value.find(
             (e): e is Api.Ai.ToolCallStartedEvent => e.type === 'tool_call_started' && e.toolCallId === toolCallId
@@ -835,6 +902,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     // Phase 3.4: SSE 事件 + HITL
     streamEvents,
     pendingConfirmation,
+    pendingActionsById,
     pendingConfirmationId,
     pendingToolCallId,
     resumeAttempts,

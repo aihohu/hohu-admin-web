@@ -23,16 +23,30 @@ const showScrollBtn = ref(false);
 // Phase 3.4: tool-call 卡片 + HITL 抽屉
 /** 按 toolCallId 配对 started / result + 关联 pendingConfirmation（§12 场景 4/5 内联 bar） */
 const toolCallCards = computed(() => {
-  const startedEvents = aiStore.streamEvents.filter(
+  const liveStarted = aiStore.streamEvents.filter(
     (e): e is Api.Ai.ToolCallStartedEvent => e.type === 'tool_call_started'
   );
+  const knownToolCalls = new Set(liveStarted.map(event => event.toolCallId));
+  const restoredStarted = Object.values(aiStore.pendingActionsById)
+    .filter(pending => !knownToolCalls.has(pending.toolCallId))
+    .map<Api.Ai.ToolCallStartedEvent>(pending => ({
+      type: 'tool_call_started',
+      tool: pending.tool,
+      toolCallId: pending.toolCallId,
+      summary: pending.presentation?.summary || pending.presentation?.title || pending.summary,
+      args: pending.presentation || {},
+      risk: 'high',
+      traceId: '',
+      chipTarget: null
+    }));
+  const startedEvents = [...liveStarted, ...restoredStarted];
   return startedEvents.map(s => {
     const result = aiStore.streamEvents.find(
       (e): e is Api.Ai.ToolCallResultEvent => e.type === 'tool_call_result' && e.toolCallId === s.toolCallId
     );
     // spec §12 场景 4: HITL pending 时卡片嵌入倒计时 + 取消/确认按钮
-    const pending = aiStore.pendingConfirmation;
-    const isPending = pending?.toolCallId === s.toolCallId;
+    const pending = Object.values(aiStore.pendingActionsById).find(item => item.toolCallId === s.toolCallId);
+    const isPending = Boolean(pending);
     return {
       started: s,
       result: result ?? null,
