@@ -17,11 +17,11 @@ pnpm build                # Production build
 pnpm lint                 # oxlint + ESLint check + fix
 pnpm fmt                  # oxfmt format
 pnpm typecheck            # TypeScript type check
-pnpm gen-route            # Regenerate routes from src/views directory
+pnpm gen-route            # Manual fallback when dev route generation is unavailable
 pnpm commit / pnpm commit:zh  # Conventional commits
 ```
 
-**Must run `pnpm lint && pnpm fmt` after code changes** — ensures all checks pass (consistent with git pre-commit).
+**Must run `pnpm lint && pnpm fmt && pnpm typecheck` after code changes** to keep lint, formatting, and TypeScript checks aligned.
 
 ## Project Structure
 
@@ -55,7 +55,7 @@ packages/                      # Monorepo workspace packages
 ## Backend Integration
 
 - **API base:** `http://127.0.0.1:8000` (docs at `/docs`)
-- **Response:** `{code: number, msg: string, data: any}` — success code `0000`
+- **Response:** `{code: number, msg: string, data: any}` — success code `200`
 - **Auth:** Bearer token in `Authorization` header
 - **Snowflake IDs:** Always `string` type in frontend — never convert to `number`
 - **Case conversion:** Backend `snake_case` ↔ Frontend `camelCase` — handled by request/response interceptors
@@ -66,7 +66,7 @@ packages/                      # Monorepo workspace packages
 
 1. Create `src/views/<module>/index.vue`
 2. Add `defineOptions({ name, meta: { title, i18nKey, icon } })` if needed
-3. Run `pnpm gen-route` to regenerate route types
+3. With the dev server running, `@elegant-router` regenerates routes automatically. Run `pnpm gen-route` only when the dev server is unavailable, CI/scripts require pre-generated output, or generated routes are out of sync.
 
 ### Adding an API Endpoint
 
@@ -149,10 +149,10 @@ src/typings/api/ai.d.ts     # Api.Ai namespace
 ```bash
 # .env.test
 VITE_SERVICE_BASE_URL=http://127.0.0.1:8000
-VITE_SERVICE_SUCCESS_CODE=0000
-VITE_SERVICE_EXPIRED_TOKEN_CODES=1002
-VITE_SERVICE_LOGOUT_CODES=1003
-VITE_SERVICE_MODAL_LOGOUT_CODES=1004
+VITE_SERVICE_SUCCESS_CODE=200
+VITE_SERVICE_EXPIRED_TOKEN_CODES=
+VITE_SERVICE_LOGOUT_CODES=401
+VITE_SERVICE_MODAL_LOGOUT_CODES=
 VITE_HTTP_PROXY=N
 ```
 
