@@ -34,7 +34,10 @@ const pendingAction: Api.Ai.PendingAction = {
   interactionFlow: 'prepared',
   presentation: {
     title: 'Import 2 users',
-    fields: { new: 2, onConflict: 'skip' },
+    fields: [
+      { label: 'new', value: 2 },
+      { label: 'onConflict', value: 'skip' }
+    ],
     warnings: []
   },
   expiresAt: '2026-08-08T12:00:00Z'
@@ -64,8 +67,11 @@ describe('prepared action recovery', () => {
     await store.selectConversation('1');
 
     expect(store.pendingConfirmation?.actionId).toBe('9001');
-    expect(store.pendingConfirmation?.args).toEqual({});
-    expect(store.pendingConfirmation?.presentation?.fields).toEqual({ new: 2, onConflict: 'skip' });
+    expect(store.pendingConfirmation).not.toHaveProperty('args');
+    expect(store.pendingConfirmation?.presentation?.fields).toEqual([
+      { label: 'new', value: 2 },
+      { label: 'onConflict', value: 'skip' }
+    ]);
     expect(JSON.stringify(store.pendingActionsById)).not.toContain('preview_token');
   });
 

@@ -59,6 +59,8 @@ const local: App.I18n.Schema = {
     downloadTemplate: 'Download Template',
     exportModal: {
       title: 'Export Users',
+      aiConfirmSummary: 'About {count} user rows will be exported to an xlsx file (removed after 30 days)',
+      estimatedRowsLabel: 'Estimated export rows',
       reasonLabel: 'Reason',
       reasonPlaceholder: 'Briefly describe the purpose of this export (1-256 chars)',
       confirmExport: 'Confirm Export',

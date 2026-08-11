@@ -199,11 +199,17 @@ declare namespace Api {
       affectedExamples?: string[];
     };
 
+    type ConfirmationPresentationField = {
+      label: string;
+      value: string | number;
+      tone?: 'default' | 'info' | 'success' | 'warning' | 'danger';
+    };
+
     type ConfirmationPresentation = {
-      title?: string;
+      title: string;
       summary?: string;
-      fields?: Record<string, string | number>;
-      warnings?: string[];
+      fields: ConfirmationPresentationField[];
+      warnings: string[];
     };
 
     type PendingAction = {
@@ -214,7 +220,7 @@ declare namespace Api {
       tool: string;
       toolCallId: string;
       sourceToolCallId?: string | null;
-      interactionFlow: 'prepared';
+      interactionFlow: 'direct' | 'prepared';
       presentation: ConfirmationPresentation;
       expiresAt: string;
     };
@@ -305,7 +311,6 @@ declare namespace Api {
       tool: string;
       toolCallId: string;
       summary: string;
-      args: Record<string, any>;
       expiresAt: string; // ISO 8601 UTC
       dryRun?: DryRunSummary;
       actionId?: string;
@@ -321,7 +326,6 @@ declare namespace Api {
       tool: string;
       toolCallId: string;
       summary: string;
-      args: Record<string, any>;
       expiresAt: string; // ISO 8601 UTC
       dryRun?: DryRunSummary;
       resumedAt: string;

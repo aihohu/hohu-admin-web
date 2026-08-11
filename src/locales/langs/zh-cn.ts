@@ -59,6 +59,8 @@ const local: App.I18n.Schema = {
     downloadTemplate: '下载模板',
     exportModal: {
       title: '导出用户列表',
+      aiConfirmSummary: '将导出约 {count} 行用户数据到 xlsx 文件（30 天后过期清理）',
+      estimatedRowsLabel: '预计导出行数',
       reasonLabel: '业务理由',
       reasonPlaceholder: '请简述本次导出用途（1-256 字符）',
       confirmExport: '确认导出',

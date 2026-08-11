@@ -3,6 +3,11 @@ import { computed, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NButton, NDrawer, NDrawerContent, NStatistic, NTag } from 'naive-ui';
 import { useAiStore } from '@/store/modules/ai';
+import {
+  localizeConfirmationField,
+  localizeConfirmationSummary,
+  localizeConfirmationTool
+} from './confirmation-presentation-i18n';
 
 const { t } = useI18n();
 const aiStore = useAiStore();
@@ -72,14 +77,21 @@ onUnmounted(() => {
   if (countdownTimer) clearInterval(countdownTimer);
 });
 
-const displaySummary = computed(
-  () =>
+const translate = (key: App.I18n.I18nKey, params?: Record<string, string | number>) =>
+  params ? t(key, params) : t(key);
+const displayTool = computed(() => localizeConfirmationTool(confirmation.value?.tool || '', translate));
+const rawPresentationFields = computed(() => confirmation.value?.presentation?.fields || []);
+const displaySummary = computed(() => {
+  const summary =
     confirmation.value?.presentation?.summary ||
     confirmation.value?.presentation?.title ||
     confirmation.value?.summary ||
-    ''
+    '';
+  return localizeConfirmationSummary(confirmation.value?.tool || '', summary, translate, rawPresentationFields.value);
+});
+const presentationFields = computed(() =>
+  rawPresentationFields.value.map(field => localizeConfirmationField(confirmation.value?.tool || '', field, translate))
 );
-const presentationFields = computed(() => Object.entries(confirmation.value?.presentation?.fields || {}));
 const presentationWarnings = computed(() => confirmation.value?.presentation?.warnings || []);
 
 function handleApprove() {
@@ -105,7 +117,7 @@ const showDrawer = computed({
         <!-- Tool 信息 -->
         <div class="confirm-section">
           <div class="confirm-label">{{ t('page.ai.chat.confirmTool') }}</div>
-          <NTag type="warning" size="large">{{ confirmation.tool }}</NTag>
+          <NTag type="warning" size="large">{{ displayTool }}</NTag>
           <!-- 续传重连标记（spec §2.2 v1.5+） -->
           <div v-if="isReconnected" class="confirm-reconnect-badge">
             <NTag type="info" size="small" :bordered="false">
@@ -141,9 +153,14 @@ const showDrawer = computed({
         <div v-if="presentationFields.length > 0" class="confirm-section">
           <div class="confirm-label">{{ t('page.ai.chat.confirmArgs') }}</div>
           <div class="confirm-fields">
-            <div v-for="[key, value] in presentationFields" :key="key" class="confirm-field">
-              <span>{{ key }}</span>
-              <strong>{{ value }}</strong>
+            <div
+              v-for="field in presentationFields"
+              :key="field.label"
+              class="confirm-field"
+              :class="`confirm-field--${field.tone || 'default'}`"
+            >
+              <span>{{ field.displayLabel }}</span>
+              <strong>{{ field.displayValue }}</strong>
             </div>
           </div>
         </div>
@@ -238,6 +255,19 @@ const showDrawer = computed({
   gap: 16px;
   padding: 5px 0;
   font-size: 13px;
+}
+
+.confirm-field--warning,
+.confirm-field--danger {
+  color: #d97706;
+}
+
+.confirm-field--success {
+  color: #16a34a;
+}
+
+.confirm-field--info {
+  color: #2563eb;
 }
 
 .confirm-warnings {

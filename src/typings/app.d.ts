@@ -417,6 +417,8 @@ declare namespace App {
         importHistory: string;
         exportModal: {
           title: string;
+          aiConfirmSummary: string;
+          estimatedRowsLabel: string;
           reasonLabel: string;
           reasonPlaceholder: string;
           confirmExport: string;

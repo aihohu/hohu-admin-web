@@ -91,9 +91,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           tool: action.tool,
           toolCallId: action.toolCallId,
           sourceToolCallId: action.sourceToolCallId,
-          interactionFlow: 'prepared' as const,
+          interactionFlow: action.interactionFlow,
           summary: action.presentation.summary || action.presentation.title || action.tool,
-          args: {},
           presentation: action.presentation,
           expiresAt: action.expiresAt
         }
