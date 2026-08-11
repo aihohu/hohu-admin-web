@@ -11,6 +11,12 @@ import {
   fetchGetAvailableModels,
   fetchRoutingFeedback
 } from '@/service/api/ai';
+import {
+  messageCoversToolCalls,
+  projectMessageToolCards,
+  projectStreamToolCards,
+  serializeToolCards
+} from './tool-card-projection';
 
 export function createChatTraceId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -45,6 +51,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   // ====== Phase 3.4: SSE 5 类事件 + HITL（spec §8.1 / §8.3） ======
   /** 当前流的 tool 调用事件列表（tool_call_started + tool_call_result，按 toolCallId 配对） */
   const streamEvents = ref<Api.Ai.AiStreamEvent[]>([]);
+  /** Current run durability handoff. Only streaming or the temp message may render cards, never both. */
+  const streamHandoffPhase = ref<'idle' | 'streaming' | 'awaiting_sync' | 'persisted' | 'stale'>('idle');
+  const activeStreamTraceId = ref<string | null>(null);
+  const lastDoneAck = ref<Api.Ai.DoneEvent | null>(null);
   /** 当前挂起的 HITL 确认（一次只允许一个；续传时为 ConfirmationResumedEvent） */
   const pendingConfirmation = ref<Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent | null>(null);
   /** Durable prepared confirmations keyed by actionId; detail/SSE reconcile into this map. */
@@ -57,8 +67,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const pendingToolCallId = ref<string | null>(null);
   /** §8.3 续传：已尝试次数（上限 3 次） */
   const resumeAttempts = ref(0);
-  /** confirm 后 30s 轮询的定时器（spec §8.3 SSE 断流兜底） */
-  let pollTimer: ReturnType<typeof setInterval> | null = null;
+  /** confirm 后 30s 轮询；每个 tool 独立，不能让后确认的 action 覆盖前一个。 */
+  const pollTimers = new Map<string, ReturnType<typeof setInterval>>();
 
   // v1.5+ supervisor routing v4: clarification 候选卡片
   /** 当前挂起的 clarification 事件（candidates 列表 + 提示文案），null 表示无 */
@@ -66,6 +76,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   let abortController: AbortController | null = null;
   let selectSeq = 0;
+  let activeRunSeq = 0;
 
   function focusPendingConfirmation() {
     const values = Object.values(pendingActionsById.value);
@@ -74,9 +85,36 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingToolCallId.value = pendingConfirmation.value?.toolCallId ?? null;
   }
 
+  function messageToolCards(message: Api.Ai.Message) {
+    return projectMessageToolCards(message, pendingActionsById.value);
+  }
+
+  function streamToolCards() {
+    return projectStreamToolCards(streamEvents.value, pendingActionsById.value);
+  }
+
+  function pendingToolCardsAfterMessage(message: Api.Ai.Message) {
+    if (message.role !== 'user') return [];
+    const actions = Object.values(pendingActionsById.value).filter(action => {
+      if (action.sourceUserMessageId !== message.messageId) return false;
+      return !currentMessages.value.some(
+        candidate => candidate.role === 'assistant' && candidate.traceId && candidate.traceId === action.traceId
+      );
+    });
+    return actions.flatMap(action =>
+      projectStreamToolCards([action], {
+        [action.actionId || `legacy:${action.confirmationId}`]: action
+      })
+    );
+  }
+
   function upsertPendingConfirmation(event: Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent) {
-    const key = event.actionId || `legacy:${event.confirmationId}`;
-    pendingActionsById.value = { ...pendingActionsById.value, [key]: event };
+    const projection = {
+      ...event,
+      traceId: event.traceId || activeStreamTraceId.value || undefined
+    };
+    const key = projection.actionId || `legacy:${projection.confirmationId}`;
+    pendingActionsById.value = { ...pendingActionsById.value, [key]: projection };
     focusPendingConfirmation();
   }
 
@@ -94,6 +132,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           interactionFlow: action.interactionFlow,
           summary: action.presentation.summary || action.presentation.title || action.tool,
           presentation: action.presentation,
+          sourceUserMessageId: action.sourceUserMessageId,
+          traceId: action.traceId,
           expiresAt: action.expiresAt
         }
       ])
@@ -116,6 +156,116 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     currentMessages.value = detail.data.messages;
     reconcilePendingActions(detail.data.pendingActions || []);
     return true;
+  }
+
+  function findDurableAssistant(
+    messages: Api.Ai.Message[],
+    traceId: string,
+    expectedToolCallIds: string[],
+    done: Api.Ai.DoneEvent | null
+  ): Api.Ai.Message | undefined {
+    return messages.find(message => {
+      if (message.role !== 'assistant') return false;
+      if (done?.messageId && message.messageId !== done.messageId) return false;
+      if (message.traceId !== (done?.traceId || traceId)) return false;
+      return messageCoversToolCalls(message, expectedToolCallIds);
+    });
+  }
+
+  async function syncStreamProjection(
+    traceId = activeStreamTraceId.value,
+    expectedToolCallIds = streamToolCards().map(card => card.started.toolCallId),
+    done = lastDoneAck.value,
+    acceptPendingHandoff = true
+  ): Promise<boolean> {
+    const conversationId = currentConversationId.value;
+    if (!conversationId || !traceId) return false;
+    let detail;
+    try {
+      detail = await fetchGetConversationDetail(conversationId);
+    } catch {
+      streamHandoffPhase.value = 'stale';
+      return false;
+    }
+    if (currentConversationId.value !== conversationId || detail.error || !detail.data) {
+      streamHandoffPhase.value = 'stale';
+      return false;
+    }
+
+    const pending = detail.data.pendingActions || [];
+    const projectionUnchanged = done?.projection === 'unchanged';
+    const durableAssistant = findDurableAssistant(detail.data.messages, traceId, expectedToolCallIds, done);
+    const durableUser = detail.data.messages.some(message => message.role === 'user' && message.traceId === traceId);
+    const durablePending = pending.some(action => action.traceId === traceId);
+    const failedButSourceCommitted = done?.persistence === 'failed' && done.projection === 'updated' && durableUser;
+
+    if (durablePending && acceptPendingHandoff && !durableAssistant) {
+      // The action is durable, but its assistant projection is not terminal yet.
+      // Preserve the temp preview owner and enrich it from pendingActions instead
+      // of replacing it with a detail snapshot that only contains the source user.
+      reconcilePendingActions(pending);
+      streamHandoffPhase.value = 'awaiting_sync';
+      return true;
+    }
+
+    if (projectionUnchanged || durableAssistant || failedButSourceCommitted) {
+      currentMessages.value = detail.data.messages;
+      reconcilePendingActions(pending);
+      streamEvents.value = [];
+      streamHandoffPhase.value = 'persisted';
+      return true;
+    }
+
+    // The detail response is authoritative, but an old snapshot must not erase
+    // the only visible copy of this run. Keep the temp message and recovery buffer.
+    if (acceptPendingHandoff) reconcilePendingActions(pending);
+    streamHandoffPhase.value = 'stale';
+    return false;
+  }
+
+  function confirmationToolCallIds(confirmation: Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent) {
+    return [...new Set([confirmation.sourceToolCallId, confirmation.toolCallId].filter(Boolean) as string[])];
+  }
+
+  async function syncConfirmationTerminal(
+    confirmation: Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent
+  ) {
+    removePendingByToolCallId(confirmation.toolCallId);
+    const traceId = confirmation.traceId || activeStreamTraceId.value;
+    if (!traceId) return refreshCurrentConversationDetail();
+    return syncStreamProjection(traceId, confirmationToolCallIds(confirmation), null, false);
+  }
+
+  function freezeTempAssistantProjection(
+    traceId: string,
+    conversationId: string,
+    content: string,
+    cards = streamToolCards()
+  ) {
+    const toolCalls = serializeToolCards(cards);
+    if (!content && toolCalls.length === 0) return;
+    const existing = currentMessages.value.find(
+      message => message.role === 'assistant' && message.traceId === traceId && message.messageId.startsWith('temp-')
+    );
+    if (existing) {
+      existing.content = content;
+      existing.toolCalls = toolCalls;
+      return;
+    }
+    currentMessages.value.push({
+      messageId: `temp-assistant-${Date.now()}`,
+      conversationId,
+      parentMessageId: null,
+      role: 'assistant',
+      messageType: 'text',
+      content,
+      parts: null,
+      toolCalls,
+      traceId,
+      tokensInput: null,
+      tokensOutput: null,
+      createTime: new Date().toISOString()
+    });
   }
 
   /** get base URL for SSE fetch */
@@ -172,10 +322,18 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** select conversation and load messages */
   async function selectConversation(conversationId: string) {
+    activeRunSeq += 1;
+    abortController?.abort();
+    abortController = null;
+    stopPolling();
+    isStreaming.value = false;
     const seq = ++selectSeq;
     currentConversationId.value = conversationId;
     streamingText.value = '';
     streamEvents.value = [];
+    streamHandoffPhase.value = 'idle';
+    activeStreamTraceId.value = null;
+    lastDoneAck.value = null;
     pendingConfirmation.value = null;
     pendingActionsById.value = {};
     pendingConfirmationId.value = null;
@@ -187,39 +345,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     if (seq !== selectSeq) return;
     if (!error && data) {
       currentMessages.value = data.messages;
-      // 修订 BUG-FE-18: 反序列化 assistant message.tool_calls JSON 注入 streamEvents，
-      // 让重连会话时能看到 tool-call 卡片（之前 reload 后只剩文字）
-      const restoredEvents: Api.Ai.AiStreamEvent[] = [];
-      for (const msg of data.messages) {
-        if (msg.role !== 'assistant' || !msg.toolCalls) continue;
-        for (const tc of msg.toolCalls) {
-          if (!tc.tool || !tc.tool_call_id) continue;
-          restoredEvents.push({
-            type: 'tool_call_started',
-            tool: tc.tool,
-            toolCallId: tc.tool_call_id,
-            summary: tc.summary ?? '',
-            args: tc.args ?? {},
-            risk: tc.risk ?? 'low',
-            traceId: tc.trace_id ?? '',
-            chipTarget: tc.chip_target ?? null
-          });
-          restoredEvents.push({
-            type: 'tool_call_result',
-            tool: tc.tool,
-            toolCallId: tc.tool_call_id,
-            ok: tc.ok ?? false,
-            durationMs: tc.duration_ms ?? 0,
-            result: tc.result,
-            affectedRows: tc.affected_rows ?? null,
-            errorCode: tc.error_code,
-            errorMsg: tc.error_msg,
-            ui: tc.ui
-          });
-        }
-      }
-      streamEvents.value = restoredEvents;
       reconcilePendingActions(data.pendingActions || []);
+      streamHandoffPhase.value = 'persisted';
     } else {
       window.$message?.error('加载会话失败');
     }
@@ -227,10 +354,18 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** clear current conversation */
   function clearCurrentConversation() {
+    activeRunSeq += 1;
+    abortController?.abort();
+    abortController = null;
+    stopPolling();
+    isStreaming.value = false;
     currentConversationId.value = null;
     currentMessages.value = [];
     streamingText.value = '';
     streamEvents.value = [];
+    streamHandoffPhase.value = 'idle';
+    activeStreamTraceId.value = null;
+    lastDoneAck.value = null;
     pendingConfirmation.value = null;
     pendingActionsById.value = {};
     pendingConfirmationId.value = null;
@@ -280,7 +415,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         pendingClarification.value = event;
         break;
       case 'done':
-        // 流结束信号（一般由 [DONE] 或 reader.done 处理，这里只清状态）
+        lastDoneAck.value = event;
         break;
       default:
         // 兜底，不处理未知事件
@@ -315,7 +450,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
 
     // 自定义事件（spec §8.1 私有命名空间）：done 终止流，其它走分流
-    if (event.type === 'done') return true;
+    if (event.type === 'done') {
+      handleAiStreamEvent(event as Api.Ai.DoneEvent);
+      return true;
+    }
     if (
       event.type === 'tool_call_started' ||
       event.type === 'tool_call_result' ||
@@ -346,6 +484,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   /** core SSE streaming — does NOT touch messages array */
   async function doStream(injectLastMessageText?: string) {
     const traceId = createChatTraceId();
+    const runSeq = ++activeRunSeq;
+    const runConversationId = currentConversationId.value;
+    if (!runConversationId) return;
+    const isActiveRun = () => runSeq === activeRunSeq && currentConversationId.value === runConversationId;
+    activeStreamTraceId.value = traceId;
+    lastDoneAck.value = null;
+    streamHandoffPhase.value = 'streaming';
     isStreaming.value = true;
     streamingText.value = '';
     reasoningText.value = '';
@@ -406,11 +551,15 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
       if (!response.ok) {
         window.$message?.error(`请求失败: ${response.status}`);
+        streamHandoffPhase.value = 'stale';
         return;
       }
 
       const reader = response.body?.getReader();
-      if (!reader) return;
+      if (!reader) {
+        streamHandoffPhase.value = 'stale';
+        return;
+      }
 
       const decoder = new TextDecoder();
       let buffer = '';
@@ -425,6 +574,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         buffer = parts.pop() || '';
 
         for (const part of parts) {
+          if (!isActiveRun()) break;
           const lines = part.split('\n');
           let payload = '';
           for (const line of lines) {
@@ -439,64 +589,64 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         }
       }
 
-      // add assistant message
-      if (streamingText.value) {
-        currentMessages.value.push({
-          messageId: `temp-assistant-${Date.now()}`,
-          conversationId: currentConversationId.value || '',
-          parentMessageId: null,
-          role: 'assistant',
-          messageType: 'text',
-          content: streamingText.value,
-          parts: null,
-          tokensInput: null,
-          tokensOutput: null,
-          createTime: new Date().toISOString()
-        });
-      }
       streamCompleted = true;
+      const terminalAck = lastDoneAck.value as Api.Ai.DoneEvent | null;
+      if (terminalAck?.persistence === 'failed') {
+        window.$message?.warning('回复未持久化，已同步当前会话状态');
+      }
     } catch (error: any) {
+      if (!isActiveRun()) {
+        return;
+      }
       if (error.name === 'AbortError') {
-        // save partial response locally (backend may not have persisted it)
-        if (streamingText.value) {
-          currentMessages.value.push({
-            messageId: `temp-assistant-${Date.now()}`,
-            conversationId: currentConversationId.value || '',
-            parentMessageId: null,
-            role: 'assistant',
-            messageType: 'text',
-            content: streamingText.value,
-            parts: null,
-            tokensInput: null,
-            tokensOutput: null,
-            createTime: new Date().toISOString()
-          });
-        }
-      } else if (pendingConfirmationId.value && resumeAttempts.value < 3) {
-        // §8.3 续传：HITL 等待期间网络中断（非用户主动 abort），自动尝试 resume
-        attemptResume(pendingConfirmationId.value);
+        // User-stopped partial output stays as a local message owner.
+        const cards = streamToolCards();
+        freezeTempAssistantProjection(traceId, runConversationId, streamingText.value, cards);
+        streamEvents.value = [];
+        streamHandoffPhase.value = 'persisted';
       } else {
-        window.$message?.error(`发送失败: ${error.message}`);
+        const runPending = Object.values(pendingActionsById.value).find(item => item.traceId === traceId);
+        if (runPending && resumeAttempts.value < 3) {
+          // §8.3 续传：HITL 等待期间网络中断（非用户主动 abort），自动尝试 resume
+          streamHandoffPhase.value = 'awaiting_sync';
+          await attemptResume(runPending.confirmationId);
+          const cards = streamToolCards();
+          freezeTempAssistantProjection(traceId, runConversationId, streamingText.value, cards);
+          const stillPending = Object.values(pendingActionsById.value).some(item => item.traceId === traceId);
+          if (
+            !(await syncStreamProjection(
+              traceId,
+              cards.map(card => card.started.toolCallId),
+              null,
+              stillPending
+            ))
+          ) {
+            streamHandoffPhase.value = 'stale';
+          }
+        } else {
+          window.$message?.error(`发送失败: ${error.message}`);
+          streamHandoffPhase.value = 'stale';
+        }
       }
     } finally {
-      isStreaming.value = false;
-      streamingText.value = '';
-      reasoningText.value = '';
-      // 保留 streamEvents（让用户能看到 tool-call 卡片），下次 sendMessage 时清空
-      // pendingConfirmation 不在此清（confirm 流程独立）
-      abortController = null;
+      if (isActiveRun()) {
+        isStreaming.value = false;
+        reasoningText.value = '';
+        abortController = null;
 
-      // Replace temp messages with real IDs from backend after stream completes normally
-      if (streamCompleted && currentConversationId.value) {
-        try {
-          const { data, error } = await fetchGetConversationDetail(currentConversationId.value);
-          if (!error && data) {
-            currentMessages.value = data.messages;
-            reconcilePendingActions(data.pendingActions || []);
+        // Freeze one temp message owner before detail reconciliation. streamEvents
+        // remains an invisible recovery buffer until the durable message takes over.
+        if (streamCompleted && currentConversationId.value) {
+          const cards = streamToolCards();
+          freezeTempAssistantProjection(traceId, runConversationId, streamingText.value, cards);
+          streamHandoffPhase.value = 'awaiting_sync';
+          const expectedToolCallIds = cards.map(card => card.started.toolCallId);
+          const synced = await syncStreamProjection(traceId, expectedToolCallIds, lastDoneAck.value);
+          if (!synced) {
+            window.$message?.warning('回复尚未完成持久化同步，请稍后重试');
           }
-        } catch {
-          // keep local messages as fallback
         }
+        streamingText.value = '';
       }
     }
   }
@@ -600,8 +750,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   /** 用户在 HITL 抽屉点确认 / 取消，调 /ai/confirm 后启动 30s 轮询兜底 */
-  async function resolveConfirmation(action: 'approve' | 'reject') {
-    const confirmation = pendingConfirmation.value;
+  async function resolveConfirmation(action: 'approve' | 'reject', actionId?: string) {
+    const confirmation = actionId ? pendingActionsById.value[actionId] : pendingConfirmation.value;
     if (!confirmation) return;
 
     try {
@@ -616,8 +766,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       }
       const terminalStatuses = ['succeeded', 'failed', 'rejected', 'expired'];
       if (terminalStatuses.includes(data.status)) {
-        removePendingByToolCallId(data.toolCallId);
-        await refreshCurrentConversationDetail();
+        if (!(await syncConfirmationTerminal(confirmation))) {
+          window.$message?.warning('操作已完成，但消息卡片尚未同步，请稍后重试');
+        }
         if (data.status === 'succeeded') window.$message?.success('操作已执行成功');
         else if (data.status === 'rejected') window.$message?.info('操作已取消');
         else if (data.status === 'expired') window.$message?.warning('操作已过期');
@@ -625,31 +776,34 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         return;
       }
       if (!data.actionId) removePendingByToolCallId(data.toolCallId);
-      startPollingResult(data.toolCallId);
+      startPollingResult(data.toolCallId, confirmation);
     } catch (e: any) {
       window.$message?.error(`确认失败: ${e.message}`);
     }
   }
 
   /** 用户点确认 */
-  async function approveTool() {
-    await resolveConfirmation('approve');
+  async function approveTool(actionId?: string) {
+    await resolveConfirmation('approve', actionId);
   }
 
   /** 用户点取消 */
-  async function rejectTool() {
-    await resolveConfirmation('reject');
+  async function rejectTool(actionId?: string) {
+    await resolveConfirmation('reject', actionId);
   }
 
   /** spec §8.3: 30s 轮询 GET /ai/operation-log?tool_call_id=...
    * 终态（success/failed/rejected/expired）停止轮询；
    * 30s 内无结果提示"操作仍在执行" */
-  function startPollingResult(toolCallId: string) {
-    stopPolling();
+  function startPollingResult(
+    toolCallId: string,
+    confirmation?: Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent
+  ) {
+    stopPolling(toolCallId);
     const deadline = Date.now() + 30_000;
-    pollTimer = setInterval(async () => {
+    const timer = setInterval(async () => {
       if (Date.now() > deadline) {
-        stopPolling();
+        stopPolling(toolCallId);
         window.$message?.info('操作仍在执行，请稍后到 AI Trace 查看');
         return;
       }
@@ -658,9 +812,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         if (error || !data) return;
         const terminalStatus = ['success', 'failed', 'rejected', 'expired'];
         if (terminalStatus.includes(data.status)) {
-          stopPolling();
-          removePendingByToolCallId(toolCallId);
-          await refreshCurrentConversationDetail();
+          stopPolling(toolCallId);
           // 找到对应 tool_call_started 事件，附加 result 信息
           const started = streamEvents.value.find(
             (e): e is Api.Ai.ToolCallStartedEvent => e.type === 'tool_call_started' && e.toolCallId === toolCallId
@@ -685,6 +837,14 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
               errorMsg: derivedErrorCode
             });
           }
+          if (confirmation) {
+            if (!(await syncConfirmationTerminal(confirmation))) {
+              window.$message?.warning('操作已完成，但消息卡片尚未同步，请稍后重试');
+            }
+          } else {
+            removePendingByToolCallId(toolCallId);
+            await refreshCurrentConversationDetail();
+          }
           if (data.status === 'success') {
             window.$message?.success('操作已执行成功');
           } else if (data.status === 'failed') {
@@ -699,17 +859,33 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         // 网络错误静默，下次重试
       }
     }, 1500);
+    pollTimers.set(toolCallId, timer);
   }
 
-  function stopPolling() {
-    if (pollTimer) {
-      clearInterval(pollTimer);
-      pollTimer = null;
+  function stopPolling(toolCallId?: string) {
+    if (toolCallId) {
+      const timer = pollTimers.get(toolCallId);
+      if (timer) clearInterval(timer);
+      pollTimers.delete(toolCallId);
+      return;
     }
+    for (const timer of pollTimers.values()) clearInterval(timer);
+    pollTimers.clear();
   }
 
   /** send a new user message + stream response */
   async function sendMessage(content: string) {
+    if (streamHandoffPhase.value === 'awaiting_sync' || streamHandoffPhase.value === 'stale') {
+      await syncStreamProjection();
+    }
+    if (Object.keys(pendingActionsById.value).length > 0) {
+      window.$message?.warning('请先处理上一条消息中的待确认操作');
+      return;
+    }
+    if (streamHandoffPhase.value === 'awaiting_sync' || streamHandoffPhase.value === 'stale') {
+      window.$message?.warning('上一条回复尚未同步，请稍后重试');
+      return;
+    }
     if (
       (!content.trim() && attachedImages.value.length === 0 && attachedFiles.value.length === 0) ||
       isStreaming.value
@@ -900,11 +1076,18 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     attachedFiles,
     // Phase 3.4: SSE 事件 + HITL
     streamEvents,
+    streamHandoffPhase,
+    activeStreamTraceId,
+    lastDoneAck,
     pendingConfirmation,
     pendingActionsById,
     pendingConfirmationId,
     pendingToolCallId,
     resumeAttempts,
+    messageToolCards,
+    streamToolCards,
+    pendingToolCardsAfterMessage,
+    syncStreamProjection,
     // v1.5+ supervisor routing v4
     pendingClarification,
     pickClarificationAgent,

@@ -317,6 +317,10 @@ declare namespace Api {
       sourceToolCallId?: string | null;
       interactionFlow?: 'direct' | 'prepared';
       presentation?: ConfirmationPresentation;
+      /** client-side durable owner metadata populated from conversation detail */
+      sourceUserMessageId?: string;
+      /** client-side durable run key populated from conversation detail */
+      traceId?: string;
     };
 
     /** spec §8.3: confirmation_resumed 事件（HITL 续传恢复确认窗口） */
@@ -333,6 +337,10 @@ declare namespace Api {
       sourceToolCallId?: string | null;
       interactionFlow?: 'direct' | 'prepared';
       presentation?: ConfirmationPresentation;
+      /** client-side durable owner metadata populated from conversation detail */
+      sourceUserMessageId?: string;
+      /** client-side durable run key populated from conversation detail */
+      traceId?: string;
     };
 
     /** spec §8.1: ai_error 事件（流级错误） */

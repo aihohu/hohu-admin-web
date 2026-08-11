@@ -20,41 +20,14 @@ const inputText = ref('');
 const isUserAtBottom = ref(true);
 const showScrollBtn = ref(false);
 
-// Phase 3.4: tool-call 卡片 + HITL 抽屉
-/** 按 toolCallId 配对 started / result + 关联 pendingConfirmation（§12 场景 4/5 内联 bar） */
-const toolCallCards = computed(() => {
-  const liveStarted = aiStore.streamEvents.filter(
-    (e): e is Api.Ai.ToolCallStartedEvent => e.type === 'tool_call_started'
-  );
-  const knownToolCalls = new Set(liveStarted.map(event => event.toolCallId));
-  const restoredStarted = Object.values(aiStore.pendingActionsById)
-    .filter(pending => !knownToolCalls.has(pending.toolCallId))
-    .map<Api.Ai.ToolCallStartedEvent>(pending => ({
-      type: 'tool_call_started',
-      tool: pending.tool,
-      toolCallId: pending.toolCallId,
-      summary: pending.presentation?.summary || pending.presentation?.title || pending.summary,
-      args: pending.presentation || {},
-      risk: 'high',
-      traceId: '',
-      chipTarget: null
-    }));
-  const startedEvents = [...liveStarted, ...restoredStarted];
-  return startedEvents.map(s => {
-    const result = aiStore.streamEvents.find(
-      (e): e is Api.Ai.ToolCallResultEvent => e.type === 'tool_call_result' && e.toolCallId === s.toolCallId
-    );
-    // spec §12 场景 4: HITL pending 时卡片嵌入倒计时 + 取消/确认按钮
-    const pending = Object.values(aiStore.pendingActionsById).find(item => item.toolCallId === s.toolCallId);
-    const isPending = Boolean(pending);
-    return {
-      started: s,
-      result: result ?? null,
-      isPending,
-      pendingExpiresAt: isPending ? pending?.expiresAt : undefined
-    };
-  });
-});
+// Only the open stream reads streamEvents. Persisted cards always come from the
+// owning message.toolCalls array and are rendered inside that message wrapper.
+const streamingToolCards = computed(() => aiStore.streamToolCards());
+
+function shouldRenderMessageBubble(message: Api.Ai.Message) {
+  if (message.role !== 'assistant') return true;
+  return Boolean(message.content.trim() || message.parts?.length);
+}
 
 /**
  * HITL 抽屉显示状态。
@@ -112,6 +85,15 @@ watch(
     } else {
       showScrollBtn.value = true;
     }
+  }
+);
+
+watch(
+  () =>
+    streamingToolCards.value.map(card => `${card.started.toolCallId}:${card.result?.ok}:${card.isPending}`).join('|'),
+  () => {
+    if (isUserAtBottom.value) nextTick(scrollToBottom);
+    else showScrollBtn.value = true;
   }
 );
 
@@ -280,57 +262,96 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
     <template v-else>
       <div ref="messageListRef" class="flex-1 overflow-y-auto msg-scroll-area" @scroll="handleScroll">
         <div class="max-w-800px mx-auto px-16px py-16px">
-          <ChatMessage
-            v-for="(msg, idx) in aiStore.currentMessages"
-            :key="msg.messageId"
-            :message="msg"
-            :index="idx"
-            :is-last-user-message="idx === lastUserMessageIndex"
-            :is-last-assistant-message="isLastAssistant(idx)"
-            @edit="handleEdit"
-            @regenerate="aiStore.regenerate()"
-          />
+          <template v-for="(msg, idx) in aiStore.currentMessages" :key="msg.messageId">
+            <div class="message-group" :class="`message-group--${msg.role}`" :data-message-id="msg.messageId">
+              <ChatMessage
+                v-if="shouldRenderMessageBubble(msg)"
+                :message="msg"
+                :index="idx"
+                :is-last-user-message="idx === lastUserMessageIndex"
+                :is-last-assistant-message="isLastAssistant(idx)"
+                @edit="handleEdit"
+                @regenerate="aiStore.regenerate()"
+              />
+              <div v-if="aiStore.messageToolCards(msg).length > 0" class="message-tool-cards">
+                <ChatToolCall
+                  v-for="card in aiStore.messageToolCards(msg)"
+                  :key="card.started.toolCallId"
+                  :started="card.started"
+                  :result="card.result"
+                  :is-pending="card.isPending"
+                  :pending-expires-at="card.pendingExpiresAt"
+                  @approve="aiStore.approveTool(card.actionId)"
+                  @reject="aiStore.rejectTool(card.actionId)"
+                />
+              </div>
+            </div>
 
-          <!-- Streaming message -->
-          <ChatMessage
-            v-if="aiStore.isStreaming && aiStore.streamingText"
-            :message="{
-              messageId: 'streaming',
-              conversationId: '',
-              parentMessageId: null,
-              role: 'assistant',
-              messageType: 'text',
-              content: aiStore.streamingText,
-              parts: null,
-              tokensInput: null,
-              tokensOutput: null,
-              createTime: new Date().toISOString()
-            }"
-            :index="-1"
-            :is-last-user-message="false"
-            :is-last-assistant-message="false"
-          />
+            <!-- Reloaded pending action with no durable assistant projection yet. -->
+            <div
+              v-if="aiStore.pendingToolCardsAfterMessage(msg).length > 0"
+              class="message-group message-group--assistant message-group--transient"
+              :data-source-message-id="msg.messageId"
+            >
+              <div class="message-tool-cards">
+                <ChatToolCall
+                  v-for="card in aiStore.pendingToolCardsAfterMessage(msg)"
+                  :key="card.started.toolCallId"
+                  :started="card.started"
+                  :result="card.result"
+                  :is-pending="card.isPending"
+                  :pending-expires-at="card.pendingExpiresAt"
+                  @approve="aiStore.approveTool(card.actionId)"
+                  @reject="aiStore.rejectTool(card.actionId)"
+                />
+              </div>
+            </div>
+          </template>
+
+          <!-- The current stream is one transient assistant owner group. -->
+          <div
+            v-if="aiStore.isStreaming && (aiStore.streamingText || streamingToolCards.length > 0)"
+            class="message-group message-group--assistant message-group--streaming"
+            data-message-id="streaming"
+          >
+            <ChatMessage
+              v-if="aiStore.streamingText"
+              :message="{
+                messageId: 'streaming',
+                conversationId: '',
+                parentMessageId: null,
+                role: 'assistant',
+                messageType: 'text',
+                content: aiStore.streamingText,
+                parts: null,
+                tokensInput: null,
+                tokensOutput: null,
+                createTime: new Date().toISOString()
+              }"
+              :index="-1"
+              :is-last-user-message="false"
+              :is-last-assistant-message="false"
+            />
+            <div v-if="streamingToolCards.length > 0" class="message-tool-cards">
+              <ChatToolCall
+                v-for="card in streamingToolCards"
+                :key="card.started.toolCallId"
+                :started="card.started"
+                :result="card.result"
+                :is-pending="card.isPending"
+                :pending-expires-at="card.pendingExpiresAt"
+                @approve="aiStore.approveTool(card.actionId)"
+                @reject="aiStore.rejectTool(card.actionId)"
+              />
+            </div>
+          </div>
 
           <!-- v1.5+ supervisor routing v4: ClarificationRequired 候选卡片 -->
           <ChatClarification />
 
-          <!-- Phase 3.4: tool-call 卡片列表（与流式文本并列渲染） -->
-          <div v-if="toolCallCards.length > 0" class="tool-call-list">
-            <ChatToolCall
-              v-for="card in toolCallCards"
-              :key="card.started.toolCallId"
-              :started="card.started"
-              :result="card.result"
-              :is-pending="card.isPending"
-              :pending-expires-at="card.pendingExpiresAt"
-              @approve="aiStore.approveTool()"
-              @reject="aiStore.rejectTool()"
-            />
-          </div>
-
           <!-- Thinking indicator -->
           <div
-            v-if="aiStore.isStreaming && !aiStore.streamingText && toolCallCards.length === 0"
+            v-if="aiStore.isStreaming && !aiStore.streamingText && streamingToolCards.length === 0"
             class="msg-row msg-row--assistant"
           >
             <div class="msg-avatar msg-avatar--ai">
@@ -527,13 +548,22 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
   border-top-left-radius: 4px;
 }
 
-/* tool-call 卡片列表 */
-.tool-call-list {
+/* A tool card belongs to one assistant wrapper and aligns with its bubble content. */
+.message-group {
+  display: flow-root;
+}
+
+.message-tool-cards {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 4px 0 8px;
-  max-width: 75%;
+  width: calc(75% - 48px);
+  margin: -4px 0 8px 64px;
+}
+
+.message-group--transient .message-tool-cards,
+.message-group--streaming .message-tool-cards {
+  margin-top: 4px;
 }
 
 /* Scroll to bottom FAB */
