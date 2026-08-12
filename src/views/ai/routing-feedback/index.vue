@@ -134,13 +134,13 @@ defineExpose({ days });
       <NSpace align="center">
         <span>时间范围：</span>
         <NRadioGroup v-model:value="days">
-          <NRadio :value="7">最近 7 天</NRadio>
-          <NRadio :value="30">最近 30 天</NRadio>
+          <NRadio :value="7" data-testid="routing-feedback-days-7">最近 7 天</NRadio>
+          <NRadio :value="30" data-testid="routing-feedback-days-30">最近 30 天</NRadio>
         </NRadioGroup>
       </NSpace>
     </NCard>
 
-    <NCard title="概览">
+    <NCard title="概览" data-testid="routing-feedback-summary">
       <NGrid :cols="4" :x-gap="16" :y-gap="16" responsive="screen">
         <NGridItem>
           <NStatistic label="反馈总数" :value="summary?.total ?? 0" :loading="summaryLoading" />

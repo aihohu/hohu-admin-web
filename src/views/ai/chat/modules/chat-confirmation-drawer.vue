@@ -117,7 +117,7 @@ const showDrawer = computed({
 </script>
 
 <template>
-  <NDrawer v-model:show="showDrawer" :width="480" placement="right">
+  <NDrawer v-model:show="showDrawer" :width="480" placement="right" data-testid="ai-confirmation-drawer">
     <NDrawerContent :title="t('page.ai.chat.confirmTitle')" closable>
       <div v-if="confirmation" class="confirm-content">
         <!-- Tool 信息 -->
@@ -184,8 +184,10 @@ const showDrawer = computed({
 
       <template #footer>
         <div class="confirm-footer">
-          <NButton @click="handleReject">{{ t('common.cancel') }}</NButton>
-          <NButton type="primary" @click="handleApprove">{{ t('common.confirm') }}</NButton>
+          <NButton data-testid="ai-confirm-reject" @click="handleReject">{{ t('common.cancel') }}</NButton>
+          <NButton type="primary" data-testid="ai-confirm-approve" @click="handleApprove">
+            {{ t('common.confirm') }}
+          </NButton>
         </div>
       </template>
     </NDrawerContent>

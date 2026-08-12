@@ -1,13 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-test.beforeEach(async ({ page }) => {
-  await page.goto('http://localhost:9527/login');
-  await page.getByPlaceholder('请输入用户名').fill('admin');
-  await page.getByPlaceholder('请输入密码').fill('hohu123456');
-  await page.getByRole('button', { name: '确认' }).click();
-  await page.waitForURL('**/home**');
-});
-
 test('导入按钮打开 3 步弹窗', async ({ page }) => {
   await page.goto('/system/user');
   await page

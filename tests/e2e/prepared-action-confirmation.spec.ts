@@ -72,6 +72,17 @@ function terminalMessages() {
       traceId: pendingAction.traceId,
       toolCalls: [
         {
+          tool: 'user.import_preview',
+          tool_call_id: pendingAction.sourceToolCallId,
+          summary: 'Prepare user import',
+          args: { file_id: 'opaque-file-id', requested_outcome: 'execute_if_approved' },
+          risk: 'low',
+          trace_id: pendingAction.traceId,
+          ok: true,
+          result: { total: 2, summary: { new: 2 } },
+          duration_ms: 3
+        },
+        {
           tool: pendingAction.tool,
           tool_call_id: pendingAction.toolCallId,
           summary: presentation.title,
@@ -88,14 +99,6 @@ function terminalMessages() {
       createTime: '2026-08-11 09:00:01'
     }
   ];
-}
-
-async function login(page: Page) {
-  await page.goto('/login');
-  await page.getByPlaceholder('请输入用户名').fill('admin');
-  await page.getByPlaceholder('请输入密码').fill('hohu123456');
-  await page.getByRole('button', { name: '确认' }).click();
-  await page.waitForURL('**/home**');
 }
 
 async function mockChatShell(page: Page, state: { pending: boolean; terminal: boolean }) {
@@ -156,19 +159,16 @@ async function approveAndAssertSafeRequest(page: Page, state: { pending: boolean
     });
   });
 
-  await page.locator('.n-drawer button', { hasText: '确认' }).click();
+  await page.getByTestId('ai-confirm-approve').click();
 
-  await expect(page.locator('.n-message')).toContainText('操作已执行成功');
+  await expect(page.locator('.n-message--success-type').filter({ hasText: '操作已执行成功' })).toBeVisible();
+  await expect(page.locator('.n-message--warning-type')).toHaveCount(0);
   expect(confirmBody).toEqual({
     confirmationId: pendingAction.confirmationId,
     action: 'approve'
   });
   expect(JSON.stringify(confirmBody)).not.toContain('preview_token');
 }
-
-test.beforeEach(async ({ page }) => {
-  await login(page);
-});
 
 test('执行意图自动进入安全确认并由 confirm API 完成执行', async ({ page }) => {
   const state = { pending: false, terminal: false };

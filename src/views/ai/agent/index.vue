@@ -99,7 +99,13 @@ const { columns, columnChecks, data, getData, loading, scrollX } = useNaiveTable
       fixed: 'right',
       render: row =>
         hasAuth('ai:agent:edit') ? (
-          <NButton size="small" type="primary" text onClick={() => openEdit(row)}>
+          <NButton
+            size="small"
+            type="primary"
+            text
+            data-testid={`ai-agent-edit-${row.code}`}
+            onClick={() => openEdit(row)}
+          >
             {$t('common.edit')}
           </NButton>
         ) : null

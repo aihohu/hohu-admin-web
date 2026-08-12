@@ -54,12 +54,18 @@ defineExpose({ handleSubmit, checkedIds, allAgents });
 </script>
 
 <template>
-  <NModal v-model:show="visible" :title="title" preset="card" class="w-480px">
+  <NModal v-model:show="visible" :title="title" preset="card" class="w-480px" data-testid="role-ai-agent-modal">
     <NSpin :show="showSpin">
       <NCheckboxGroup v-model:value="checkedIds">
         <NSpace vertical>
           <div v-for="agent in allAgents" :key="agent.agentId" class="flex-y-center gap-12px">
-            <NCheckbox :value="agent.agentId" :disabled="agent.isShared">{{ agent.name }} ({{ agent.code }})</NCheckbox>
+            <NCheckbox
+              :value="agent.agentId"
+              :disabled="agent.isShared"
+              :data-testid="`role-agent-checkbox-${agent.code}`"
+            >
+              {{ agent.name }} ({{ agent.code }})
+            </NCheckbox>
             <NTag v-if="agent.isShared" size="small" type="info">shared 直通</NTag>
           </div>
         </NSpace>
@@ -69,7 +75,9 @@ defineExpose({ handleSubmit, checkedIds, allAgents });
     <template #footer>
       <NSpace justify="end">
         <NButton size="small" @click="visible = false">{{ $t('common.cancel') }}</NButton>
-        <NButton type="primary" size="small" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
+        <NButton type="primary" size="small" data-testid="role-agent-submit" @click="handleSubmit">
+          {{ $t('common.confirm') }}
+        </NButton>
       </NSpace>
     </template>
   </NModal>

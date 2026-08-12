@@ -102,7 +102,13 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
             </NButton>
           )}
           {hasAuth('system:role:ai-agent-auth') && (
-            <NButton type="primary" ghost size="small" onClick={() => onAiAgentAuthClick(row.roleId)}>
+            <NButton
+              type="primary"
+              ghost
+              size="small"
+              data-testid={`role-ai-agent-auth-${row.roleCode}`}
+              onClick={() => onAiAgentAuthClick(row.roleId)}
+            >
               AI Agent 授权
             </NButton>
           )}

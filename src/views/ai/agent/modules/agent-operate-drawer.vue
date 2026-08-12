@@ -109,7 +109,7 @@ defineExpose({ descInvalid, model, handleSubmit });
 </script>
 
 <template>
-  <NDrawer v-model:show="visible" :width="600">
+  <NDrawer v-model:show="visible" :width="600" data-testid="ai-agent-drawer">
     <NDrawerContent title="编辑 Agent" closable>
       <NForm :model="model" label-placement="top" :disabled="detailLoading">
         <NFormItem :label="$t('page.ai.agent.code')">
@@ -119,7 +119,7 @@ defineExpose({ descInvalid, model, handleSubmit });
           <NInput v-model:value="model.name" />
         </NFormItem>
         <NFormItem :label="$t('page.ai.agent.enabled')">
-          <NSwitch v-model:value="model.enabled" />
+          <NSwitch v-model:value="model.enabled" data-testid="ai-agent-enabled" />
         </NFormItem>
         <NFormItem :label="$t('page.ai.agent.displayOrder')">
           <NInputNumber v-model:value="model.displayOrder" :min="0" class="w-full" />
@@ -141,7 +141,7 @@ defineExpose({ descInvalid, model, handleSubmit });
           <NSelect v-model:value="model.modelPreference" :options="modelPreferenceOptions" />
         </NFormItem>
         <NFormItem :label="$t('page.ai.agent.description')">
-          <NInput v-model:value="model.description" type="textarea" :rows="4" />
+          <NInput v-model:value="model.description" type="textarea" :rows="4" data-testid="ai-agent-description" />
           <template #feedback>
             <span :class="{ 'text-red-500': descInvalid }">{{ descLen }} / 50-200</span>
           </template>
@@ -153,7 +153,13 @@ defineExpose({ descInvalid, model, handleSubmit });
       <template #footer>
         <NSpace justify="end">
           <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
-          <NButton type="primary" :disabled="descInvalid" :loading="submitting" @click="handleSubmit">
+          <NButton
+            type="primary"
+            :disabled="descInvalid"
+            :loading="submitting"
+            data-testid="ai-agent-submit"
+            @click="handleSubmit"
+          >
             {{ $t('common.confirm') }}
           </NButton>
         </NSpace>
