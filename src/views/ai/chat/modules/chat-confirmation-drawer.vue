@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { NButton, NDrawer, NDrawerContent, NStatistic, NTag } from 'naive-ui';
 import { useAiStore } from '@/store/modules/ai';
 import {
+  localizeConfirmationDryRun,
   localizeConfirmationField,
   localizeConfirmationSummary,
   localizeConfirmationTool
@@ -93,6 +94,11 @@ const presentationFields = computed(() =>
   rawPresentationFields.value.map(field => localizeConfirmationField(confirmation.value?.tool || '', field, translate))
 );
 const presentationWarnings = computed(() => confirmation.value?.presentation?.warnings || []);
+const displayDryRun = computed(() => {
+  const dryRun = confirmation.value?.dryRun;
+  if (!dryRun) return null;
+  return localizeConfirmationDryRun(confirmation.value?.tool || '', dryRun, translate, rawPresentationFields.value);
+});
 
 function handleApprove() {
   emit('update:show', false);
@@ -137,15 +143,15 @@ const showDrawer = computed({
         <div v-if="confirmation.dryRun" class="confirm-section">
           <div class="confirm-label">{{ t('page.ai.chat.confirmImpact') }}</div>
           <div class="confirm-impact">
-            <NStatistic :label="t('page.ai.chat.confirmAffected')" :value="confirmation.dryRun.affectedCount" />
-            <div v-if="confirmation.dryRun.summary" class="confirm-impact-summary">
-              {{ confirmation.dryRun.summary }}
+            <NStatistic :label="t('page.ai.chat.confirmAffected')" :value="displayDryRun?.affectedCount ?? 0" />
+            <div v-if="displayDryRun?.summary" class="confirm-impact-summary">
+              {{ displayDryRun.summary }}
             </div>
             <div
-              v-if="confirmation.dryRun.affectedExamples && confirmation.dryRun.affectedExamples.length > 0"
+              v-if="displayDryRun?.affectedExamples && displayDryRun.affectedExamples.length > 0"
               class="confirm-examples"
             >
-              <div v-for="(ex, i) in confirmation.dryRun.affectedExamples" :key="i">{{ ex }}</div>
+              <div v-for="(ex, i) in displayDryRun.affectedExamples" :key="i">{{ ex }}</div>
             </div>
           </div>
         </div>

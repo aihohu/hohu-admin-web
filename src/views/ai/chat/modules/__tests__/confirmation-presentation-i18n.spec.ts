@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  localizeConfirmationDryRun,
   localizeConfirmationField,
   localizeConfirmationSummary,
   localizeConfirmationTool
@@ -24,7 +25,29 @@ const zh: Record<string, string> = {
   'common.exportModal.title': '导出用户列表',
   'common.exportModal.aiConfirmSummary': '将导出约 {count} 行用户数据到 xlsx 文件（30 天后过期清理）',
   'common.exportModal.reasonLabel': '业务理由',
-  'common.exportModal.estimatedRowsLabel': '预计导出行数'
+  'common.exportModal.estimatedRowsLabel': '预计导出行数',
+  'page.system.user.addUser': '新增用户',
+  'page.system.user.editUser': '编辑用户',
+  'page.system.user.resetPwd.title': '重置密码',
+  'page.system.user.userName': '用户名',
+  'page.system.user.nickname': '昵称',
+  'page.system.user.userPhone': '手机号',
+  'page.system.user.userEmail': '邮箱',
+  'page.system.user.userGender': '性别',
+  'page.system.user.userStatus': '用户状态',
+  'page.system.user.gender.unknown': '未知',
+  'page.system.user.gender.male': '男',
+  'page.system.user.gender.female': '女',
+  'page.system.common.status.enable': '启用',
+  'page.system.common.status.disable': '禁用',
+  'page.system.user.primaryDept': '主部门',
+  'page.ai.chat.confirmAffected': '预计影响',
+  'page.ai.chat.userId': '用户 ID',
+  'page.ai.chat.targetUser': '目标用户',
+  'page.ai.chat.confirmCreateUserSummary': '将创建用户 {userName} 并应用系统默认密码与角色策略',
+  'page.ai.chat.confirmResetPasswordSummary': '将把用户 {userId} 的密码重置为系统默认策略',
+  'page.ai.chat.confirmUpdateUserSingleSummary': '将把用户“{userName}”的{fieldName}更新为“{value}”',
+  'page.ai.chat.confirmUpdateUserMultipleSummary': '将更新用户“{userName}”的 {count} 个资料字段，请核对下方新值'
 };
 
 const t = (key: string, params?: Record<string, string | number>) => {
@@ -77,5 +100,108 @@ describe('confirmation presentation i18n', () => {
       displayLabel: '预计导出行数',
       displayValue: 12
     });
+  });
+
+  it('localizes user create and reset-password confirmations without exposing a password value', () => {
+    const createFields: Api.Ai.ConfirmationPresentationField[] = [
+      { label: 'user_name', value: 'lisi' },
+      { label: 'primary_dept_id', value: 'AI 产品部（81001）' },
+      { label: 'affectedCount', value: 1, tone: 'warning' }
+    ];
+    const resetFields: Api.Ai.ConfirmationPresentationField[] = [
+      { label: 'user_id', value: '82002' },
+      { label: 'affectedCount', value: 1, tone: 'warning' }
+    ];
+
+    expect(localizeConfirmationTool('user.create', t)).toBe('新增用户 (user.create)');
+    expect(localizeConfirmationSummary('user.create', 'raw backend summary', t, createFields)).toBe(
+      '将创建用户 lisi 并应用系统默认密码与角色策略'
+    );
+    expect(localizeConfirmationField('user.create', createFields[0], t)).toMatchObject({
+      displayLabel: '用户名',
+      displayValue: 'lisi'
+    });
+    expect(localizeConfirmationField('user.create', createFields[1], t)).toMatchObject({
+      displayLabel: '主部门',
+      displayValue: 'AI 产品部（81001）'
+    });
+
+    expect(localizeConfirmationTool('user.reset_password', t)).toBe('重置密码 (user.reset_password)');
+    expect(localizeConfirmationSummary('user.reset_password', 'raw backend summary', t, resetFields)).toBe(
+      '将把用户 82002 的密码重置为系统默认策略'
+    );
+    expect(localizeConfirmationField('user.reset_password', resetFields[0], t)).toMatchObject({
+      displayLabel: '用户 ID',
+      displayValue: '82002'
+    });
+    expect(JSON.stringify({ createFields, resetFields })).not.toContain('AiPolicy123');
+
+    expect(
+      localizeConfirmationDryRun(
+        'user.create',
+        {
+          summary: '后端中文影响摘要',
+          affectedCount: 1,
+          affectedExamples: ['账号：lisi', '密码策略：系统默认密码']
+        },
+        t,
+        createFields
+      )
+    ).toEqual({
+      summary: '将创建用户 lisi 并应用系统默认密码与角色策略',
+      affectedCount: 1,
+      affectedExamples: []
+    });
+  });
+
+  it('localizes user update target, changed field, new value and enum values', () => {
+    const nicknameFields: Api.Ai.ConfirmationPresentationField[] = [
+      { label: 'user_id', value: '十四篇（7493097707360227328）' },
+      { label: 'nickname', value: '十四篇' },
+      { label: 'affectedCount', value: 1, tone: 'warning' }
+    ];
+
+    expect(localizeConfirmationTool('user.update', t)).toBe('编辑用户 (user.update)');
+    expect(localizeConfirmationSummary('user.update', 'raw backend summary', t, nicknameFields)).toBe(
+      '将把用户“十四篇（7493097707360227328）”的昵称更新为“十四篇”'
+    );
+    expect(localizeConfirmationField('user.update', nicknameFields[0], t)).toMatchObject({
+      displayLabel: '目标用户',
+      displayValue: '十四篇（7493097707360227328）'
+    });
+    expect(localizeConfirmationField('user.update', nicknameFields[1], t)).toMatchObject({
+      displayLabel: '昵称',
+      displayValue: '十四篇'
+    });
+    expect(localizeConfirmationField('user.update', { label: 'status', value: '2' }, t)).toMatchObject({
+      displayLabel: '用户状态',
+      displayValue: '禁用'
+    });
+    expect(localizeConfirmationField('user.update', { label: 'user_gender', value: '1' }, t)).toMatchObject({
+      displayLabel: '性别',
+      displayValue: '男'
+    });
+    expect(
+      localizeConfirmationDryRun(
+        'user.update',
+        { summary: '后端摘要', affectedCount: 1, affectedExamples: ['nickname: old → 十四篇'] },
+        t,
+        nicknameFields
+      )
+    ).toEqual({
+      summary: '',
+      affectedCount: 1,
+      affectedExamples: []
+    });
+  });
+
+  it('keeps unknown dry-run presentations unchanged', () => {
+    const dryRun: Api.Ai.DryRunSummary = {
+      summary: 'raw summary',
+      affectedCount: 2,
+      affectedExamples: ['raw example']
+    };
+
+    expect(localizeConfirmationDryRun('unknown.tool', dryRun, t)).toEqual(dryRun);
   });
 });

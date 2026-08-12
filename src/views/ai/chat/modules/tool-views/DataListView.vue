@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps<{
   data: Api.Ai.UIResult;
 }>();
 
 const viewData = computed(() => props.data.viewData as Api.Ai.DataListViewData);
+const { t, te } = useI18n();
+const columnLabel = (label: string) => (te(label) ? t(label) : label);
 </script>
 
 <template>
@@ -13,7 +16,7 @@ const viewData = computed(() => props.data.viewData as Api.Ai.DataListViewData);
     <table class="data-table">
       <thead>
         <tr>
-          <th v-for="col in viewData.columns" :key="col.key">{{ col.label }}</th>
+          <th v-for="col in viewData.columns" :key="col.key">{{ columnLabel(col.label) }}</th>
         </tr>
       </thead>
       <tbody>

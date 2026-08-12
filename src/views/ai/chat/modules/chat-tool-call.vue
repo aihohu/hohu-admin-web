@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
 import { computed, onUnmounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { request } from '@/service/request';
+import { localizeToolDescription, localizeToolError } from './tool-call-i18n';
 import { PlainJsonView, resolveToolView } from './tool-views';
+
+const { t, te } = useI18n();
+const translate = (key: App.I18n.I18nKey) => t(key);
+const hasTranslation = (key: App.I18n.I18nKey) => te(key);
 
 const props = defineProps<{
   /** tool_call_started 事件（含 tool/toolCallId/summary/args/risk） */
@@ -24,11 +30,9 @@ const emit = defineEmits<{
 const TOOL_DESC: Record<string, string> = {
   'user.lookup': '查询用户信息',
   'user.list': '查询用户列表',
-  'user.create': '创建用户',
   'user.update_dept': '调整用户部门',
   'user.update_email': '修改用户邮箱',
   'user.batch_delete': '批量删除用户',
-  'user.reset_password': '重置用户密码',
   'user.disable': '禁用用户',
   'user.enable': '启用用户',
   'user.distinct': '查询不重复字段值',
@@ -44,7 +48,7 @@ const TOOL_DESC: Record<string, string> = {
   'job.update_cron': '更新定时任务 cron'
 };
 
-const toolDesc = computed(() => TOOL_DESC[props.started.tool] || '');
+const toolDesc = computed(() => localizeToolDescription(props.started.tool, translate, hasTranslation, TOOL_DESC));
 
 // ===== 状态映射（spec §12 卡片视觉）=====
 type CardStatus = 'running' | 'success' | 'failed' | 'pending';
@@ -78,7 +82,7 @@ const errorCodeFriendly = computed(() => {
     USER_REJECTED: '已取消',
     AI_STATS_FIELD_NOT_ALLOWED: '字段不在白名单'
   };
-  return map[code] || code;
+  return localizeToolError(code, translate, hasTranslation, map);
 });
 
 const statusText = computed(() => {

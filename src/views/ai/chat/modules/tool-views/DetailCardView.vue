@@ -6,7 +6,7 @@ const props = defineProps<{
   data: Api.Ai.UIResult;
 }>();
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 const viewData = computed(() => props.data.viewData as Api.Ai.DetailCardViewData);
 const title = computed(() => {
   if (props.data.labelKey) {
@@ -14,6 +14,7 @@ const title = computed(() => {
   }
   return viewData.value.title;
 });
+const fieldLabel = (label: string) => (te(label) ? t(label) : label);
 </script>
 
 <template>
@@ -21,7 +22,7 @@ const title = computed(() => {
     <div class="title">{{ title }}</div>
     <div class="field-grid">
       <template v-for="(f, idx) in viewData.fields" :key="idx">
-        <div class="label">{{ f.label }}</div>
+        <div class="label">{{ fieldLabel(f.label) }}</div>
         <code class="value">{{ f.value }}</code>
       </template>
     </div>
