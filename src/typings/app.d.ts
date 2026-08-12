@@ -1136,6 +1136,11 @@ declare namespace App {
             confirmResetPasswordSummary: string;
             confirmUpdateUserSingleSummary: string;
             confirmUpdateUserMultipleSummary: string;
+            confirmBatchDeleteSummary: string;
+            confirmUpdateCronSummary: string;
+            destructiveWarning: string;
+            clarificationQuotaExceeded: string;
+            clarificationSelectionRequired: string;
             confirmArgs: string;
             confirmSecondsLeft: string;
             toolRunning: string;
@@ -1517,6 +1522,15 @@ declare namespace App {
         AI_MODEL_NOT_FOUND: string;
         AI_CONVERSATION_NOT_FOUND: string;
         AI_MODEL_NOT_CONFIGURED: string;
+        AI_USAGE_LIMIT_EXCEEDED: string;
+        AI_CHAT_GUARD_LOST: string;
+        AI_MESSAGE_PERSIST_FAILED: string;
+        AI_ROUTING_FAILED: string;
+        AI_IP_BLOCKED: string;
+        AI_USER_AUTO_DISABLED: string;
+        AI_KEYWORD_BLOCKED: string;
+        AI_FORBIDDEN_TOPIC: string;
+        AI_FORBIDDEN_URL: string;
         AI_PROVIDER_DUPLICATE: string;
         AI_TEST_NO_MODEL: string;
         AI_TEST_NO_API_KEY: string;
@@ -1567,6 +1581,7 @@ declare namespace App {
         AI_USER_DEPT_NAME_REQUIRED: string;
         AI_USER_PRIMARY_DEPT_NOT_FOUND: string;
         AI_USER_CREATE_INVALID: string;
+        AI_LOOKUP_NO_MATCH: string;
         AI_USER_RESET_NOT_FOUND: string;
         AI_USER_RESET_SELF_FORBIDDEN: string;
         AI_IMPORT_REASON_REQUIRED: string;
@@ -1576,6 +1591,20 @@ declare namespace App {
       // v1.5+ tool result view registry — referenced by backend UIResult.label_key
       ai: {
         tool: {
+          field: {
+            name: string;
+            code: string;
+            status: string;
+            parentDeptId: string;
+            userName: string;
+            nickname: string;
+            exportId: string;
+            exportRows: string;
+            fileSize: string;
+            expiresAt: string;
+            jobId: string;
+            newCron: string;
+          };
           user: {
             count: { result: string };
             stats: { result: string };

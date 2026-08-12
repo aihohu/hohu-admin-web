@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAiStore } from '@/store/modules/ai';
+import { localizeClarificationMessage } from './dynamic-message-i18n';
 
 /**
  * spec §6.2 v4: ClarificationRequired 卡片.
@@ -12,8 +14,17 @@ import { useAiStore } from '@/store/modules/ai';
  *   - 点击候选卡片 → 写入 selectedAgentCode 并清空 pendingClarification
  *   - 点击关闭按钮 → 仅清空 pendingClarification（不改 agentCode，让用户手输或换 Agent）
  */
-const { t } = useI18n();
+const { t, te } = useI18n();
 const aiStore = useAiStore();
+const displayMessage = computed(() => {
+  const clarification = aiStore.pendingClarification;
+  if (!clarification) return '';
+  return localizeClarificationMessage(
+    clarification,
+    (key, params) => (params ? t(key, params) : t(key)),
+    key => te(key)
+  );
+});
 </script>
 
 <template>
@@ -21,7 +32,7 @@ const aiStore = useAiStore();
     <div v-if="aiStore.pendingClarification" class="clarification-card">
       <div class="clarification-header">
         <IconIcRoundQuestionAnswer class="text-18px clarification-icon" />
-        <div class="clarification-message">{{ aiStore.pendingClarification.message }}</div>
+        <div class="clarification-message">{{ displayMessage }}</div>
         <button class="clarification-close" :title="t('common.close')" @click="aiStore.dismissClarification()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />

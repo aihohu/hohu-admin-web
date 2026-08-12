@@ -56,8 +56,8 @@ export function localizeToolError(
   te: HasTranslation,
   fallback: Record<string, string> = {}
 ): string {
-  const commonKey = `common.${code}` as App.I18n.I18nKey;
-  const key = TOOL_ERROR_KEYS[code] || commonKey;
+  const globalKey = `errorCode.${code}` as App.I18n.I18nKey;
+  const key = TOOL_ERROR_KEYS[code] || globalKey;
   if (te(key)) return t(key);
   return fallback[code] || code;
 }

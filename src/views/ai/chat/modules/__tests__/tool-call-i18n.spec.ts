@@ -8,8 +8,9 @@ const messages: Record<string, string> = {
   'page.ai.chat.toolDescriptions.userList': 'List users',
   'page.ai.chat.toolDescriptions.fileParse': 'Parse file',
   'page.ai.chat.toolErrors.AI_TOOL_TIMEOUT': 'Operation timed out',
-  'common.AI_USER_DEFAULT_ROLE_NOT_FOUND': 'The default user role is missing or disabled',
-  'common.AI_USER_DEPT_NAME_REQUIRED': 'Enter a department name'
+  'errorCode.AI_USER_DEFAULT_ROLE_NOT_FOUND': 'The default user role is missing or disabled',
+  'errorCode.AI_USER_DEPT_NAME_REQUIRED': 'Enter a department name',
+  'errorCode.AI_LOOKUP_NO_MATCH': 'No matching user was found'
 };
 
 const t = (key: App.I18n.I18nKey) => messages[key] ?? key;
@@ -24,11 +25,12 @@ describe('tool call i18n', () => {
     expect(localizeToolDescription('file.parse', t, te)).toBe('Parse file');
   });
 
-  it('uses common error-code translations and preserves unknown codes', () => {
+  it('uses global error-code translations and preserves unknown codes', () => {
     expect(localizeToolError('AI_USER_DEFAULT_ROLE_NOT_FOUND', t, te)).toBe(
       'The default user role is missing or disabled'
     );
     expect(localizeToolError('AI_USER_DEPT_NAME_REQUIRED', t, te)).toBe('Enter a department name');
+    expect(localizeToolError('AI_LOOKUP_NO_MATCH', t, te)).toBe('No matching user was found');
     expect(localizeToolError('AI_TOOL_TIMEOUT', t, te)).toBe('Operation timed out');
     expect(localizeToolError('UNKNOWN_CODE', t, te)).toBe('UNKNOWN_CODE');
   });

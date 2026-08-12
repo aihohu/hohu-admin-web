@@ -258,7 +258,7 @@ function onReject() {
       <div v-if="result && !result.ok" class="tool-section tool-error">
         <div class="tool-section-title">{{ t('page.ai.chat.toolError') }}</div>
         <div class="tool-error-code">{{ result.errorCode }}</div>
-        <div v-if="result.errorMsg" class="tool-error-msg">{{ result.errorMsg }}</div>
+        <div class="tool-error-msg">{{ errorCodeFriendly }}</div>
       </div>
     </div>
 

@@ -10,7 +10,7 @@ import {
   localizeConfirmationTool
 } from './confirmation-presentation-i18n';
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 const aiStore = useAiStore();
 
 const props = defineProps<{
@@ -83,21 +83,36 @@ const translate = (key: App.I18n.I18nKey, params?: Record<string, string | numbe
 const displayTool = computed(() => localizeConfirmationTool(confirmation.value?.tool || '', translate));
 const rawPresentationFields = computed(() => confirmation.value?.presentation?.fields || []);
 const displaySummary = computed(() => {
-  const summary =
-    confirmation.value?.presentation?.summary ||
-    confirmation.value?.presentation?.title ||
-    confirmation.value?.summary ||
-    '';
+  const presentation = confirmation.value?.presentation;
+  if (presentation?.summaryKey && te(presentation.summaryKey)) {
+    return translate(presentation.summaryKey, presentation.summaryParams);
+  }
+  const summary = presentation?.summary || presentation?.title || confirmation.value?.summary || '';
   return localizeConfirmationSummary(confirmation.value?.tool || '', summary, translate, rawPresentationFields.value);
 });
 const presentationFields = computed(() =>
   rawPresentationFields.value.map(field => localizeConfirmationField(confirmation.value?.tool || '', field, translate))
 );
-const presentationWarnings = computed(() => confirmation.value?.presentation?.warnings || []);
+const presentationWarnings = computed(() => {
+  const presentation = confirmation.value?.presentation;
+  if (presentation?.warningKeys?.length) {
+    return presentation.warningKeys.map(key => (te(key) ? t(key) : key));
+  }
+  return presentation?.warnings || [];
+});
 const displayDryRun = computed(() => {
   const dryRun = confirmation.value?.dryRun;
   if (!dryRun) return null;
-  return localizeConfirmationDryRun(confirmation.value?.tool || '', dryRun, translate, rawPresentationFields.value);
+  const localizedDryRun =
+    dryRun.summaryKey && te(dryRun.summaryKey)
+      ? { ...dryRun, summary: translate(dryRun.summaryKey, dryRun.summaryParams) }
+      : dryRun;
+  return localizeConfirmationDryRun(
+    confirmation.value?.tool || '',
+    localizedDryRun,
+    translate,
+    rawPresentationFields.value
+  );
 });
 
 function handleApprove() {

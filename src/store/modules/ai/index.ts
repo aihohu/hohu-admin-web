@@ -18,6 +18,7 @@ import {
   projectStreamToolCards,
   serializeToolCards
 } from './tool-card-projection';
+import { localizeErrorCode } from '@/views/ai/chat/modules/dynamic-message-i18n';
 
 export function createChatTraceId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -409,7 +410,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         break;
       case 'ai_error':
         window.$message?.error(
-          $t('page.ai.chat.aiError', { message: event.message || $t('page.ai.chat.unknownError') })
+          localizeErrorCode(
+            event.errorCode,
+            event.message || $t('page.ai.chat.unknownError'),
+            key => $t(key),
+            key => $t(key) !== key
+          )
         );
         break;
       case 'clarification_required':
@@ -842,7 +848,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           }
           if (confirmation) {
             if (!(await syncConfirmationTerminal(confirmation))) {
-              window.$message?.warning('操作已完成，但消息卡片尚未同步，请稍后重试');
+              window.$message?.warning($t('page.ai.chat.operationCardSyncPending'));
             }
           } else {
             removePendingByToolCallId(toolCallId);

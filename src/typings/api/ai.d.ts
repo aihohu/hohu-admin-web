@@ -196,6 +196,8 @@ declare namespace Api {
     type DryRunSummary = {
       summary: string;
       affectedCount: number;
+      summaryKey?: App.I18n.I18nKey;
+      summaryParams?: Record<string, string | number>;
       affectedExamples?: string[];
     };
 
@@ -208,8 +210,11 @@ declare namespace Api {
     type ConfirmationPresentation = {
       title: string;
       summary?: string;
+      summaryKey?: App.I18n.I18nKey;
+      summaryParams?: Record<string, string | number>;
       fields: ConfirmationPresentationField[];
       warnings: string[];
+      warningKeys?: App.I18n.I18nKey[];
     };
 
     type PendingAction = {
@@ -361,6 +366,7 @@ declare namespace Api {
       type: 'clarification_required';
       candidates: ClarificationCandidate[];
       message: string;
+      reasonCode?: 'quota_exceeded' | 'selection_required';
     };
 
     /** spec §8.1: done 事件（流结束） */
