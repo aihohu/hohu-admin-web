@@ -26,29 +26,7 @@ const emit = defineEmits<{
   reject: [];
 }>();
 
-// spec §12 prototype tool desc 中文映射；未知 tool 显示空（head 不渲染）
-const TOOL_DESC: Record<string, string> = {
-  'user.lookup': '查询用户信息',
-  'user.list': '查询用户列表',
-  'user.update_dept': '调整用户部门',
-  'user.update_email': '修改用户邮箱',
-  'user.batch_delete': '批量删除用户',
-  'user.disable': '禁用用户',
-  'user.enable': '启用用户',
-  'user.distinct': '查询不重复字段值',
-  'user.count': '统计用户数量',
-  'user.stats': '按维度分组统计',
-  'role.count': '统计角色数量',
-  'role.list': '查询角色列表',
-  'dept.count': '统计部门数量',
-  'dept.list': '查询部门列表',
-  'dept.export_members': '导出部门成员',
-  'role.bind_menus': '给角色绑定菜单',
-  'file.parse': '解析文件',
-  'job.update_cron': '更新定时任务 cron'
-};
-
-const toolDesc = computed(() => localizeToolDescription(props.started.tool, translate, hasTranslation, TOOL_DESC));
+const toolDesc = computed(() => localizeToolDescription(props.started.tool, translate, hasTranslation));
 
 // ===== 状态映射（spec §12 卡片视觉）=====
 type CardStatus = 'running' | 'success' | 'failed' | 'pending';
@@ -68,34 +46,21 @@ const iconChar = computed(() => {
 
 const errorCodeFriendly = computed(() => {
   const code = props.result?.errorCode;
-  if (!code) return '内部错误';
-  const map: Record<string, string> = {
-    AI_TOOL_NOT_FOUND: '工具不可用',
-    AI_TOOL_PERM_DENIED: '权限不足',
-    AI_DATA_SCOPE_VIOLATION: '目标不在可见范围',
-    AI_RATE_LIMIT_USER_WRITE: '操作过于频繁',
-    AI_DAILY_QUOTA_EXHAUSTED: '今日额度已用尽',
-    AI_TOOL_TIMEOUT: '操作超时',
-    AI_REPEATED_FAILURE: '连续失败',
-    AI_INTERNAL_ERROR: '内部错误',
-    AI_HITL_EXPIRED: '确认已超时',
-    USER_REJECTED: '已取消',
-    AI_STATS_FIELD_NOT_ALLOWED: '字段不在白名单'
-  };
-  return localizeToolError(code, translate, hasTranslation, map);
+  if (!code) return t('page.ai.chat.toolErrors.AI_INTERNAL_ERROR');
+  return localizeToolError(code, translate, hasTranslation);
 });
 
 const statusText = computed(() => {
-  if (props.isPending) return '等待你确认';
-  if (!props.result) return '执行中……';
+  if (props.isPending) return t('page.ai.chat.toolWaitingConfirmation');
+  if (!props.result) return t('page.ai.chat.toolRunning');
   if (props.result.ok) {
     const dur = props.result.durationMs ?? 0;
     if (props.result.affectedRows != null) {
-      return `已执行 · ${dur}ms · ${props.result.affectedRows} 行`;
+      return t('page.ai.chat.toolExecutedRows', { duration: dur, rows: props.result.affectedRows });
     }
-    return `已执行 · ${dur}ms`;
+    return t('page.ai.chat.toolExecuted', { duration: dur });
   }
-  return `失败 · ${errorCodeFriendly.value}`;
+  return t('page.ai.chat.toolFailedWithReason', { reason: errorCodeFriendly.value });
 });
 
 const expanded = ref(false);
@@ -163,7 +128,7 @@ async function handleDownload() {
       responseType: 'blob' as any
     });
     if (error || !data) {
-      window.$message?.error('下载失败');
+      window.$message?.error(t('page.ai.chat.downloadFailed'));
       return;
     }
     const blobUrl = URL.createObjectURL(data);
@@ -261,8 +226,8 @@ function onReject() {
     <div v-show="expanded" class="tool-card-body">
       <div class="tool-section">
         <div class="tool-section-title">
-          参数
-          <span class="hint">· args_summary（仅元信息）</span>
+          {{ t('page.ai.chat.toolArgs') }}
+          <span class="hint">· args_summary（{{ t('page.ai.chat.toolArgsMetadataHint') }}）</span>
         </div>
         <div class="summary-line">{{ started.summary }}</div>
         <table v-if="argsEntries.length > 0" class="kv-table">
@@ -277,7 +242,7 @@ function onReject() {
       <!-- spec 2026-07-16 §3: 按 viewType 路由标准组件 -->
       <div v-if="result && result.ok && viewProps" class="tool-section">
         <div class="tool-section-title">
-          数据视图
+          {{ t('page.ai.chat.toolDataView') }}
           <span class="hint">· {{ viewProps.viewType }}</span>
         </div>
         <component :is="viewComponent" :data="viewProps" />
@@ -285,13 +250,13 @@ function onReject() {
       <!-- 兜底：result.ok 但 ui=None（老 tool 未迁移 / executor fallback 包装） -->
       <div v-else-if="result && result.ok && fallbackJson" class="tool-section">
         <div class="tool-section-title">
-          结果摘要
+          {{ t('page.ai.chat.toolResultSummary') }}
           <span class="hint">· result</span>
         </div>
         <pre class="tool-pre">{{ fallbackJson }}</pre>
       </div>
       <div v-if="result && !result.ok" class="tool-section tool-error">
-        <div class="tool-section-title">错误</div>
+        <div class="tool-section-title">{{ t('page.ai.chat.toolError') }}</div>
         <div class="tool-error-code">{{ result.errorCode }}</div>
         <div v-if="result.errorMsg" class="tool-error-msg">{{ result.errorMsg }}</div>
       </div>
@@ -299,14 +264,14 @@ function onReject() {
 
     <!-- spec 2026-07-16 §3 决策 2: chip 从 started.chipTarget 读；决策 N: 用 router-link 避免 SPA 整页刷新 -->
     <div v-if="chipHref" class="chip-row">
-      <RouterLink class="chip-link" :to="chipHref">📊 查看完整数据 →</RouterLink>
-      <span class="chip-hint">跳转到模块页（已带筛选回放）</span>
+      <RouterLink class="chip-link" :to="chipHref">📊 {{ t('page.ai.chat.viewFullData') }}</RouterLink>
+      <span class="chip-hint">{{ t('page.ai.chat.replayFilterHint') }}</span>
     </div>
 
     <!-- Task 33：下载 chip 常显（不依赖 expanded），与 chipHref 跳转 chip 同级 -->
     <div v-if="downloadAction" class="chip-row">
       <button class="chip-link chip-link--download" :disabled="downloading" @click="handleDownload">
-        {{ downloading ? '⏳ 下载中…' : '⬇ 下载文件' }}
+        {{ downloading ? `⏳ ${t('page.ai.chat.downloading')}` : `⬇ ${t('page.ai.chat.downloadFile')}` }}
       </button>
       <span class="chip-hint">{{ downloadAction.filename }}</span>
     </div>
@@ -314,12 +279,14 @@ function onReject() {
     <!-- §12 场景 4/5: HITL pending 内联倒计时 bar -->
     <div v-if="isPending" class="hitl-bar">
       <span>⏱</span>
-      <span>剩余</span>
+      <span>{{ t('page.ai.chat.timeRemaining') }}</span>
       <span class="timer" :class="{ urgent: isUrgent }">{{ formattedTime }}</span>
-      <span class="hitl-hint">{{ isUrgent ? '即将超时' : '5 分钟后自动取消' }}</span>
+      <span class="hitl-hint">
+        {{ isUrgent ? t('page.ai.chat.expiringSoon') : t('page.ai.chat.autoCancelAfterFiveMinutes') }}
+      </span>
       <div class="hitl-action">
-        <button class="btn-mini btn-mini-ghost" @click.stop="onReject">取消</button>
-        <button class="btn-mini btn-mini-primary" @click.stop="onApprove">立即确认</button>
+        <button class="btn-mini btn-mini-ghost" @click.stop="onReject">{{ t('common.cancel') }}</button>
+        <button class="btn-mini btn-mini-primary" @click.stop="onApprove">{{ t('page.ai.chat.confirmNow') }}</button>
       </div>
     </div>
   </div>

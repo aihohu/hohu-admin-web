@@ -18,7 +18,7 @@ const visible = defineModel<boolean>('visible', {
   default: false
 });
 
-const title = computed(() => 'AI Agent 授权');
+const title = computed(() => $t('page.ai.aiAgentAuth.title'));
 
 const showSpin = shallowRef<boolean>(false);
 
@@ -66,11 +66,11 @@ defineExpose({ handleSubmit, checkedIds, allAgents });
             >
               {{ agent.name }} ({{ agent.code }})
             </NCheckbox>
-            <NTag v-if="agent.isShared" size="small" type="info">shared 直通</NTag>
+            <NTag v-if="agent.isShared" size="small" type="info">{{ $t('page.ai.aiAgentAuth.sharedTag') }}</NTag>
           </div>
         </NSpace>
       </NCheckboxGroup>
-      <NAlert type="info" class="mt-12px" :bordered="false">shared Agent 直通所有用户，无需勾选。</NAlert>
+      <NAlert type="info" class="mt-12px" :bordered="false">{{ $t('page.ai.aiAgentAuth.sharedHint') }}</NAlert>
     </NSpin>
     <template #footer>
       <NSpace justify="end">

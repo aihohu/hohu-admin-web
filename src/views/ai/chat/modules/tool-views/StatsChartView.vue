@@ -5,8 +5,11 @@ import * as echarts from 'echarts/core';
 import { BarChart, PieChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import { useI18n } from 'vue-i18n';
 
 echarts.use([GridComponent, LegendComponent, TooltipComponent, BarChart, PieChart, CanvasRenderer]);
+
+const { t } = useI18n();
 
 const props = defineProps<{
   data: Api.Ai.UIResult;
@@ -33,9 +36,9 @@ const labeled = computed(() =>
 );
 
 function formatLabel(v: string): string {
-  if (v === 'null' || v === '' || v === null) return '未知（未设置）';
-  if (v === '1' || v === 'male') return '男';
-  if (v === '2' || v === 'female') return '女';
+  if (v === 'null' || v === '' || v === null) return t('page.ai.chat.statsUnknown');
+  if (v === '1' || v === 'male') return t('page.ai.chat.statsMale');
+  if (v === '2' || v === 'female') return t('page.ai.chat.statsFemale');
   return v;
 }
 
@@ -146,10 +149,14 @@ onUnmounted(() => {
   <div class="stats-tabs">
     <div class="stats-tab-header">
       <button class="stats-tab" :class="[{ active: activeTab === 'table' }]" @click="activeTab = 'table'">
-        📋 表格
+        📋 {{ t('page.ai.chat.statsTable') }}
       </button>
-      <button class="stats-tab" :class="[{ active: activeTab === 'bar' }]" @click="activeTab = 'bar'">📊 柱状图</button>
-      <button class="stats-tab" :class="[{ active: activeTab === 'pie' }]" @click="activeTab = 'pie'">🥧 饼图</button>
+      <button class="stats-tab" :class="[{ active: activeTab === 'bar' }]" @click="activeTab = 'bar'">
+        📊 {{ t('page.ai.chat.statsBar') }}
+      </button>
+      <button class="stats-tab" :class="[{ active: activeTab === 'pie' }]" @click="activeTab = 'pie'">
+        🥧 {{ t('page.ai.chat.statsPie') }}
+      </button>
     </div>
     <div class="stats-tab-body">
       <table v-if="activeTab === 'table'" class="stats-table">
@@ -162,7 +169,7 @@ onUnmounted(() => {
             </td>
           </tr>
           <tr class="stats-total">
-            <td>合计</td>
+            <td>{{ t('page.ai.chat.statsTotal') }}</td>
             <td>
               <strong>{{ total }}</strong>
             </td>

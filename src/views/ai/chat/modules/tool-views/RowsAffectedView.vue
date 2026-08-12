@@ -13,7 +13,7 @@ const label = computed(() => {
   if (props.data.labelKey) {
     return t(props.data.labelKey, { count: viewData.value.count, ...props.data.labelParams });
   }
-  return `已影响 ${viewData.value.count} 行`;
+  return t('page.ai.chat.rowsAffected', { count: viewData.value.count });
 });
 </script>
 
@@ -22,7 +22,7 @@ const label = computed(() => {
     <div class="count-badge">{{ viewData.count }}</div>
     <div class="label">{{ label }}</div>
     <details v-if="viewData.ids && viewData.ids.length > 0" class="ids-detail">
-      <summary>查看 ID 列表（{{ viewData.ids.length }}）</summary>
+      <summary>{{ t('page.ai.chat.viewIdList', { count: viewData.ids.length }) }}</summary>
       <pre>{{ viewData.ids.join(', ') }}</pre>
     </details>
   </div>

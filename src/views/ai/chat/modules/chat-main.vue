@@ -136,9 +136,9 @@ async function handleSend() {
   if (text) {
     title = text.slice(0, 20) + (text.length > 20 ? '...' : '');
   } else if (hasFiles) {
-    title = '文件对话';
+    title = t('page.ai.chat.fileConversation');
   } else {
-    title = '图片对话';
+    title = t('page.ai.chat.imageConversation');
   }
   if (!hasConversation.value) {
     const { data, error } = await fetchSaveConversation({

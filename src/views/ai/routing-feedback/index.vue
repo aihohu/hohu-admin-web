@@ -4,6 +4,7 @@ import { NCard, NDataTable, NInput, NRadio, NRadioGroup, NSpace, NStatistic, NGr
 import type { DataTableColumn } from 'naive-ui';
 import dayjs from 'dayjs';
 import { fetchRoutingFeedbackList, fetchRoutingFeedbackSummary } from '@/service/api';
+import { $t } from '@/locales';
 
 defineOptions({
   name: 'AiRoutingFeedback'
@@ -50,15 +51,15 @@ async function loadList() {
 
 const columns = computed<DataTableColumn<Api.AiRoutingFeedback.ListItem>[]>(() => [
   {
-    title: '时间',
+    title: $t('page.ai.routingFeedback.time'),
     key: 'createTime',
     width: 180,
     render: (row: Api.AiRoutingFeedback.ListItem) =>
       row.createTime ? dayjs(row.createTime).format('YYYY-MM-DD HH:mm:ss') : '-'
   },
-  { title: '用户', key: 'userName', width: 120 },
+  { title: $t('page.ai.routingFeedback.user'), key: 'userName', width: 120 },
   {
-    title: '原 Agent → 纠正 Agent',
+    title: $t('page.ai.routingFeedback.agentFlow'),
     key: 'agentFlow',
     render: (row: Api.AiRoutingFeedback.ListItem) => `${row.originalAgentName} → ${row.correctedAgentName || '-'}`
   },
@@ -82,16 +83,16 @@ const columns = computed<DataTableColumn<Api.AiRoutingFeedback.ListItem>[]>(() =
   }
 ]);
 
-const topWrongColumns: DataTableColumn<Api.AiRoutingFeedback.TopWrongAgent>[] = [
+const topWrongColumns = computed<DataTableColumn<Api.AiRoutingFeedback.TopWrongAgent>[]>(() => [
   { title: 'Agent', key: 'agentName' },
-  { title: '错路由数', key: 'wrongCount', width: 120 },
+  { title: $t('page.ai.routingFeedback.wrongCount'), key: 'wrongCount', width: 120 },
   {
-    title: '最常被纠正到',
+    title: $t('page.ai.routingFeedback.topCorrected'),
     key: 'topCorrected',
     render: (row: Api.AiRoutingFeedback.TopWrongAgent) =>
       row.topCorrected ? `${row.topCorrected.name} (${row.topCorrected.count})` : '-'
   }
-];
+]);
 
 const wrongRateDisplay = computed(() => {
   if (!summary.value) return '0%';
@@ -130,41 +131,71 @@ defineExpose({ days });
 
 <template>
   <NSpace vertical :size="16">
-    <NCard title="筛选">
+    <NCard :title="$t('page.ai.routingFeedback.filter')">
       <NSpace align="center">
-        <span>时间范围：</span>
+        <span>{{ $t('page.ai.routingFeedback.timeRange') }}：</span>
         <NRadioGroup v-model:value="days">
-          <NRadio :value="7" data-testid="routing-feedback-days-7">最近 7 天</NRadio>
-          <NRadio :value="30" data-testid="routing-feedback-days-30">最近 30 天</NRadio>
+          <NRadio :value="7" data-testid="routing-feedback-days-7">
+            {{ $t('page.ai.routingFeedback.last7Days') }}
+          </NRadio>
+          <NRadio :value="30" data-testid="routing-feedback-days-30">
+            {{ $t('page.ai.routingFeedback.last30Days') }}
+          </NRadio>
         </NRadioGroup>
       </NSpace>
     </NCard>
 
-    <NCard title="概览" data-testid="routing-feedback-summary">
+    <NCard :title="$t('page.ai.routingFeedback.overview')" data-testid="routing-feedback-summary">
       <NGrid :cols="4" :x-gap="16" :y-gap="16" responsive="screen">
         <NGridItem>
-          <NStatistic label="反馈总数" :value="summary?.total ?? 0" :loading="summaryLoading" />
+          <NStatistic
+            :label="$t('page.ai.routingFeedback.total')"
+            :value="summary?.total ?? 0"
+            :loading="summaryLoading"
+          />
         </NGridItem>
         <NGridItem>
-          <NStatistic label="正确路由" :value="summary?.correct ?? 0" :loading="summaryLoading" />
+          <NStatistic
+            :label="$t('page.ai.routingFeedback.correct')"
+            :value="summary?.correct ?? 0"
+            :loading="summaryLoading"
+          />
         </NGridItem>
         <NGridItem>
-          <NStatistic label="错误路由" :value="summary?.wrong ?? 0" :loading="summaryLoading" />
+          <NStatistic
+            :label="$t('page.ai.routingFeedback.wrong')"
+            :value="summary?.wrong ?? 0"
+            :loading="summaryLoading"
+          />
         </NGridItem>
         <NGridItem>
-          <NStatistic label="错误率" :value="wrongRateDisplay" :loading="summaryLoading" />
+          <NStatistic
+            :label="$t('page.ai.routingFeedback.wrongRate')"
+            :value="wrongRateDisplay"
+            :loading="summaryLoading"
+          />
         </NGridItem>
       </NGrid>
     </NCard>
 
-    <NCard title="高频错误 Agent TOP10">
+    <NCard :title="$t('page.ai.routingFeedback.topWrongAgentsTop10')">
       <NDataTable :columns="topWrongColumns" :data="summary?.topWrongAgents ?? []" :loading="summaryLoading" />
     </NCard>
 
-    <NCard title="错误反馈明细">
+    <NCard :title="$t('page.ai.routingFeedback.wrongDetail')">
       <NSpace align="center" :size="12" class="mb-3">
-        <NInput v-model:value="originalAgent" placeholder="原 Agent 名称/编码" clearable style="width: 200px" />
-        <NInput v-model:value="correctedAgent" placeholder="纠正到 Agent 名称/编码" clearable style="width: 200px" />
+        <NInput
+          v-model:value="originalAgent"
+          :placeholder="$t('page.ai.routingFeedback.originalAgentPlaceholder')"
+          clearable
+          style="width: 200px"
+        />
+        <NInput
+          v-model:value="correctedAgent"
+          :placeholder="$t('page.ai.routingFeedback.correctedAgentPlaceholder')"
+          clearable
+          style="width: 200px"
+        />
       </NSpace>
       <NDataTable
         :columns="columns"

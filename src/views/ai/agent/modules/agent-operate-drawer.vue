@@ -26,7 +26,9 @@ const detailLoading = ref(false);
 const model = ref<Api.AiAgent.AdminUpdateReq & { code?: string }>({});
 const detail = shallowRef<Api.AiAgent.AdminDetailItem | null>(null);
 
-const modelPreferenceOptions = shallowRef<{ label: string; value: string }[]>([{ label: '用全局默认', value: '' }]);
+const modelPreferenceOptions = shallowRef<{ label: string; value: string }[]>([
+  { label: $t('page.ai.agent.useGlobalDefault'), value: '' }
+]);
 
 const descLen = computed(() => model.value.description?.length ?? 0);
 const descInvalid = computed(() => {
@@ -53,7 +55,7 @@ async function loadDetail() {
     };
     model.value.code = data.code;
   } else {
-    window.$message?.error?.('加载失败');
+    window.$message?.error?.($t('page.ai.agent.loadFailed'));
   }
   detailLoading.value = false;
 }
@@ -66,7 +68,7 @@ async function loadModelOptions() {
       label: `${m.providerName} / ${m.model}`,
       value: `${m.providerCode}:${m.model}`
     }));
-    modelPreferenceOptions.value = [{ label: '用全局默认', value: '' }, ...opts];
+    modelPreferenceOptions.value = [{ label: $t('page.ai.agent.useGlobalDefault'), value: '' }, ...opts];
   }
   // silent fail — modelPreference select keeps default option
 }
@@ -110,7 +112,7 @@ defineExpose({ descInvalid, model, handleSubmit });
 
 <template>
   <NDrawer v-model:show="visible" :width="600" data-testid="ai-agent-drawer">
-    <NDrawerContent title="编辑 Agent" closable>
+    <NDrawerContent :title="$t('page.ai.agent.editTitle')" closable>
       <NForm :model="model" label-placement="top" :disabled="detailLoading">
         <NFormItem :label="$t('page.ai.agent.code')">
           <NInput :value="model.code" disabled />

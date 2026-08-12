@@ -109,7 +109,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
               data-testid={`role-ai-agent-auth-${row.roleCode}`}
               onClick={() => onAiAgentAuthClick(row.roleId)}
             >
-              AI Agent 授权
+              {$t('page.ai.aiAgentAuth.title')}
             </NButton>
           )}
           {hasAuth('system:role:edit') && (
@@ -153,11 +153,11 @@ onMounted(async () => {
   if (typeof aiQueryId !== 'string' || !aiQueryId) return;
   const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
   if (error) {
-    window.$message?.error('筛选回放加载失败');
+    window.$message?.error($t('common.filterReplayLoadFailed'));
     return;
   }
   if (!cache) {
-    window.$message?.info('筛选条件已过期（5 分钟），请重新发起查询', { duration: 8000 });
+    window.$message?.info($t('common.filterReplayExpired'), { duration: 8000 });
     return;
   }
   const filters = cache.filters || {};

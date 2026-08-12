@@ -101,9 +101,9 @@ function formatFileSize(bytes: number): string {
 }
 
 function getFileExtension(filename?: string): string {
-  if (!filename) return '文件';
+  if (!filename) return t('page.ai.chat.fileFallback');
   const parts = filename.split('.');
-  return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : '文件';
+  return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : t('page.ai.chat.fileFallback');
 }
 
 // 非 image 文件 parts（独立附件块，渲染在气泡外，与文字分离形成视觉层级）
@@ -209,7 +209,7 @@ async function submitFeedback() {
                 <IconIcRoundUpload class="text-18px" />
               </div>
               <div class="msg-file-info">
-                <div class="msg-file-name">{{ part.filename || '附件' }}</div>
+                <div class="msg-file-name">{{ part.filename || t('page.ai.chat.attachmentFallback') }}</div>
                 <div v-if="part.fileSize" class="msg-file-meta">
                   {{ formatFileSize(part.fileSize) }} · {{ getFileExtension(part.filename) }}
                 </div>

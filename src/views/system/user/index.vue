@@ -202,12 +202,12 @@ onMounted(async () => {
   if (typeof aiQueryId !== 'string' || !aiQueryId) return;
   const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
   if (error) {
-    window.$message?.error('筛选回放加载失败');
+    window.$message?.error($t('common.filterReplayLoadFailed'));
     return;
   }
   if (!cache) {
     // §8.7 v1.5+：chip 跳转 trace_id TTL 5min 过期后的友好提示
-    window.$message?.info('筛选条件已过期（5 分钟），请重新发起查询', { duration: 8000 });
+    window.$message?.info($t('common.filterReplayExpired'), { duration: 8000 });
     return;
   }
   // query_cache 返回 filters（snake_case），映射到 searchParams（camelCase）

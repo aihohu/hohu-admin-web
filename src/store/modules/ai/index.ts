@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { SetupStoreId } from '@/enum';
+import { $t } from '@/locales';
 import { localStg } from '@/utils/storage';
 import { getServiceBaseURL } from '@/utils/service';
 import { fetchGetConversationList, fetchGetConversationDetail, fetchDeleteConversation } from '@/service/api';
@@ -348,7 +349,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       reconcilePendingActions(data.pendingActions || []);
       streamHandoffPhase.value = 'persisted';
     } else {
-      window.$message?.error('加载会话失败');
+      window.$message?.error($t('page.ai.chat.loadConversationFailed'));
     }
   }
 
@@ -407,7 +408,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         streamEvents.value.push(event);
         break;
       case 'ai_error':
-        window.$message?.error(`AI 错误: ${event.message || '未知错误'}`);
+        window.$message?.error(
+          $t('page.ai.chat.aiError', { message: event.message || $t('page.ai.chat.unknownError') })
+        );
         break;
       case 'clarification_required':
         // spec §6.2 v4: stateless clarification —— 前端弹候选 Agent 卡片
@@ -471,7 +474,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     if (event.type === 'error' && typeof event.errorText === 'string') {
       const isUsageLimit = event.errorText.includes('request_limit') || event.errorText.includes('tool_calls_limit');
       window.$message?.error(
-        isUsageLimit ? 'AI 调用次数超限，可能选错了工具或在循环重试，请换种问法' : `AI 错误: ${event.errorText}`
+        isUsageLimit ? $t('page.ai.chat.usageLimitExceeded') : $t('page.ai.chat.aiError', { message: event.errorText })
       );
       return false;
     }
@@ -550,7 +553,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       });
 
       if (!response.ok) {
-        window.$message?.error(`请求失败: ${response.status}`);
+        window.$message?.error($t('page.ai.chat.requestFailed', { status: response.status }));
         streamHandoffPhase.value = 'stale';
         return;
       }
@@ -592,7 +595,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       streamCompleted = true;
       const terminalAck = lastDoneAck.value as Api.Ai.DoneEvent | null;
       if (terminalAck?.persistence === 'failed') {
-        window.$message?.warning('回复未持久化，已同步当前会话状态');
+        window.$message?.warning($t('page.ai.chat.responseNotPersisted'));
       }
     } catch (error: any) {
       if (!isActiveRun()) {
@@ -624,7 +627,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             streamHandoffPhase.value = 'stale';
           }
         } else {
-          window.$message?.error(`发送失败: ${error.message}`);
+          window.$message?.error($t('page.ai.chat.sendFailed', { message: error.message }));
           streamHandoffPhase.value = 'stale';
         }
       }
@@ -643,7 +646,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           const expectedToolCallIds = cards.map(card => card.started.toolCallId);
           const synced = await syncStreamProjection(traceId, expectedToolCallIds, lastDoneAck.value);
           if (!synced) {
-            window.$message?.warning('回复尚未完成持久化同步，请稍后重试');
+            window.$message?.warning($t('page.ai.chat.responseSyncPending'));
           }
         }
         streamingText.value = '';
@@ -663,7 +666,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
    */
   async function attemptResume(confirmationId: string) {
     if (resumeAttempts.value >= 3) {
-      window.$message?.error('续传失败 3 次，请重新发起对话');
+      window.$message?.error($t('page.ai.chat.resumeFailedAfterRetries'));
       return;
     }
     resumeAttempts.value += 1;
@@ -694,23 +697,23 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       if (response.status === 410) {
         // 确认窗口已被处理（approved/rejected/expired），fallback 轮询结果
         if (pendingToolCallId.value) {
-          window.$message?.info('操作已被处理，正在拉取结果...');
+          window.$message?.info($t('page.ai.chat.actionHandledLoadingResult'));
           startPollingResult(pendingToolCallId.value);
         } else {
-          window.$message?.warning('该确认已过期或已被处理，请重新发起');
+          window.$message?.warning($t('page.ai.chat.confirmationExpiredOrHandled'));
         }
         return;
       }
       if (response.status === 422) {
-        window.$message?.warning('确认窗口已临近超时，请重新发起');
+        window.$message?.warning($t('page.ai.chat.confirmationNearExpiry'));
         return;
       }
       if (response.status === 404) {
-        window.$message?.info('该确认已过期，请重新发起');
+        window.$message?.info($t('page.ai.chat.confirmationExpired'));
         return;
       }
       if (!response.ok) {
-        window.$message?.error(`续传失败: ${response.status}`);
+        window.$message?.error($t('page.ai.chat.resumeFailed', { message: response.status }));
         return;
       }
       const reader = response.body?.getReader();
@@ -736,7 +739,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
-        window.$message?.error(`续传失败: ${error.message}`);
+        window.$message?.error($t('page.ai.chat.resumeFailed', { message: error.message }));
       }
     } finally {
       // 主动 abort 让服务端 finally 块立即跑释放 owner 锁
@@ -760,25 +763,25 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         action
       });
       if (error || !data) {
-        window.$message?.error('确认失败');
+        window.$message?.error($t('page.ai.chat.confirmationFailed'));
         await refreshCurrentConversationDetail();
         return;
       }
       const terminalStatuses = ['succeeded', 'failed', 'rejected', 'expired'];
       if (terminalStatuses.includes(data.status)) {
         if (!(await syncConfirmationTerminal(confirmation))) {
-          window.$message?.warning('操作已完成，但消息卡片尚未同步，请稍后重试');
+          window.$message?.warning($t('page.ai.chat.operationCardSyncPending'));
         }
-        if (data.status === 'succeeded') window.$message?.success('操作已执行成功');
-        else if (data.status === 'rejected') window.$message?.info('操作已取消');
-        else if (data.status === 'expired') window.$message?.warning('操作已过期');
-        else window.$message?.error('操作执行失败');
+        if (data.status === 'succeeded') window.$message?.success($t('page.ai.chat.operationSucceeded'));
+        else if (data.status === 'rejected') window.$message?.info($t('page.ai.chat.operationCancelled'));
+        else if (data.status === 'expired') window.$message?.warning($t('page.ai.chat.operationExpired'));
+        else window.$message?.error($t('page.ai.chat.operationFailed'));
         return;
       }
       if (!data.actionId) removePendingByToolCallId(data.toolCallId);
       startPollingResult(data.toolCallId, confirmation);
     } catch (e: any) {
-      window.$message?.error(`确认失败: ${e.message}`);
+      window.$message?.error($t('page.ai.chat.confirmationFailedWithMessage', { message: e.message }));
     }
   }
 
@@ -804,7 +807,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     const timer = setInterval(async () => {
       if (Date.now() > deadline) {
         stopPolling(toolCallId);
-        window.$message?.info('操作仍在执行，请稍后到 AI Trace 查看');
+        window.$message?.info($t('page.ai.chat.operationStillRunning'));
         return;
       }
       try {
@@ -846,13 +849,15 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             await refreshCurrentConversationDetail();
           }
           if (data.status === 'success') {
-            window.$message?.success('操作已执行成功');
+            window.$message?.success($t('page.ai.chat.operationSucceeded'));
           } else if (data.status === 'failed') {
-            window.$message?.error(`操作失败: ${data.errorCode || '未知'}`);
+            window.$message?.error(
+              $t('page.ai.chat.operationFailedWithCode', { code: data.errorCode || $t('page.ai.chat.unknownError') })
+            );
           } else if (data.status === 'rejected') {
-            window.$message?.info('操作已取消');
+            window.$message?.info($t('page.ai.chat.operationCancelled'));
           } else if (data.status === 'expired') {
-            window.$message?.warning('操作已超时');
+            window.$message?.warning($t('page.ai.chat.operationExpired'));
           }
         }
       } catch {
@@ -879,11 +884,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       await syncStreamProjection();
     }
     if (Object.keys(pendingActionsById.value).length > 0) {
-      window.$message?.warning('请先处理上一条消息中的待确认操作');
+      window.$message?.warning($t('page.ai.chat.pendingActionFirst'));
       return;
     }
     if (streamHandoffPhase.value === 'awaiting_sync' || streamHandoffPhase.value === 'stale') {
-      window.$message?.warning('上一条回复尚未同步，请稍后重试');
+      window.$message?.warning($t('page.ai.chat.previousResponseSyncPending'));
       return;
     }
     if (
@@ -1043,13 +1048,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     try {
       const { error } = await fetchRoutingFeedback(messageId, payload);
       if (error) {
-        window.$message?.error(`反馈提交失败: ${error.message}`);
+        window.$message?.error($t('page.ai.chat.feedbackSubmitFailed', { message: error.message }));
         return false;
       }
-      window.$message?.success('反馈已提交，谢谢！');
+      window.$message?.success($t('page.ai.chat.feedbackSubmitted'));
       return true;
     } catch (e: any) {
-      window.$message?.error(`反馈提交失败: ${e.message}`);
+      window.$message?.error($t('page.ai.chat.feedbackSubmitFailed', { message: e.message }));
       return false;
     }
   }
