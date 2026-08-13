@@ -3,7 +3,7 @@ import { onMounted, reactive, shallowRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
-import { enableStatusRecord } from '@/constants/business';
+import { enableStatusRecord, roleDataScopeRecord } from '@/constants/business';
 import { fetchBatchDeleteRole, fetchDeleteRole, fetchGetRoleList } from '@/service/api';
 import { fetchAiQueryCache } from '@/service/api/ai';
 import { useAppStore } from '@/store/modules/app';
@@ -29,6 +29,7 @@ const searchParams: Api.SystemManage.RoleSearchParams = reactive({
   size: 10,
   roleName: null,
   roleCode: null,
+  dataScope: null,
   status: null
 });
 
@@ -70,6 +71,17 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       minWidth: 120
     },
     {
+      key: 'dataScope',
+      title: $t('page.system.role.dataScope.label'),
+      align: 'center',
+      minWidth: 140,
+      render: row => (
+        <NTag type="info" class="whitespace-nowrap">
+          {$t(roleDataScopeRecord[row.dataScope])}
+        </NTag>
+      )
+    },
+    {
       key: 'status',
       title: $t('page.system.role.roleStatus'),
       align: 'center',
@@ -93,9 +105,9 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       key: 'operate',
       title: $t('common.operate'),
       align: 'center',
-      width: 360,
+      minWidth: 360,
       render: row => (
-        <div class="flex-center gap-8px">
+        <div class="flex-center flex-nowrap gap-8px whitespace-nowrap">
           {hasAuth('system:role:menu-auth') && (
             <NButton type="info" ghost size="small" onClick={() => onMenuAuthClick(row.roleId)}>
               {$t('page.system.role.menuAuth')}
@@ -217,8 +229,9 @@ function onAiAgentAuthClick(id: string) {
         :columns="columns"
         :data="data"
         size="small"
+        table-layout="auto"
         :flex-height="!appStore.isMobile"
-        :scroll-x="802"
+        :scroll-x="1200"
         :loading="loading"
         remote
         :row-key="row => row.roleId"

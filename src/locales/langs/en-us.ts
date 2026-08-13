@@ -497,6 +497,16 @@ const local: App.I18n.Schema = {
         roleDesc: 'Role Description',
         menuAuth: 'Menu Auth',
         buttonAuth: 'Button Auth',
+        dataScope: {
+          label: 'Data Scope',
+          placeholder: 'Please select data scope',
+          selectDept: 'Select Departments',
+          all: 'All Data',
+          custom: 'Custom Departments',
+          dept: 'Current Department',
+          deptAndSub: 'Current and Child Departments',
+          self: 'Self Only'
+        },
         form: {
           roleName: 'Please enter role name',
           roleCode: 'Please enter role code',

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { toRaw } from 'vue';
 import { jsonClone } from '@sa/utils';
-import { enableStatusOptions } from '@/constants/business';
+import { enableStatusOptions, roleDataScopeOptions } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
 
@@ -32,15 +32,30 @@ function search() {
   <NCard :bordered="false" size="small" class="card-wrapper">
     <NCollapse :default-expanded-names="['role-search']">
       <NCollapseItem :title="$t('common.search')" name="role-search">
-        <NForm :model="model" label-placement="left" :label-width="80">
+        <NForm :model="model" label-placement="top">
           <NGrid responsive="screen" item-responsive>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.role.roleName')" path="roleName" class="pr-24px">
+            <NFormItemGi
+              span="24 s:12 m:6 l:5"
+              :label="$t('page.system.role.roleName')"
+              path="roleName"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.roleName" :placeholder="$t('page.system.role.form.roleName')" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.role.roleCode')" path="roleCode" class="pr-24px">
+            <NFormItemGi
+              span="24 s:12 m:6 l:5"
+              :label="$t('page.system.role.roleCode')"
+              path="roleCode"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.roleCode" :placeholder="$t('page.system.role.form.roleCode')" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.role.roleStatus')" path="status" class="pr-24px">
+            <NFormItemGi
+              span="24 s:12 m:6 l:5"
+              :label="$t('page.system.role.roleStatus')"
+              path="status"
+              class="pr-24px"
+            >
               <NSelect
                 v-model:value="model.status"
                 :placeholder="$t('page.system.role.form.roleStatus')"
@@ -48,7 +63,21 @@ function search() {
                 clearable
               />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6">
+            <NFormItemGi
+              span="24 s:12 m:6 l:5"
+              :label="$t('page.system.role.dataScope.label')"
+              path="dataScope"
+              class="pr-24px"
+            >
+              <NSelect
+                v-model:value="model.dataScope"
+                data-testid="role-data-scope-search"
+                :placeholder="$t('page.system.role.dataScope.placeholder')"
+                :options="translateOptions(roleDataScopeOptions)"
+                clearable
+              />
+            </NFormItemGi>
+            <NFormItemGi span="24 s:12 m:6 l:4" data-testid="role-search-actions">
               <NSpace class="w-full" justify="end">
                 <NButton @click="resetModel">
                   <template #icon>

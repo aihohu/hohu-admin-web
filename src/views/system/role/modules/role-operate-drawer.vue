@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { jsonClone } from '@sa/utils';
-import { enableStatusOptions } from '@/constants/business';
-import { fetchGetDeptTree, fetchSaveRole, fetchUpdateRole } from '@/service/api';
+import { enableStatusOptions, roleDataScopeOptions } from '@/constants/business';
+import { fetchGetDeptTreeOption, fetchSaveRole, fetchUpdateRole } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
+import { translateOptions } from '@/utils/common';
 
 defineOptions({
   name: 'RoleOperateDrawer'
@@ -40,14 +41,6 @@ const title = computed(() => {
   return titles[props.operateType];
 });
 
-const dataScopeOptions = [
-  { label: '全部数据', value: '1' },
-  { label: '自定义数据', value: '2' },
-  { label: '本部门数据', value: '3' },
-  { label: '本部门及以下', value: '4' },
-  { label: '仅本人', value: '5' }
-];
-
 type Model = Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'roleDesc' | 'dataScope' | 'status'> & {
   deptIds: string[];
 };
@@ -77,10 +70,10 @@ const loading = ref(false);
 
 const showDeptTree = computed(() => model.value.dataScope === '2');
 
-const deptTreeData = ref<Api.SystemManage.DeptTree[]>([]);
+const deptTreeData = ref<Api.SystemManage.DeptTreeOption[]>([]);
 
 async function loadDeptTree() {
-  const { data } = await fetchGetDeptTree();
+  const { data } = await fetchGetDeptTreeOption();
   if (data) {
     deptTreeData.value = data;
   }
@@ -159,10 +152,10 @@ watch(visible, () => {
             <NRadio v-for="item in enableStatusOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
           </NRadioGroup>
         </NFormItem>
-        <NFormItem label="数据权限" path="dataScope">
-          <NSelect v-model:value="model.dataScope" :options="dataScopeOptions" />
+        <NFormItem :label="$t('page.system.role.dataScope.label')" path="dataScope">
+          <NSelect v-model:value="model.dataScope" :options="translateOptions(roleDataScopeOptions)" />
         </NFormItem>
-        <NFormItem v-if="showDeptTree" label="选择部门">
+        <NFormItem v-if="showDeptTree" :label="$t('page.system.role.dataScope.selectDept')">
           <NTree
             v-model:checked-keys="model.deptIds"
             :data="deptTreeData"

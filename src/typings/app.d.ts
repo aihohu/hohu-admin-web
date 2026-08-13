@@ -711,6 +711,16 @@ declare namespace App {
             roleCode: string;
             roleStatus: string;
             roleDesc: string;
+            dataScope: {
+              label: string;
+              placeholder: string;
+              selectDept: string;
+              all: string;
+              custom: string;
+              dept: string;
+              deptAndSub: string;
+              self: string;
+            };
             form: {
               roleName: string;
               roleCode: string;

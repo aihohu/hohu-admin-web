@@ -80,7 +80,7 @@ declare namespace Api {
       /** role description */
       roleDesc: string;
       /** data scope: 1-all, 2-custom, 3-dept, 4-dept and sub, 5-self */
-      dataScope: string;
+      dataScope: '1' | '2' | '3' | '4' | '5';
       /** dept ids for custom data scope */
       deptIds: string[];
     }>;
@@ -94,7 +94,7 @@ declare namespace Api {
 
     /** role search params */
     type RoleSearchParams = CommonType.RecordNullable<
-      Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'status'> & CommonSearchParams
+      Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'dataScope' | 'status'> & CommonSearchParams
     >;
 
     /** role list */

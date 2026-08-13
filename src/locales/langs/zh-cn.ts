@@ -491,6 +491,16 @@ const local: App.I18n.Schema = {
         roleDesc: '角色描述',
         menuAuth: '菜单权限',
         buttonAuth: '按钮权限',
+        dataScope: {
+          label: '数据权限',
+          placeholder: '请选择数据权限',
+          selectDept: '选择部门',
+          all: '全部数据',
+          custom: '自定义数据',
+          dept: '本部门数据',
+          deptAndSub: '本部门及以下',
+          self: '仅本人'
+        },
         form: {
           roleName: '请输入角色名称',
           roleCode: '请输入角色编码',

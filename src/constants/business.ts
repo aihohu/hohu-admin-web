@@ -7,6 +7,16 @@ export const enableStatusRecord: Record<Api.Common.EnableStatus, App.I18n.I18nKe
 
 export const enableStatusOptions = transformRecordToOption(enableStatusRecord);
 
+export const roleDataScopeRecord: Record<Api.SystemManage.Role['dataScope'], App.I18n.I18nKey> = {
+  '1': 'page.system.role.dataScope.all',
+  '2': 'page.system.role.dataScope.custom',
+  '3': 'page.system.role.dataScope.dept',
+  '4': 'page.system.role.dataScope.deptAndSub',
+  '5': 'page.system.role.dataScope.self'
+};
+
+export const roleDataScopeOptions = transformRecordToOption(roleDataScopeRecord);
+
 export const userGenderRecord: Record<Api.SystemManage.UserGender, App.I18n.I18nKey> = {
   '0': 'page.system.user.gender.unknown',
   '1': 'page.system.user.gender.male',
