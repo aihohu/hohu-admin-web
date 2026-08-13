@@ -150,7 +150,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       key: 'operate',
       title: $t('common.operate'),
       align: 'center',
-      width: 200,
+      width: 280,
       render: row => (
         <div class="flex-center gap-8px">
           {hasAuth('system:user:edit') && (
@@ -197,7 +197,7 @@ const {
 
 // Replay cached tool filters when arriving from an AI result card.
 onMounted(async () => {
-  loadDefaultPassword();
+  if (hasAuth('system:user:import')) loadDefaultPassword();
   const aiQueryId = route.query.ai_query_id;
   if (typeof aiQueryId !== 'string' || !aiQueryId) return;
   const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
@@ -332,7 +332,7 @@ function handleExported() {
               </template>
               {{ $t('common.export') }}
             </NButton>
-            <NButton size="small" quaternary @click="openImportHistory">
+            <NButton v-if="hasAuth('system:user:import')" size="small" quaternary @click="openImportHistory">
               <template #icon>
                 <IconIcRoundHistory class="text-icon" />
               </template>
@@ -347,7 +347,7 @@ function handleExported() {
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
-        :scroll-x="1032"
+        :scroll-x="1200"
         :loading="loading"
         remote
         :row-key="row => row.userId"
