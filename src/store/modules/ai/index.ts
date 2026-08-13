@@ -69,6 +69,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const pendingToolCallId = ref<string | null>(null);
   /** §8.3 续传：已尝试次数（上限 3 次） */
   const resumeAttempts = ref(0);
+  /** Each durable confirmation owns an independent resume retry budget. */
+  const resumeAttemptsByConfirmation = new Map<string, number>();
   /** confirm 后 30s 轮询；每个 tool 独立，不能让后确认的 action 覆盖前一个。 */
   const pollTimers = new Map<string, ReturnType<typeof setInterval>>();
 
@@ -85,6 +87,22 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingConfirmation.value = values[0] ?? null;
     pendingConfirmationId.value = pendingConfirmation.value?.confirmationId ?? null;
     pendingToolCallId.value = pendingConfirmation.value?.toolCallId ?? null;
+    resumeAttempts.value = pendingConfirmationId.value
+      ? resumeAttemptsByConfirmation.get(pendingConfirmationId.value) || 0
+      : 0;
+  }
+
+  function findPendingByConfirmationId(confirmationId: string) {
+    return Object.values(pendingActionsById.value).find(item => item.confirmationId === confirmationId);
+  }
+
+  function getResumeAttempts(confirmationId: string) {
+    return resumeAttemptsByConfirmation.get(confirmationId) || 0;
+  }
+
+  function setResumeAttempts(confirmationId: string, attempts: number) {
+    resumeAttemptsByConfirmation.set(confirmationId, attempts);
+    if (pendingConfirmationId.value === confirmationId) resumeAttempts.value = attempts;
   }
 
   function messageToolCards(message: Api.Ai.Message) {
@@ -121,6 +139,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   function reconcilePendingActions(actions: Api.Ai.PendingAction[]) {
+    const activeConfirmationIds = new Set(actions.map(action => action.confirmationId));
+    for (const confirmationId of resumeAttemptsByConfirmation.keys()) {
+      if (!activeConfirmationIds.has(confirmationId)) resumeAttemptsByConfirmation.delete(confirmationId);
+    }
     pendingActionsById.value = Object.fromEntries(
       actions.map(action => [
         action.actionId,
@@ -144,6 +166,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   function removePendingByToolCallId(toolCallId: string) {
+    for (const item of Object.values(pendingActionsById.value)) {
+      if (item.toolCallId === toolCallId) resumeAttemptsByConfirmation.delete(item.confirmationId);
+    }
     pendingActionsById.value = Object.fromEntries(
       Object.entries(pendingActionsById.value).filter(([, item]) => item.toolCallId !== toolCallId)
     );
@@ -341,6 +366,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
     pendingClarification.value = null;
+    resumeAttemptsByConfirmation.clear();
     resumeAttempts.value = 0;
     currentMessages.value = [];
     const { data, error } = await fetchGetConversationDetail(conversationId);
@@ -373,6 +399,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
     pendingClarification.value = null;
+    resumeAttemptsByConfirmation.clear();
     resumeAttempts.value = 0;
   }
 
@@ -396,9 +423,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       case 'tool_call_result':
         streamEvents.value.push(event);
         // §8.3 续传：tool 执行完成则无需再续，清掉挂起状态
-        if (event.toolCallId === pendingToolCallId.value) {
-          removePendingByToolCallId(event.toolCallId);
-        }
+        removePendingByToolCallId(event.toolCallId);
         break;
       case 'confirmation_required':
       case 'confirmation_resumed':
@@ -508,6 +533,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     // v1.5+ supervisor routing: 新流开始时清空上轮 clarification 候选
     pendingClarification.value = null;
     // 新流开始：清空续传重试计数（旧失败不应阻塞新对话的续传）
+    resumeAttemptsByConfirmation.clear();
     resumeAttempts.value = 0;
     abortController = new AbortController();
     let streamCompleted = false;
@@ -615,7 +641,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         streamHandoffPhase.value = 'persisted';
       } else {
         const runPending = Object.values(pendingActionsById.value).find(item => item.traceId === traceId);
-        if (runPending && resumeAttempts.value < 3) {
+        if (runPending && getResumeAttempts(runPending.confirmationId) < 3) {
           // §8.3 续传：HITL 等待期间网络中断（非用户主动 abort），自动尝试 resume
           streamHandoffPhase.value = 'awaiting_sync';
           await attemptResume(runPending.confirmationId);
@@ -671,11 +697,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
    * - 其它 !ok：直接报错
    */
   async function attemptResume(confirmationId: string) {
-    if (resumeAttempts.value >= 3) {
+    const pending = findPendingByConfirmationId(confirmationId);
+    const attempts = getResumeAttempts(confirmationId);
+    if (attempts >= 3) {
       window.$message?.error($t('page.ai.chat.resumeFailedAfterRetries'));
       return;
     }
-    resumeAttempts.value += 1;
+    setResumeAttempts(confirmationId, attempts + 1);
     isStreaming.value = true;
     // AbortController 让 catch/finally 主动断开 SSE，后端 finally 块立即跑
     // 释放 owner 锁（避免 60s TTL 残留导致下次 409 IN_PROGRESS）
@@ -702,9 +730,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       }
       if (response.status === 410) {
         // 确认窗口已被处理（approved/rejected/expired），fallback 轮询结果
-        if (pendingToolCallId.value) {
+        if (pending) {
           window.$message?.info($t('page.ai.chat.actionHandledLoadingResult'));
-          startPollingResult(pendingToolCallId.value);
+          startPollingResult(pending.toolCallId, pending);
         } else {
           window.$message?.warning($t('page.ai.chat.confirmationExpiredOrHandled'));
         }

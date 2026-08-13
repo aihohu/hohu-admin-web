@@ -250,4 +250,88 @@ describe('prepared action recovery', () => {
       vi.useRealTimers();
     }
   });
+
+  it('removes a terminal non-focused action by toolCallId', async () => {
+    const second = {
+      ...pendingAction,
+      actionId: '9002',
+      confirmationId: 'cid_prepared_9002',
+      toolCallId: 'tc_execute_9002'
+    };
+    vi.mocked(fetchGetConversationDetail).mockResolvedValue(detail([pendingAction, second]));
+    const terminalEvent = {
+      type: 'tool_call_result',
+      tool: second.tool,
+      toolCallId: second.toolCallId,
+      ok: true,
+      durationMs: 8
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(`data: ${JSON.stringify(terminalEvent)}\n\n`, { status: 200 }))
+    );
+    const store = useAiStore();
+    try {
+      await store.selectConversation('1');
+      await store.attemptResume(second.confirmationId);
+
+      expect(store.pendingActionsById).toHaveProperty('9001');
+      expect(store.pendingActionsById).not.toHaveProperty('9002');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('uses the resumed confirmation toolCallId for a 410 fallback', async () => {
+    vi.useFakeTimers();
+    const second = {
+      ...pendingAction,
+      actionId: '9002',
+      confirmationId: 'cid_prepared_9002',
+      toolCallId: 'tc_execute_9002'
+    };
+    vi.mocked(fetchGetConversationDetail).mockResolvedValue(detail([pendingAction, second]));
+    vi.mocked(fetchAiOperationLog).mockResolvedValue({ data: null, error: null } as any);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 410 })));
+    try {
+      const store = useAiStore();
+      await store.selectConversation('1');
+
+      await store.attemptResume(second.confirmationId);
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(fetchAiOperationLog).toHaveBeenCalledWith(second.toolCallId);
+      expect(fetchAiOperationLog).not.toHaveBeenCalledWith(pendingAction.toolCallId);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('isolates the resume retry budget by confirmationId', async () => {
+    const second = {
+      ...pendingAction,
+      actionId: '9002',
+      confirmationId: 'cid_prepared_9002',
+      toolCallId: 'tc_execute_9002'
+    };
+    vi.mocked(fetchGetConversationDetail).mockResolvedValue(detail([pendingAction, second]));
+    const resumeFetch = vi.fn().mockResolvedValue(new Response(null, { status: 404 }));
+    vi.stubGlobal('fetch', resumeFetch);
+    const store = useAiStore();
+    try {
+      await store.selectConversation('1');
+
+      await store.attemptResume(pendingAction.confirmationId);
+      await store.attemptResume(pendingAction.confirmationId);
+      await store.attemptResume(pendingAction.confirmationId);
+      await store.attemptResume(pendingAction.confirmationId);
+      await store.attemptResume(second.confirmationId);
+
+      expect(resumeFetch).toHaveBeenCalledTimes(4);
+      expect(resumeFetch.mock.calls[3]?.[1]?.headers).toMatchObject({ 'Last-Event-ID': second.confirmationId });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
