@@ -85,6 +85,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   let abortController: AbortController | null = null;
   let selectSeq = 0;
   let activeRunSeq = 0;
+  let sessionSeq = 0;
 
   function abortResumes() {
     for (const controller of resumeControllers.values()) controller.abort();
@@ -344,6 +345,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** load conversation list (first page, reset) */
   async function loadConversations(title?: string | null) {
+    const seq = sessionSeq;
     searchTitle.value = title ?? null;
     conversationCurrent.value = 1;
     hasMoreConversations.value = true;
@@ -355,18 +357,20 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         status: null,
         title: searchTitle.value
       });
+      if (seq !== sessionSeq) return;
       if (!error && data) {
         conversations.value = data.records;
         hasMoreConversations.value = data.records.length >= conversationSize.value;
       }
     } finally {
-      loading.value = false;
+      if (seq === sessionSeq) loading.value = false;
     }
   }
 
   /** load more conversations (append next page) */
   async function loadMoreConversations() {
     if (loading.value || !hasMoreConversations.value) return;
+    const seq = sessionSeq;
     loading.value = true;
     conversationCurrent.value += 1;
     try {
@@ -376,6 +380,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         status: null,
         title: searchTitle.value
       });
+      if (seq !== sessionSeq) return;
       if (!error && data) {
         conversations.value.push(...data.records);
         hasMoreConversations.value = data.records.length >= conversationSize.value;
@@ -383,7 +388,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         hasMoreConversations.value = false;
       }
     } finally {
-      loading.value = false;
+      if (seq === sessionSeq) loading.value = false;
     }
   }
 
@@ -443,6 +448,25 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingClarification.value = null;
     resumeAttemptsByConfirmation.clear();
     resumeAttempts.value = 0;
+  }
+
+  /** Clear all account-scoped state and invalidate responses started by the previous login session. */
+  function resetStore() {
+    sessionSeq += 1;
+    selectSeq += 1;
+    clearCurrentConversation();
+    conversations.value = [];
+    loading.value = false;
+    availableModels.value = [];
+    selectedModelId.value = '';
+    conversationCurrent.value = 1;
+    hasMoreConversations.value = true;
+    searchTitle.value = null;
+    attachedImages.value = [];
+    attachedFiles.value = [];
+    availableAgents.value = [];
+    selectedAgentCode.value = '';
+    reasoningText.value = '';
   }
 
   /** delete conversation */
@@ -1106,8 +1130,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** load available models from enabled providers */
   async function loadModels() {
+    const seq = sessionSeq;
     try {
       const { data, error } = await fetchGetAvailableModels();
+      if (seq !== sessionSeq) return;
       if (!error && data) {
         availableModels.value = data;
         // auto select first if none selected
@@ -1122,8 +1148,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** load Agents available to the current user and default to automatic routing */
   async function loadAgents() {
+    const seq = sessionSeq;
     try {
       const { data, error } = await fetchAiAgents();
+      if (seq !== sessionSeq) return;
       if (!error && data) {
         availableAgents.value = data;
         // The backend falls back to its default Agent when automatic routing is disabled.
@@ -1213,6 +1241,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     loadMoreConversations,
     selectConversation,
     clearCurrentConversation,
+    resetStore,
     removeConversation,
     sendMessage,
     stopStreaming,
