@@ -13,7 +13,7 @@ const TOOL_VIEW_REGISTRY: Record<Api.Ai.ViewType, Component> = {
   plain_json: PlainJsonView
 };
 
-/** spec 2026-07-16 §3 决策: 按 viewType 路由标准组件；未知 viewType fallback 到 PlainJsonView */
+/** resolve a structured tool result view, falling back safely for unknown server values */
 export function resolveToolView(viewType: Api.Ai.ViewType | undefined | null): Component {
   if (!viewType || !(viewType in TOOL_VIEW_REGISTRY)) {
     return PlainJsonView;

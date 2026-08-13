@@ -166,13 +166,13 @@ declare namespace Api {
     /** user list */
     type UserList = Common.PaginatingQueryRecord<User>;
 
-    /** user import conflict strategy (spec §2.7 on_conflict) */
+    /** action taken when an imported user already exists */
     type UserImportConflictStrategy = 'skip' | 'overwrite' | 'fail_fast';
 
-    /** user import employee_no sync mode (spec §2.24) */
+    /** fields that an import is allowed to create or update */
     type UserImportSyncMode = 'CREATE_ONLY' | 'UPDATE_PROFILE' | 'FULL_SYNC';
 
-    /** user import row record (spec §3.1, one Excel row) */
+    /** normalized record parsed from one spreadsheet row */
     type UserImportRecord = {
       rowNum: number;
       userName: string;
@@ -186,7 +186,7 @@ declare namespace Api {
       status: '0' | '1';
     };
 
-    /** user import failed row (spec §3.4) */
+    /** validation or scope failure associated with one imported row */
     type UserImportFailedRow = {
       rowNum: number;
       field: string;
@@ -195,7 +195,7 @@ declare namespace Api {
       errorCode: string;
     };
 
-    /** user import dry-run result (spec §3.2 + §5.1 dry_run=true response) */
+    /** classified preview returned before an import is executed */
     type UserImportDryRunResult = {
       total: number;
       newRecords: UserImportRecord[];
@@ -208,19 +208,18 @@ declare namespace Api {
       outOfScopeRecordsTruncated: boolean;
       conflictRecordsFile: string | null;
       outOfScopeRecordsFile: string | null;
-      /** API layer merges batch.summary_* into response (spec §5.1 line 553-565) */
+      /** complete category totals; preview record arrays may be truncated */
       newCount: number;
       existsCount: number;
       conflictCount: number;
       outOfScopeCount: number;
-      /** spec §2.21 line 773: dry_run 响应必含 batchId（供 cancel 调用）.
-       *  NOTE: 后端目前缺这字段（Task 22c 待补）；前端 cancelImport 会 defensive 缺字段时禁用按钮。 */
+      /** preview batch identifier used by cancellation; absent values disable cancellation defensively */
       batchId?: string;
       previewToken: string;
       expiresAt: string;
     };
 
-    /** user import execute result (spec §3.3 + §5.1 dry_run=false response) */
+    /** final result returned after executing an import preview */
     type UserImportExecuteResult = {
       batchId: string;
       status: 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED';
@@ -233,7 +232,7 @@ declare namespace Api {
       idempotentReplay: boolean;
     };
 
-    /** user import batch status (spec §2.26 state machine) */
+    /** import batch lifecycle state */
     type UserImportBatchStatus =
       | 'CREATED'
       | 'PREVIEW_DONE'
@@ -244,7 +243,7 @@ declare namespace Api {
       | 'EXPIRED'
       | 'CANCELLED';
 
-    /** batch summary record returned by GET /import (list) + GET /import/{batch_id} (detail) (spec §5.4) */
+    /** import batch summary returned by list and detail endpoints */
     type UserImportBatch = {
       batchId: string;
       status: UserImportBatchStatus;
@@ -269,7 +268,7 @@ declare namespace Api {
       expiresAt: string | null;
     };
 
-    /** batch list query params (spec §5.4 GET /import line 2275) */
+    /** import batch list filters */
     type UserImportBatchQuery = CommonSearchParams & {
       status?: UserImportBatchStatus | null;
       operatorId?: string | null;
@@ -277,10 +276,10 @@ declare namespace Api {
       endTime?: number | null;
     };
 
-    /** paginated batch list (spec §5.4) */
+    /** paginated import batch list */
     type UserImportBatchList = Common.PaginatingQueryRecord<UserImportBatch>;
 
-    /** batch log entry (spec §2.28 + §5.5 GET /import/{batch_id}/logs) */
+    /** audited import batch transition or action */
     type UserImportBatchLog = {
       logId: string;
       batchId: string;
@@ -293,7 +292,7 @@ declare namespace Api {
       createdAt: string;
     };
 
-    /** batch log list query params (spec §5.5) */
+    /** import batch log filters */
     type UserImportBatchLogQuery = CommonSearchParams & {
       event?: string | null;
     };
@@ -301,7 +300,7 @@ declare namespace Api {
     /** paginated batch log list */
     type UserImportBatchLogList = Common.PaginatingQueryRecord<UserImportBatchLog>;
 
-    /** user export POST body (spec §5.2) — filter + reason */
+    /** user export filters and mandatory audit reason */
     type UserExportRequest = {
       userName?: string | null;
       nickname?: string | null;
@@ -312,10 +311,10 @@ declare namespace Api {
       reason: string;
     };
 
-    /** user export task status (spec §2.31) */
+    /** user export task lifecycle state */
     type UserExportTaskStatus = 'CREATED' | 'SUCCESS' | 'FAILED';
 
-    /** user export task record (spec §2.31 GET /export) */
+    /** persisted user export task */
     type UserExportTask = {
       exportId: string;
       operatorId: string;
@@ -331,7 +330,7 @@ declare namespace Api {
       expiresAt: string | null;
     };
 
-    /** export task query params (spec §2.31 GET /export) */
+    /** export task list filters */
     type UserExportTaskQuery = CommonSearchParams & {
       status?: UserExportTaskStatus | null;
       operatorId?: string | null;

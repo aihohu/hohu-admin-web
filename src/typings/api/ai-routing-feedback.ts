@@ -40,7 +40,7 @@ declare namespace Api {
       days: number;
       current: number;
       size: number;
-      /** tightened per spec decision #6 (correct not standalone) */
+      /** `correct` is represented by the unfiltered `all` view, not as a standalone filter */
       feedback?: 'wrong' | 'all';
       originalAgent?: string;
       correctedAgent?: string;

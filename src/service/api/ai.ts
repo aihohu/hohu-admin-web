@@ -142,7 +142,7 @@ export function fetchDeleteConversation(conversationId: string) {
   });
 }
 
-// ==================== HITL Confirm（spec §8.3） ====================
+// ==================== Human confirmation ====================
 
 /** POST /ai/confirm — 用户点确认 / 取消 */
 export function fetchAiConfirm(data: Api.Ai.ConfirmRequest) {
@@ -153,7 +153,7 @@ export function fetchAiConfirm(data: Api.Ai.ConfirmRequest) {
   });
 }
 
-// ==================== AI Operation Log（spec §9.3 SSE 断流兜底） ====================
+// ==================== Confirmation operation status ====================
 
 /** GET /ai/operation-log?tool_call_id=... — confirm 后 30s 轮询兜底取结果 */
 export function fetchAiOperationLog(toolCallId: string) {
@@ -164,7 +164,7 @@ export function fetchAiOperationLog(toolCallId: string) {
   });
 }
 
-// ==================== AI Query Cache（spec §8.7 chip 跳转回放） ====================
+// ==================== Tool query replay cache ====================
 
 /** GET /ai/query-cache/<trace_id> — 模块页 mounted 时反查回放筛选 */
 export function fetchAiQueryCache(traceId: string, toolName?: string) {
@@ -175,7 +175,7 @@ export function fetchAiQueryCache(traceId: string, toolName?: string) {
   });
 }
 
-// ==================== AI Agent（v1.5+ UI 切换器） ====================
+// ==================== Available chat Agents ====================
 
 /** GET /ai/agents — 列当前用户可用的 Agent（超管全开 / 普通用户走 role_ai_agent + shared 直通） */
 export function fetchAiAgents() {
@@ -185,7 +185,7 @@ export function fetchAiAgents() {
   });
 }
 
-// ==================== Routing Feedback（spec §6.4 supervisor routing v4） ====================
+// ==================== Agent routing feedback ====================
 
 /** POST /ai/messages/{messageId}/routing-feedback — 用户对路由结果做反馈 */
 export function fetchRoutingFeedback(messageId: string, data: Api.Ai.RoutingFeedbackRequest) {

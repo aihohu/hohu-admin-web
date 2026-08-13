@@ -5,8 +5,6 @@ import { useAiStore } from '@/store/modules/ai';
 import { localizeClarificationMessage } from './dynamic-message-i18n';
 
 /**
- * spec §6.2 v4: ClarificationRequired 卡片.
- *
  * 触发条件：supervisor LLM 判定用户输入意图模糊（多 Agent 候选）或日配额已用尽.
  * 后端 emit `clarification_required` SSE 事件（无状态：无 confirmationId，无 Redis）.
  *

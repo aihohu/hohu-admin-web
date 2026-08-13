@@ -15,7 +15,7 @@ const props = defineProps<{
   started: Api.Ai.ToolCallStartedEvent;
   /** 配对的 tool_call_result 事件（可选，未完成时为 null） */
   result?: Api.Ai.ToolCallResultEvent | null;
-  /** §12 场景 4: HITL pending 状态（卡片嵌入倒计时 bar） */
+  /** whether the tool is waiting for human confirmation */
   isPending?: boolean;
   /** HITL pending 过期时间 ISO 8601 UTC */
   pendingExpiresAt?: string;
@@ -28,7 +28,7 @@ const emit = defineEmits<{
 
 const toolDesc = computed(() => localizeToolDescription(props.started.tool, translate, hasTranslation));
 
-// ===== 状态映射（spec §12 卡片视觉）=====
+// ===== Card state =====
 type CardStatus = 'running' | 'success' | 'failed' | 'pending';
 
 const cardStatus = computed<CardStatus>(() => {
@@ -81,7 +81,7 @@ function formatValue(v: unknown): string {
   }
 }
 
-// spec 2026-07-16 §3: 按 result.ui.viewType 路由标准组件
+// Unknown or missing view types degrade to a plain JSON result.
 const viewComponent = computed<Component>(() => {
   if (!props.result?.ok) return PlainJsonView;
   if (!props.result.ui) return PlainJsonView;
@@ -93,7 +93,7 @@ const viewProps = computed<Api.Ai.UIResult | null>(() => {
   return props.result.ui;
 });
 
-// spec 2026-07-16 §3 决策 2: chip 从 started.chipTarget 读（不再硬编码 CHIP_TARGETS）
+// The backend owns navigation targets so frontend routes cannot drift from tool metadata.
 const chipHref = computed<string | null>(() => {
   if (!props.result?.ok) return null;
   if (!props.started.traceId) return null;
@@ -101,9 +101,8 @@ const chipHref = computed<string | null>(() => {
   return `${props.started.chipTarget}?ai_query_id=${encodeURIComponent(props.started.traceId)}`;
 });
 
-// Task 33：detail_card 携带 downloadUrl 时，在卡片底部渲染常显下载 chip
-// （与 chipHref 跳转 chip 同级），用户无需展开 body 即可下载。
-// 区分：chipHref 是 SPA 路由跳转（router-link），downloadAction 是 Blob 下载（button）。
+// Keep authenticated downloads visible without expanding the result body.
+// Navigation uses RouterLink; file downloads use a button and an authenticated Blob request.
 const downloadAction = computed<{ url: string; filename: string } | null>(() => {
   if (!props.result?.ok) return null;
   const ui = props.result.ui;
@@ -154,7 +153,7 @@ const fallbackJson = computed(() => {
   }
 });
 
-// §12 场景 4/5: HITL 倒计时（基于 expiresAt，每秒更新）
+// Confirmation countdown is derived from the server expiry time.
 const URGENT_THRESHOLD_SEC = 30;
 const remainingSec = ref(0);
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
@@ -239,7 +238,6 @@ function onReject() {
           </tr>
         </table>
       </div>
-      <!-- spec 2026-07-16 §3: 按 viewType 路由标准组件 -->
       <div v-if="result && result.ok && viewProps" class="tool-section">
         <div class="tool-section-title">
           {{ t('page.ai.chat.toolDataView') }}
@@ -262,13 +260,12 @@ function onReject() {
       </div>
     </div>
 
-    <!-- spec 2026-07-16 §3 决策 2: chip 从 started.chipTarget 读；决策 N: 用 router-link 避免 SPA 整页刷新 -->
+    <!-- RouterLink preserves SPA state while replaying the tool query on its destination page. -->
     <div v-if="chipHref" class="chip-row">
       <RouterLink class="chip-link" :to="chipHref">📊 {{ t('page.ai.chat.viewFullData') }}</RouterLink>
       <span class="chip-hint">{{ t('page.ai.chat.replayFilterHint') }}</span>
     </div>
 
-    <!-- Task 33：下载 chip 常显（不依赖 expanded），与 chipHref 跳转 chip 同级 -->
     <div v-if="downloadAction" class="chip-row">
       <button class="chip-link chip-link--download" :disabled="downloading" @click="handleDownload">
         {{ downloading ? `⏳ ${t('page.ai.chat.downloading')}` : `⬇ ${t('page.ai.chat.downloadFile')}` }}
@@ -276,7 +273,6 @@ function onReject() {
       <span class="chip-hint">{{ downloadAction.filename }}</span>
     </div>
 
-    <!-- §12 场景 4/5: HITL pending 内联倒计时 bar -->
     <div v-if="isPending" class="hitl-bar">
       <span>⏱</span>
       <span>{{ t('page.ai.chat.timeRemaining') }}</span>
@@ -302,7 +298,7 @@ function onReject() {
   position: relative;
 }
 
-/* spec §12: 左侧 3px 状态色条 */
+/* Status accent */
 .tool-card::before {
   content: '';
   position: absolute;
@@ -562,7 +558,7 @@ function onReject() {
   margin-top: 4px;
 }
 
-/* §8.7 chip 跳转行 */
+/* Tool action row */
 .chip-row {
   display: flex;
   align-items: center;
@@ -590,8 +586,7 @@ function onReject() {
   background: #4d6bfe;
   color: #fff;
 }
-/* Task 33：下载 chip 用 button 元素（Blob 下载，非 router-link），
-   视觉与 .chip-link 一致但用绿色区分「拿文件」vs「跳转」动作 */
+/* Downloads are buttons rather than navigation links; green distinguishes file transfer. */
 .chip-link--download {
   border-color: #10b981;
   color: #10b981;
@@ -611,7 +606,7 @@ function onReject() {
   color: var(--n-text-color-3, #9ca3af);
 }
 
-/* §12 场景 4/5: HITL 内联 bar */
+/* Inline confirmation bar */
 .hitl-bar {
   display: flex;
   align-items: center;

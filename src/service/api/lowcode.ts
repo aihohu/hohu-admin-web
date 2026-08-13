@@ -56,7 +56,7 @@ export interface AppDataListParams {
   /** `?order_by=-created_at,name` — `-` prefix = DESC, multi-column comma-separated */
   order_by?: string;
   /**
-   * Django-suffix filters (spec 6.2 / decision #75 #76).
+   * Django-style suffix filters accepted by the low-code data API.
    * Keys like `name__contains` / `status__in` / `age__gte` / `tags__has`.
    * Values are strings; `__in` accepts CSV.
    * Unknown fields / type-mismatched ops → 400 APP_FILTER_*.

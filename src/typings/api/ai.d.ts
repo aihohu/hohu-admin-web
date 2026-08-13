@@ -76,7 +76,7 @@ declare namespace Api {
       baseUrl: string | null;
     };
 
-    /** file attached to a chat message (Excel/CSV for file.parse tool, spec §16 SR-25) */
+    /** spreadsheet or CSV file attached to a chat message for server-side parsing */
     type AttachedFile = {
       fileId: string;
       fileName: string;
@@ -150,7 +150,7 @@ declare namespace Api {
       content: string;
       /** structured message parts (images, files, etc.) */
       parts: MessagePart[] | null;
-      /** tool call events (BUG-FE-18: assistant msg 关联的 tool 调用，重连会话时还原卡片) */
+      /** persisted tool calls used to restore cards after reopening a conversation */
       toolCalls?: Array<{
         tool: string;
         tool_call_id: string;
@@ -158,7 +158,7 @@ declare namespace Api {
         args?: Record<string, unknown>;
         risk?: 'low' | 'high' | 'destructive';
         trace_id?: string;
-        /** v1.6+ SR-13: readonly tool chip 跳转目标（声明式），reload 后还原卡片 chip */
+        /** declarative navigation target restored with the persisted tool card */
         chip_target?: string | null;
         ok?: boolean;
         result?: unknown;
@@ -166,7 +166,7 @@ declare namespace Api {
         error_code?: string;
         error_msg?: string;
         duration_ms?: number;
-        /** v1.6+ SR-13: UI 层结果，重连后按 viewType 路由标准组件（缺失则 fallback PlainJsonView） */
+        /** structured UI result; missing values fall back to the plain JSON view */
         ui?: UIResult;
       }> | null;
       /** ChatCommand run reconciliation key */
@@ -190,7 +190,7 @@ declare namespace Api {
       pendingActions: PendingAction[];
     };
 
-    // ============ HITL + Stream Events（spec §8.1） ============
+    // ============ Human confirmation and stream events ============
 
     /** dry_run 影响范围（HITL 抽屉展示） */
     type DryRunSummary = {
@@ -230,7 +230,7 @@ declare namespace Api {
       expiresAt: string;
     };
 
-    /** spec 2026-07-16 §2.3: 5 种标准 view_type */
+    /** supported tool-result presentation types */
     type ViewType = 'rows_affected' | 'data_list' | 'stats_chart' | 'detail_card' | 'plain_json';
 
     /** rows_affected view_data schema */
@@ -255,20 +255,18 @@ declare namespace Api {
       title: string;
       fields: Array<{ label: string; value: string }>;
       /**
-       * Task 33 / spec §2.31 line 1626：可选下载链接（相对 baseURL 的 API 路径，
-       * 例如 `/system/user/export/{export_id}/download`）。设置后 DetailCardView
-       * 在 fields 下方渲染「下载」按钮，点击调 fetchDownloadFile 走 Authorization
-       * 下载 blob 触发浏览器保存。
+       * Optional API path for an authenticated Blob download, for example
+       * `/system/user/export/{export_id}/download`.
        */
       downloadUrl?: string;
-      /** 下载文件名（决策 30.6 规范：hohu_xxx_YYYYMMDD_HHmmss.xlsx） */
+      /** suggested browser download filename */
       downloadFilename?: string;
     };
 
     /** plain_json view_data schema（自由 dict） */
     type PlainJsonViewData = Record<string, unknown>;
 
-    /** UIResult（spec §2.2）— 前端按 viewType 路由标准组件 */
+    /** structured tool result routed to a component by viewType */
     type UIResult = {
       viewType: ViewType;
       viewData: RowsAffectedViewData | DataListViewData | StatsChartViewData | DetailCardViewData | PlainJsonViewData;
@@ -277,22 +275,22 @@ declare namespace Api {
       labelParams?: Record<string, unknown>;
     };
 
-    /** spec §8.1: tool_call_started 事件 */
+    /** emitted when a tool call starts */
     type ToolCallStartedEvent = {
       type: 'tool_call_started';
       tool: string;
       toolCallId: string;
       summary: string;
       args: Record<string, any>;
-      /** §5.3 风险分级（卡片色条 + chip 标签） */
+      /** risk level used by the card accent and badge */
       risk: 'low' | 'high' | 'destructive';
-      /** §8.7 chip 跳转用 trace_id */
+      /** trace used to replay the tool filters on the destination page */
       traceId: string;
-      /** v1.6+ SR-13: chip 跳转目标（声明式，替代前端 CHIP_TARGETS map） */
+      /** backend-provided navigation target; avoids a duplicated frontend mapping */
       chipTarget?: string | null;
     };
 
-    /** spec §8.1: tool_call_result 事件 */
+    /** emitted when a tool call finishes */
     type ToolCallResultEvent = {
       type: 'tool_call_result';
       tool: string;
@@ -305,11 +303,11 @@ declare namespace Api {
       affectedRows?: number | null;
       errorCode?: string;
       errorMsg?: string;
-      /** v1.6+ SR-13: UI 层结果，前端按 ui.viewType 路由标准组件 */
+      /** structured result rendered according to ui.viewType */
       ui?: UIResult;
     };
 
-    /** spec §8.1: confirmation_required 事件（前端弹 HITL 抽屉） */
+    /** requests human confirmation before the tool may continue */
     type ConfirmationRequiredEvent = {
       type: 'confirmation_required';
       confirmationId: string;
@@ -328,7 +326,7 @@ declare namespace Api {
       traceId?: string;
     };
 
-    /** spec §8.3: confirmation_resumed 事件（HITL 续传恢复确认窗口） */
+    /** restores a confirmation window after reconnecting its event stream */
     type ConfirmationResumedEvent = {
       type: 'confirmation_resumed';
       confirmationId: string;
@@ -348,14 +346,14 @@ declare namespace Api {
       traceId?: string;
     };
 
-    /** spec §8.1: ai_error 事件（流级错误） */
+    /** stream-level application error */
     type AiErrorEvent = {
       type: 'ai_error';
       errorCode: string;
       message: string;
     };
 
-    /** spec §6.2 v4: clarification_required 事件（无状态，前端弹候选 Agent 卡片重发） */
+    /** candidate Agent offered when routing needs user clarification */
     type ClarificationCandidate = {
       code: string;
       name: string;
@@ -369,7 +367,7 @@ declare namespace Api {
       reasonCode?: 'quota_exceeded' | 'selection_required';
     };
 
-    /** spec §8.1: done 事件（流结束） */
+    /** terminal stream acknowledgement */
     type DoneEvent = {
       type: 'done';
       traceId?: string;
@@ -388,7 +386,7 @@ declare namespace Api {
       | AiErrorEvent
       | DoneEvent;
 
-    /** spec §6.4: routing feedback request (POST /ai/messages/{id}/routing-feedback) */
+    /** routing feedback request for POST /ai/messages/{id}/routing-feedback */
     type RoutingFeedbackRequest = {
       /** 'correct' | 'wrong' */
       feedback: 'correct' | 'wrong';
@@ -396,7 +394,7 @@ declare namespace Api {
       correctedAgentCode?: string;
     };
 
-    /** spec §6.4: routing feedback response */
+    /** routing feedback response */
     type RoutingFeedbackResponse = {
       feedbackId: string;
     };
@@ -414,7 +412,7 @@ declare namespace Api {
       status: 'queued' | 'stream_gone' | 'running' | 'succeeded' | 'failed' | 'rejected' | 'expired';
     };
 
-    /** /ai/operation-log?tool_call_id=... 响应（spec §9.3 SSE 断流兜底轮询） */
+    /** operation status used when a confirmation stream disconnects */
     type OperationLog = {
       toolCallId: string;
       toolName: string;
@@ -425,7 +423,7 @@ declare namespace Api {
       durationMs: number | null;
     };
 
-    /** /ai/query-cache/<trace_id> 响应（spec §8.7 chip 跳转回放） */
+    /** cached query filters replayed after navigating from a tool card */
     type QueryCache = {
       toolName: string;
       module: string;
@@ -433,7 +431,7 @@ declare namespace Api {
       createdAt: string;
     };
 
-    /** /ai/agents 响应（v1.5+ UI 切换器） */
+    /** Agent available in the chat selector */
     type Agent = {
       code: string;
       name: string;

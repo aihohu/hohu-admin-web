@@ -1241,7 +1241,7 @@ declare namespace App {
               jobUpdateCron: string;
             };
             resumedAt: string;
-            // v1.5+ supervisor routing v4
+            // Agent routing feedback
             agentAutoName: string;
             agentAutoDesc: string;
             routingFeedback: string;
@@ -1589,7 +1589,7 @@ declare namespace App {
         AI_EXPORT_ASYNC_REQUIRED: string;
         AI_EXPORT_TASK_NOT_FOUND: string;
       };
-      // v1.5+ tool result view registry — referenced by backend UIResult.label_key
+      // Tool result labels referenced by backend UIResult.label_key values
       ai: {
         tool: {
           field: {

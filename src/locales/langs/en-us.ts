@@ -1027,7 +1027,7 @@ const local: App.I18n.Schema = {
           fileParse: 'Parse file',
           jobUpdateCron: 'Update scheduled job cron'
         },
-        // v1.5+ supervisor routing v4
+        // Agent routing feedback
         agentAutoName: 'AI Auto Routing',
         agentAutoDesc: 'AI Supervisor picks the best agent based on your question',
         routingFeedback: 'Routing Feedback',
@@ -1401,7 +1401,7 @@ const local: App.I18n.Schema = {
     AI_EXPORT_ASYNC_REQUIRED: 'Export rows too large, please batch or wait for async channel',
     AI_EXPORT_TASK_NOT_FOUND: 'Export task not found'
   },
-  // v1.5+ tool result view registry — referenced by backend UIResult.label_key
+  // Tool result labels referenced by backend UIResult.label_key values
   ai: {
     tool: {
       field: {

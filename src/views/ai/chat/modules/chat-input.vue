@@ -30,7 +30,7 @@ const canSend = computed(
     (model.value.trim() || aiStore.attachedImages.length > 0 || aiStore.attachedFiles.length > 0)
 );
 
-// v1.5+ SR-25: chat 直接上传 Excel/CSV（与 parser 对齐）
+// Spreadsheet and CSV attachments accepted by the server-side parser.
 const ACCEPTED_FILE_EXTS = ['.csv', '.xlsx'];
 const ACCEPTED_FILE_MIMES = [
   'text/csv',
@@ -76,8 +76,7 @@ const currentAgent = computed(() => {
   return aiStore.availableAgents.find(a => a.code === aiStore.selectedAgentCode);
 });
 
-// v1.5+ supervisor routing v4: agent 列表顶部插入 'auto'（让 LLM 自动选 Agent）
-// sentinel code 'auto' 与后端 stickiness.py §5.3 约定一致
+// `auto` delegates Agent selection to the backend router.
 const AUTO_AGENT_OPTION: DropdownOption = {
   key: 'auto',
   label: t('page.ai.chat.agentAutoName'),
@@ -672,7 +671,7 @@ function formatFileSize(bytes: number): string {
   padding: 0;
 }
 
-/* File attachment chip (Excel/CSV, spec §16 SR-25) */
+/* Spreadsheet and CSV attachment chip */
 .attach-file-chip {
   display: flex;
   align-items: center;

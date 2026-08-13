@@ -147,7 +147,7 @@ const {
   // closeDrawer
 } = useTableOperate(data, 'roleId', getData);
 
-// §8.7 chip 跳转回放：URL 含 ?ai_query_id 时调 query-cache 应用 filters
+// Replay cached tool filters when arriving from an AI result card.
 onMounted(async () => {
   const aiQueryId = route.query.ai_query_id;
   if (typeof aiQueryId !== 'string' || !aiQueryId) return;

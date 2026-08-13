@@ -12,8 +12,8 @@ export const WIDGET_REGISTRY: Record<string, ReturnType<typeof defineAsyncCompon
 };
 
 export function inferWidget(fieldDef: Record<string, any>): string {
-  // BelongsTo relation (spec §6.5 / decision #79): field has x-ref → dropdown
-  // populated from target table. Checked before type-based inference so
+  // A field-level x-ref represents a belongs-to relation populated from the target table.
+  // Check it before type-based inference so
   // x-ref + integer falls into here rather than NInputNumber.
   if (fieldDef['x-ref']) return 'NSelectBelongsTo';
   const type = fieldDef.type;

@@ -24,7 +24,7 @@ const emit = defineEmits<{
 
 const confirmation = computed(() => aiStore.pendingConfirmation);
 
-// 续传重连标记（spec §2.2 v1.5+）
+// Distinguish a restored confirmation from one received on the active stream.
 const isReconnected = computed(
   () => confirmation.value?.type === 'confirmation_resumed' && Boolean(confirmation.value.resumedAt)
 );
@@ -139,7 +139,6 @@ const showDrawer = computed({
         <div class="confirm-section">
           <div class="confirm-label">{{ t('page.ai.chat.confirmTool') }}</div>
           <NTag type="warning" size="large">{{ displayTool }}</NTag>
-          <!-- 续传重连标记（spec §2.2 v1.5+） -->
           <div v-if="isReconnected" class="confirm-reconnect-badge">
             <NTag type="info" size="small" :bordered="false">
               <IconIcRoundRefresh class="text-12px" />

@@ -122,7 +122,7 @@ const hasTextOrImage = computed(() => {
   return props.message.parts.some(p => p.type === 'text' || (p.type === 'file' && p.mediaType?.startsWith('image/')));
 });
 
-// v1.5+ supervisor routing v4: 路由反馈（spec §6.4）
+// Feedback about the Agent selected for this response.
 // 仅 assistant 消息显示按钮；temp-XXX / streaming 等无 messageId 的消息不显示
 const canFeedback = computed(
   () => props.message.role === 'assistant' && !!props.message.messageId && !props.message.messageId.startsWith('temp-')
@@ -286,7 +286,6 @@ async function submitFeedback() {
           </NTooltip>
         </div>
 
-        <!-- Routing feedback dialog (spec §6.4) -->
         <NModal
           v-model:show="feedbackVisible"
           preset="dialog"
@@ -760,7 +759,7 @@ html.dark .msg-action-btn:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* Routing feedback dialog (spec §6.4) */
+/* Routing feedback dialog */
 .feedback-body {
   display: flex;
   flex-direction: column;

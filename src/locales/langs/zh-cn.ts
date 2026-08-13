@@ -1019,7 +1019,7 @@ const local: App.I18n.Schema = {
           fileParse: '解析文件',
           jobUpdateCron: '更新定时任务 cron'
         },
-        // v1.5+ supervisor routing v4
+        // Agent routing feedback
         agentAutoName: 'AI 自动路由',
         agentAutoDesc: '由 AI Supervisor 根据你的问题自动选择最合适的助手',
         routingFeedback: '路由反馈',
@@ -1393,7 +1393,7 @@ const local: App.I18n.Schema = {
     AI_EXPORT_ASYNC_REQUIRED: '导出行数过多，请分批或等待异步通道开放',
     AI_EXPORT_TASK_NOT_FOUND: '导出任务不存在'
   },
-  // v1.5+ tool result view registry — referenced by backend UIResult.label_key
+  // Tool result labels referenced by backend UIResult.label_key values
   ai: {
     tool: {
       field: {

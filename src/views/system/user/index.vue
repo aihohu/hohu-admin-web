@@ -195,7 +195,7 @@ const {
   // closeDrawer
 } = useTableOperate(data, 'userId', getData);
 
-// §8.7 chip 跳转回放：URL 含 ?ai_query_id=<trace_id> 时调 query-cache 应用 filters
+// Replay cached tool filters when arriving from an AI result card.
 onMounted(async () => {
   loadDefaultPassword();
   const aiQueryId = route.query.ai_query_id;
@@ -206,7 +206,7 @@ onMounted(async () => {
     return;
   }
   if (!cache) {
-    // §8.7 v1.5+：chip 跳转 trace_id TTL 5min 过期后的友好提示
+    // An expired cache entry is expected and should produce a friendly message.
     window.$message?.info($t('common.filterReplayExpired'), { duration: 8000 });
     return;
   }
@@ -300,7 +300,7 @@ function handleImportCompleted() {
 }
 
 function handleExported() {
-  // spec §5.2: 同步导出已直接触发 Blob 下载；列表不需要刷新（export 不影响 user 表）
+  // Exporting does not mutate users, so no list refresh is needed after the Blob download starts.
 }
 </script>
 

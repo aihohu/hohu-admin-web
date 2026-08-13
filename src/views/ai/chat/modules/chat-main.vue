@@ -182,7 +182,7 @@ const quickActions = [
 ];
 void quickActions; // template 已改用 sceneCards，保留 quickActions 防 i18n key 漂移
 
-// 场景卡：点击直接预选 agent + 填示例 prompt（spec §16 SR-26 空状态重设）
+// Scenario cards preselect an Agent and fill a starter prompt.
 // icon 用 PascalCase 组件引用（unplugin-icons auto-import），避免 kebab 字符串未注册
 const sceneCards = computed(() => [
   {
@@ -346,7 +346,6 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
             </div>
           </div>
 
-          <!-- v1.5+ supervisor routing v4: ClarificationRequired 候选卡片 -->
           <ChatClarification />
 
           <!-- Thinking indicator -->
@@ -373,7 +372,6 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
       />
     </template>
 
-    <!-- Phase 3.4: HITL 确认抽屉 -->
     <ChatConfirmationDrawer v-model:show="showConfirmDrawer" />
 
     <!-- Scroll to bottom FAB -->
@@ -413,7 +411,7 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
   text-align: center;
 }
 
-/* 场景卡：替代 quick-actions，每个卡含图标 + 标题 + 描述（spec §16 SR-26） */
+/* Scenario cards replace generic quick actions with contextual prompts. */
 .scene-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

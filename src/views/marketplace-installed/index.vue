@@ -115,7 +115,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
 async function onOpen(row: Marketplace.Install) {
   // In-place navigation: lowcode apps are trusted (declared manifest, no remote code)
   // so they render inside BaseLayout like any other module. New-tab isolation is
-  // reserved for Phase 2 remote-component apps.
+  // Reserved for applications that render remote components.
   router.push(`/app/${row.appSlug}/list`);
 }
 

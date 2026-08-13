@@ -78,7 +78,7 @@ const belongsToFields = computed<Set<string>>(() => {
   for (const [key, def] of Object.entries(props.dataSchema.properties || {})) {
     if ((def as Record<string, any>)['x-ref']) out.add(key);
   }
-  // Explicit relations (rare for single-table mode but spec allows)
+  // Include explicit relations declared at the schema root.
   for (const rel of props.dataSchema.relations || []) {
     if (rel?.type === 'belongs_to' && rel.foreign_key) out.add(rel.foreign_key);
   }

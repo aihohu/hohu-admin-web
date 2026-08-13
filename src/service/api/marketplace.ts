@@ -179,7 +179,7 @@ export function fetchMyApps() {
   });
 }
 
-/** create a rating for an app (Phase 1: any logged-in user) */
+/** create a rating for an app as the current authenticated user */
 export function createRating(appId: string, data: Marketplace.RatingInput) {
   return request<Marketplace.Rating>({
     url: '/marketplace/rating',

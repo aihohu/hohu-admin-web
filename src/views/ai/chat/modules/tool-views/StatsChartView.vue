@@ -18,7 +18,7 @@ const props = defineProps<{
 const viewData = computed(() => props.data.viewData as Api.Ai.StatsChartViewData);
 
 type StatsGroup = { group: string; count: number };
-/** spec §2.9 stats 返回结构 [{group, count}] */
+/** normalized grouped-count rows returned by aggregate tools */
 const groups = computed<StatsGroup[]>(() => viewData.value.rows);
 
 type TabKey = 'table' | 'bar' | 'pie';

@@ -43,14 +43,14 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const searchTitle = ref<string | null>(null);
   const attachedImages = ref<{ fileUrl: string; mediaType: string; fileName: string }[]>([]);
 
-  // v1.5+ SR-25: chat 直接上传的文件（Excel/CSV），发送时把 file_id 注入到消息末尾
+  // Spreadsheet and CSV attachments are referenced by file ID in the outgoing prompt.
   const attachedFiles = ref<Api.Ai.AttachedFile[]>([]);
 
-  // v1.5+: agent 切换器
+  // Agents available to the current user and the active routing selection.
   const availableAgents = ref<Api.Ai.Agent[]>([]);
   const selectedAgentCode = ref<string>('');
 
-  // ====== Phase 3.4: SSE 5 类事件 + HITL（spec §8.1 / §8.3） ======
+  // ====== Stream events and human confirmation ======
   /** 当前流的 tool 调用事件列表（tool_call_started + tool_call_result，按 toolCallId 配对） */
   const streamEvents = ref<Api.Ai.AiStreamEvent[]>([]);
   /** Current run durability handoff. Only streaming or the temp message may render cards, never both. */
@@ -63,11 +63,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const pendingActionsById = ref<Record<string, Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent>>(
     {}
   );
-  /** §8.3 续传：当前挂起确认的 ID（attemptResume 入参 + tool_call_result 清理依据） */
+  /** confirmation restored by attemptResume and cleared when its tool result arrives */
   const pendingConfirmationId = ref<string | null>(null);
-  /** §8.3 续传：当前挂起确认对应的 toolCallId（410 时 fallback 轮询用） */
+  /** tool call polled when a resume request reports that confirmation is already handled */
   const pendingToolCallId = ref<string | null>(null);
-  /** §8.3 续传：已尝试次数（上限 3 次） */
+  /** retry count exposed for the active confirmation; each confirmation has a three-attempt budget */
   const resumeAttempts = ref(0);
   /** Each durable confirmation owns an independent resume retry budget. */
   const resumeAttemptsByConfirmation = new Map<string, number>();
@@ -78,7 +78,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const activeResumeIds = new Set<string>();
   const resumeExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  // v1.5+ supervisor routing v4: clarification 候选卡片
+  // Candidate Agents offered when automatic routing needs user clarification.
   /** 当前挂起的 clarification 事件（candidates 列表 + 提示文案），null 表示无 */
   const pendingClarification = ref<Api.Ai.ClarificationRequiredEvent | null>(null);
 
@@ -455,7 +455,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     await loadConversations();
   }
 
-  // ============ SSE 事件分流（spec §8.1） ============
+  // ============ Stream event dispatch ============
 
   /** 处理自定义 SSE 事件（非 Vercel 原生 text-delta） */
   function handleAiStreamEvent(event: Api.Ai.AiStreamEvent) {
@@ -465,12 +465,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         break;
       case 'tool_call_result':
         streamEvents.value.push(event);
-        // §8.3 续传：tool 执行完成则无需再续，清掉挂起状态
+        // A completed tool no longer needs confirmation recovery.
         removePendingByToolCallId(event.toolCallId);
         break;
       case 'confirmation_required':
       case 'confirmation_resumed':
-        // spec §8.3: 一次只允许一个挂起 HITL（confirmation_resumed 是断流续传回带的）。
+        // The active drawer shows one confirmation; a resumed event has the same ownership semantics.
         // pendingConfirmation 是 ConfirmationRequiredEvent | ConfirmationResumedEvent 的联合类型，
         // 两者结构同形（后者多一个必填 resumedAt），联合分支按 event.type 自动窄化。
         upsertPendingConfirmation(event);
@@ -487,8 +487,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         );
         break;
       case 'clarification_required':
-        // spec §6.2 v4: stateless clarification —— 前端弹候选 Agent 卡片
-        // 用户点选后写入 selectedAgentCode 重发，无需后端 confirmationId
+        // Clarification is stateless: selecting a candidate retries with its Agent code.
         pendingClarification.value = event;
         break;
       case 'done':
@@ -526,7 +525,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       return false;
     }
 
-    // 自定义事件（spec §8.1 私有命名空间）：done 终止流，其它走分流
+    // The custom done event terminates the stream; other application events are dispatched above.
     if (event.type === 'done') {
       handleAiStreamEvent(event as Api.Ai.DoneEvent);
       return true;
@@ -573,7 +572,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     reasoningText.value = '';
     streamEvents.value = [];
     focusPendingConfirmation();
-    // v1.5+ supervisor routing: 新流开始时清空上轮 clarification 候选
+    // A new stream invalidates clarification candidates from the previous run.
     pendingClarification.value = null;
     // 新流开始：清空续传重试计数（旧失败不应阻塞新对话的续传）
     resumeAttemptsByConfirmation.clear();
@@ -615,8 +614,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
               parts: msg.parts && msg.parts.length > 0 ? msg.parts : [{ type: 'text', text: msg.content }]
             };
           }),
-          // v1.5+ SR-25: 后端持久化用 displayContent（用户原始输入），
-          // LLM 仍看注入版（messages 里含 file_id），UI reload 后显示原始
+          // Persist the user's original display text; file IDs remain transport-only prompt context.
           displayContent: injectLastMessageText
             ? currentMessages.value[currentMessages.value.length - 1]?.content
             : undefined,
@@ -685,7 +683,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       } else {
         const runPending = Object.values(pendingActionsById.value).find(item => item.traceId === traceId);
         if (runPending && getResumeAttempts(runPending.confirmationId) < 3) {
-          // §8.3 续传：HITL 等待期间网络中断（非用户主动 abort），自动尝试 resume
+          // Recover a pending confirmation after an unexpected network disconnect.
           streamHandoffPhase.value = 'awaiting_sync';
           await attemptResume(runPending.confirmationId);
           const cards = streamToolCards();
@@ -729,10 +727,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
   }
 
-  // ============ HITL 确认 / 拒绝（spec §8.3） ============
+  // ============ Human confirmation approval and rejection ============
 
   /**
-   * spec §8.3: HITL 等待期间 SSE 断流时自动续传。
+   * Resume a confirmation whose event stream disconnected while waiting for the user.
    * - GET /ai/chat/resume（Last-Event-ID 回传）
    * - 409（并发冲突）：2s 后串行重试（仍受 resumeAttempts < 3 上限）
    * - 410（已处理）：fallback 轮询 operation-log 拉取结果
@@ -890,7 +888,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     await resolveConfirmation('reject', actionId);
   }
 
-  /** spec §8.3: 30s 轮询 GET /ai/operation-log?tool_call_id=...
+  /** Confirmation fallback: poll operation status for up to 30 seconds.
    * 终态（success/failed/rejected/expired）停止轮询；
    * 30s 内无结果提示"操作仍在执行" */
   function startPollingResult(
@@ -1015,7 +1013,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       return;
     }
 
-    // v1.5+ SR-25: attached files (Excel/CSV) 注入到消息末尾，
+    // Append spreadsheet and CSV file IDs to the outgoing prompt.
     // LLM 看到 file_id 后自动调 file.parse tool，UX 同 OpenAI/Claude 附件 chip
     // 注意：注入文本仅用于发送 LLM，UI 显示保持原始 content（见 doStream injectLastMessageText）
     let injectText: string | undefined;
@@ -1081,7 +1079,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     attachedImages.value = [];
   }
 
-  /** add attached file (Excel/CSV, spec §16 SR-25) */
+  /** add a spreadsheet or CSV attachment */
   function addFile(fileId: string, fileName: string, mimeType: string, fileSize: number) {
     attachedFiles.value.push({ fileId, fileName, mimeType, fileSize });
   }
@@ -1122,14 +1120,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
   }
 
-  /** v1.5+: 加载当前用户可用 agent 列表，默认 'auto'（supervisor 自动路由） */
+  /** load Agents available to the current user and default to automatic routing */
   async function loadAgents() {
     try {
       const { data, error } = await fetchAiAgents();
       if (!error && data) {
         availableAgents.value = data;
-        // v1.5+ supervisor routing v4: 默认 'auto'，让 LLM 自动选 Agent
-        // 后端 supervisor_enabled=false 时会自动 fallback DEFAULT_AGENT_CODE
+        // The backend falls back to its default Agent when automatic routing is disabled.
         if (!selectedAgentCode.value) {
           selectedAgentCode.value = 'auto';
         }
@@ -1139,13 +1136,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
   }
 
-  // v1.5+ supervisor routing v4
-  /** 用户从 clarification 候选中选了某个 Agent —— 切 agentCode + 自动重发上轮 user message.
-
-   * UX polish：spec §6.2 v4 没明确要求自动重发，但用户点候选就是想"用这个 agent 重试"，
-   * 让他重新输入再发送是多余动作。currentMessages 已有 user message（sendMessage 先
-   * push 再 doStream），直接复用即可。后端拿到新 agentCode（具体业务 code）走
-   * manual_override 路径，正常 save_user_message + 路由 + 响应.
+  /**
+   * Select an Agent candidate and retry the last user message.
+   * Reusing the locally appended message avoids asking the user to enter the same prompt again.
    */
   async function pickClarificationAgent(code: string) {
     selectedAgentCode.value = code;
@@ -1160,7 +1153,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     pendingClarification.value = null;
   }
 
-  /** spec §6.4: 提交 routing feedback */
+  /** submit feedback about the Agent selected for a message */
   async function submitRoutingFeedback(messageId: string, payload: Api.Ai.RoutingFeedbackRequest): Promise<boolean> {
     try {
       const { error } = await fetchRoutingFeedback(messageId, payload);
@@ -1196,7 +1189,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     hasMoreConversations,
     attachedImages,
     attachedFiles,
-    // Phase 3.4: SSE 事件 + HITL
+    // Stream events and human confirmation
     streamEvents,
     streamHandoffPhase,
     activeStreamTraceId,
@@ -1210,7 +1203,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     streamToolCards,
     pendingToolCardsAfterMessage,
     syncStreamProjection,
-    // v1.5+ supervisor routing v4
+    // Agent routing clarification
     pendingClarification,
     pickClarificationAgent,
     dismissClarification,
