@@ -107,7 +107,7 @@ const { columns, columnChecks, data, loading, getData, scrollX } = useNaiveTable
       render: row => (
         <div class="flex-center gap-8px">
           {hasAuth('system:dept:edit') && (
-            <NButton type="success" ghost size="small" onClick={() => manageUsers(row.deptId)}>
+            <NButton type="info" ghost size="small" onClick={() => manageUsers(row.deptId)}>
               {$t('page.system.dept.manageUsers')}
             </NButton>
           )}
