@@ -72,7 +72,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   /** Each durable confirmation owns an independent resume retry budget. */
   const resumeAttemptsByConfirmation = new Map<string, number>();
   /** confirm 后 30s 轮询；每个 tool 独立，不能让后确认的 action 覆盖前一个。 */
-  const pollTimers = new Map<string, ReturnType<typeof setInterval>>();
+  const pollTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const pollOwners = new Map<string, symbol>();
+  const resumeControllers = new Map<string, AbortController>();
+  const activeResumeIds = new Set<string>();
+  const resumeExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   // v1.5+ supervisor routing v4: clarification 候选卡片
   /** 当前挂起的 clarification 事件（candidates 列表 + 提示文案），null 表示无 */
@@ -81,6 +85,30 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   let abortController: AbortController | null = null;
   let selectSeq = 0;
   let activeRunSeq = 0;
+
+  function abortResumes() {
+    for (const controller of resumeControllers.values()) controller.abort();
+    for (const timer of resumeExpiryTimers.values()) clearTimeout(timer);
+    resumeControllers.clear();
+    activeResumeIds.clear();
+    resumeExpiryTimers.clear();
+  }
+
+  function scheduleResumeExpiryReconciliation(
+    confirmation: Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent
+  ) {
+    const existing = resumeExpiryTimers.get(confirmation.confirmationId);
+    if (existing) clearTimeout(existing);
+    const expiresAt = Date.parse(confirmation.expiresAt);
+    const delay = Number.isFinite(expiresAt) ? Math.max(0, expiresAt - Date.now() + 1000) : 1000;
+    const timer = setTimeout(async () => {
+      resumeExpiryTimers.delete(confirmation.confirmationId);
+      if (findPendingByConfirmationId(confirmation.confirmationId)) {
+        await refreshCurrentConversationDetail();
+      }
+    }, delay);
+    resumeExpiryTimers.set(confirmation.confirmationId, timer);
+  }
 
   function focusPendingConfirmation() {
     const values = Object.values(pendingActionsById.value);
@@ -143,6 +171,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     for (const confirmationId of resumeAttemptsByConfirmation.keys()) {
       if (!activeConfirmationIds.has(confirmationId)) resumeAttemptsByConfirmation.delete(confirmationId);
     }
+    for (const [confirmationId, timer] of resumeExpiryTimers) {
+      if (!activeConfirmationIds.has(confirmationId)) {
+        clearTimeout(timer);
+        resumeExpiryTimers.delete(confirmationId);
+      }
+    }
     pendingActionsById.value = Object.fromEntries(
       actions.map(action => [
         action.actionId,
@@ -167,7 +201,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   function removePendingByToolCallId(toolCallId: string) {
     for (const item of Object.values(pendingActionsById.value)) {
-      if (item.toolCallId === toolCallId) resumeAttemptsByConfirmation.delete(item.confirmationId);
+      if (item.toolCallId === toolCallId) {
+        resumeAttemptsByConfirmation.delete(item.confirmationId);
+        const timer = resumeExpiryTimers.get(item.confirmationId);
+        if (timer) clearTimeout(timer);
+        resumeExpiryTimers.delete(item.confirmationId);
+      }
     }
     pendingActionsById.value = Object.fromEntries(
       Object.entries(pendingActionsById.value).filter(([, item]) => item.toolCallId !== toolCallId)
@@ -211,10 +250,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     try {
       detail = await fetchGetConversationDetail(conversationId);
     } catch {
-      streamHandoffPhase.value = 'stale';
+      if (currentConversationId.value === conversationId) streamHandoffPhase.value = 'stale';
       return false;
     }
-    if (currentConversationId.value !== conversationId || detail.error || !detail.data) {
+    if (currentConversationId.value !== conversationId) return false;
+    if (detail.error || !detail.data) {
       streamHandoffPhase.value = 'stale';
       return false;
     }
@@ -352,6 +392,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     activeRunSeq += 1;
     abortController?.abort();
     abortController = null;
+    abortResumes();
     stopPolling();
     isStreaming.value = false;
     const seq = ++selectSeq;
@@ -385,6 +426,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     activeRunSeq += 1;
     abortController?.abort();
     abortController = null;
+    abortResumes();
     stopPolling();
     isStreaming.value = false;
     currentConversationId.value = null;
@@ -405,7 +447,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** delete conversation */
   async function removeConversation(conversationId: string) {
-    await fetchDeleteConversation(conversationId);
+    const { error } = await fetchDeleteConversation(conversationId);
+    if (error) return;
     if (currentConversationId.value === conversationId) {
       clearCurrentConversation();
     }
@@ -691,42 +734,50 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   /**
    * spec §8.3: HITL 等待期间 SSE 断流时自动续传。
    * - GET /ai/chat/resume（Last-Event-ID 回传）
-   * - 409（并发冲突）：2s 后递归重试（仍受 resumeAttempts < 3 上限）
+   * - 409（并发冲突）：2s 后串行重试（仍受 resumeAttempts < 3 上限）
    * - 410（已处理）：fallback 轮询 operation-log 拉取结果
    * - 422（临近超时）：提示用户重新发起
    * - 其它 !ok：直接报错
    */
   async function attemptResume(confirmationId: string) {
     const pending = findPendingByConfirmationId(confirmationId);
-    const attempts = getResumeAttempts(confirmationId);
-    if (attempts >= 3) {
-      window.$message?.error($t('page.ai.chat.resumeFailedAfterRetries'));
-      return;
-    }
-    setResumeAttempts(confirmationId, attempts + 1);
+    const resumeConversationId = currentConversationId.value;
+    const resumeRunSeq = activeRunSeq;
+    const isActiveResume = () => currentConversationId.value === resumeConversationId && activeRunSeq === resumeRunSeq;
+    activeResumeIds.add(confirmationId);
     isStreaming.value = true;
     // AbortController 让 catch/finally 主动断开 SSE，后端 finally 块立即跑
     // 释放 owner 锁（避免 60s TTL 残留导致下次 409 IN_PROGRESS）
     const resumeAbort = new AbortController();
+    resumeControllers.get(confirmationId)?.abort();
+    resumeControllers.set(confirmationId, resumeAbort);
     try {
       const baseUrl = getBaseUrl();
       const token = localStg.get('token');
-      const response = await fetch(`${baseUrl}/ai/chat/resume?_t=${Date.now()}`, {
-        method: 'GET',
-        cache: 'no-store',
-        signal: resumeAbort.signal,
-        headers: {
-          Authorization: token ? `Bearer ${token}` : '',
-          // 强制用入参 confirmationId（doStream catch 自动调时传入）。cache-buster
-          // ?_t 防 vite proxy 缓存 SSE 错误响应（410/409）。
-          'Last-Event-ID': confirmationId,
-          Accept: 'text/event-stream'
+      let response: Response;
+      while (true) {
+        const attempts = getResumeAttempts(confirmationId);
+        if (attempts >= 3) {
+          if (isActiveResume()) window.$message?.error($t('page.ai.chat.resumeFailedAfterRetries'));
+          return;
         }
-      });
-      if (response.status === 409) {
-        // 并发冲突，2s 后递归重试
+        setResumeAttempts(confirmationId, attempts + 1);
+        response = await fetch(`${baseUrl}/ai/chat/resume?_t=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          signal: resumeAbort.signal,
+          headers: {
+            Authorization: token ? `Bearer ${token}` : '',
+            // 强制用入参 confirmationId（doStream catch 自动调时传入）。cache-buster
+            // ?_t 防 vite proxy 缓存 SSE 错误响应（410/409）。
+            'Last-Event-ID': confirmationId,
+            Accept: 'text/event-stream'
+          }
+        });
+        if (!isActiveResume()) return;
+        if (response.status !== 409) break;
         await new Promise(resolve => setTimeout(resolve, 2000));
-        return attemptResume(confirmationId);
+        if (!isActiveResume()) return;
       }
       if (response.status === 410) {
         // 确认窗口已被处理（approved/rejected/expired），fallback 轮询结果
@@ -740,10 +791,14 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       }
       if (response.status === 422) {
         window.$message?.warning($t('page.ai.chat.confirmationNearExpiry'));
+        await refreshCurrentConversationDetail();
+        const current = findPendingByConfirmationId(confirmationId);
+        if (current) scheduleResumeExpiryReconciliation(current);
         return;
       }
       if (response.status === 404) {
         window.$message?.info($t('page.ai.chat.confirmationExpired'));
+        await refreshCurrentConversationDetail();
         return;
       }
       if (!response.ok) {
@@ -761,6 +816,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         const parts = buffer.split('\n\n');
         buffer = parts.pop() || '';
         for (const part of parts) {
+          if (!isActiveResume()) break;
           const lines = part.split('\n');
           let payload = '';
           for (const line of lines) {
@@ -768,11 +824,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             if (trimmed.startsWith('data: ')) payload = trimmed.slice(6);
           }
           if (!payload) continue;
-          parseSsePayload(payload);
+          if (isActiveResume()) parseSsePayload(payload);
         }
       }
     } catch (error: any) {
-      if (error.name !== 'AbortError') {
+      if (isActiveResume() && error.name !== 'AbortError') {
         window.$message?.error($t('page.ai.chat.resumeFailed', { message: error.message }));
       }
     } finally {
@@ -782,7 +838,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       } catch {
         // 已 abort 静默
       }
-      isStreaming.value = false;
+      const ownsResume = resumeControllers.get(confirmationId) === resumeAbort;
+      if (ownsResume) {
+        resumeControllers.delete(confirmationId);
+        activeResumeIds.delete(confirmationId);
+      }
+      if (ownsResume && isActiveResume()) isStreaming.value = activeResumeIds.size > 0;
     }
   }
 
@@ -838,7 +899,16 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   ) {
     stopPolling(toolCallId);
     const deadline = Date.now() + 30_000;
-    const timer = setInterval(async () => {
+    const pollConversationId = currentConversationId.value;
+    const pollRunSeq = activeRunSeq;
+    const owner = Symbol(toolCallId);
+    const isActivePoll = () =>
+      pollOwners.get(toolCallId) === owner &&
+      currentConversationId.value === pollConversationId &&
+      activeRunSeq === pollRunSeq;
+    pollOwners.set(toolCallId, owner);
+    const poll = async () => {
+      if (!isActivePoll()) return;
       if (Date.now() > deadline) {
         stopPolling(toolCallId);
         window.$message?.info($t('page.ai.chat.operationStillRunning'));
@@ -846,6 +916,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       }
       try {
         const { data, error } = await fetchAiOperationLog(toolCallId);
+        if (!isActivePoll()) return;
         if (error || !data) return;
         const terminalStatus = ['success', 'failed', 'rejected', 'expired'];
         if (terminalStatus.includes(data.status)) {
@@ -896,20 +967,32 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         }
       } catch {
         // 网络错误静默，下次重试
+      } finally {
+        if (pollOwners.get(toolCallId) === owner) {
+          pollTimers.set(
+            toolCallId,
+            setTimeout(() => void poll(), 1500)
+          );
+        }
       }
-    }, 1500);
-    pollTimers.set(toolCallId, timer);
+    };
+    pollTimers.set(
+      toolCallId,
+      setTimeout(() => void poll(), 1500)
+    );
   }
 
   function stopPolling(toolCallId?: string) {
     if (toolCallId) {
       const timer = pollTimers.get(toolCallId);
-      if (timer) clearInterval(timer);
+      if (timer) clearTimeout(timer);
       pollTimers.delete(toolCallId);
+      pollOwners.delete(toolCallId);
       return;
     }
-    for (const timer of pollTimers.values()) clearInterval(timer);
+    for (const timer of pollTimers.values()) clearTimeout(timer);
     pollTimers.clear();
+    pollOwners.clear();
   }
 
   /** send a new user message + stream response */

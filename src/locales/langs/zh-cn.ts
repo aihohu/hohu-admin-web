@@ -520,6 +520,7 @@ const local: App.I18n.Schema = {
           userEmail: '请输入邮箱',
           userStatus: '请选择用户状态',
           userRole: '请选择用户角色',
+          userRoleRequired: '请至少选择一个用户角色',
           primaryDeptRequired: '请选择主部门'
         },
         addUser: '新增用户',
@@ -1264,7 +1265,7 @@ const local: App.I18n.Schema = {
     required: '不能为空',
     userName: {
       required: '请输入用户名',
-      invalid: '用户名必须为2-16位中文、字母、数字、下划线或减号'
+      invalid: '用户名必须为2-16位字母或数字'
     },
     phone: {
       required: '请输入手机号',

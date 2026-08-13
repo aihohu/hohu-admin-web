@@ -743,6 +743,7 @@ declare namespace App {
               userEmail: string;
               userStatus: string;
               userRole: string;
+              userRoleRequired: string;
               primaryDeptRequired: string;
             };
             addUser: string;

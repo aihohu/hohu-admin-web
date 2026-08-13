@@ -526,6 +526,7 @@ const local: App.I18n.Schema = {
           userEmail: 'Please enter email',
           userStatus: 'Please select user status',
           userRole: 'Please select user role',
+          userRoleRequired: 'Please select at least one user role',
           primaryDeptRequired: 'Please select a primary department'
         },
         addUser: 'Add User',
@@ -1272,7 +1273,7 @@ const local: App.I18n.Schema = {
     required: 'Cannot be empty',
     userName: {
       required: 'Please enter user name',
-      invalid: 'Username must be 2-16 characters: Chinese, letters, numbers, underscore or hyphen'
+      invalid: 'Username must be 2-16 letters or numbers'
     },
     phone: {
       required: 'Please enter phone number',

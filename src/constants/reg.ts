@@ -1,4 +1,5 @@
-export const REG_USER_NAME = /^[\u4E00-\u9FA5a-zA-Z0-9_-]{2,16}$/;
+/** User name: 2-16 Unicode letters or numbers, aligned with backend `str.isalnum()`. */
+export const REG_USER_NAME = /^[\p{L}\p{N}]{2,16}$/u;
 
 /** Phone reg */
 export const REG_PHONE =

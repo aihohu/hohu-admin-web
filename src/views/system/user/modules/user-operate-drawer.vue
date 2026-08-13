@@ -56,12 +56,22 @@ function createDefaultModel(): Api.SystemManage.CreateUserParams {
   };
 }
 
-type RuleKey = Extract<keyof Api.SystemManage.CreateUserParams, 'userName' | 'nickname' | 'password' | 'status'>;
+type RuleKey = Extract<
+  keyof Api.SystemManage.CreateUserParams,
+  'userName' | 'nickname' | 'password' | 'roles' | 'status'
+>;
 
 const rules: Record<RuleKey, App.Global.FormRule[]> = {
   userName: formRules.userName,
-  nickname: formRules.userName,
+  nickname: [defaultRequiredRule],
   password: formRules.pwd,
+  roles: [
+    {
+      required: true,
+      type: 'array',
+      message: $t('page.system.user.form.userRoleRequired')
+    }
+  ],
   status: [defaultRequiredRule]
 };
 
@@ -151,7 +161,11 @@ function closeDrawer() {
 }
 
 async function handleSubmit() {
-  await validate();
+  try {
+    await validate();
+  } catch {
+    return;
+  }
   if (allSelectedDeptIds.value.length > 0 && !primaryDeptId.value) {
     window.$message?.error($t('page.system.user.form.primaryDeptRequired'));
     return;

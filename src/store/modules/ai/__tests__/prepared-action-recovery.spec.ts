@@ -19,7 +19,7 @@ vi.mock('@/utils/storage', () => ({
   localStg: { get: vi.fn() }
 }));
 
-import { fetchGetConversationDetail } from '@/service/api';
+import { fetchDeleteConversation, fetchGetConversationDetail, fetchGetConversationList } from '@/service/api';
 import { fetchAiConfirm, fetchAiOperationLog } from '@/service/api/ai';
 import { useAiStore } from '..';
 
@@ -57,7 +57,11 @@ function detail(actions: Api.Ai.PendingAction[]) {
 describe('prepared action recovery', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    vi.mocked(fetchGetConversationList).mockResolvedValue({
+      data: { records: [], total: 0, current: 1, size: 20 },
+      error: null
+    } as any);
   });
 
   it('restores a safe confirmation from conversation detail without frozen args', async () => {
@@ -73,6 +77,85 @@ describe('prepared action recovery', () => {
       { label: 'onConflict', value: 'skip' }
     ]);
     expect(JSON.stringify(store.pendingActionsById)).not.toContain('preview_token');
+  });
+
+  it('keeps the current conversation when deletion is rejected', async () => {
+    vi.mocked(fetchGetConversationDetail).mockResolvedValue(detail([pendingAction]));
+    vi.mocked(fetchDeleteConversation).mockResolvedValue({
+      data: null,
+      error: { message: 'AI_CHAT_RUN_IN_PROGRESS' }
+    } as any);
+    const store = useAiStore();
+    await store.selectConversation('1');
+
+    await store.removeConversation('1');
+
+    expect(store.currentConversationId).toBe('1');
+    expect(store.pendingActionsById).toHaveProperty('9001');
+  });
+
+  it('aborts and ignores a resume stream after switching conversations', async () => {
+    vi.mocked(fetchGetConversationDetail)
+      .mockResolvedValueOnce(detail([pendingAction]))
+      .mockResolvedValueOnce({
+        data: { conversation: { conversationId: '2' }, messages: [], pendingActions: [] },
+        error: null
+      } as any);
+    let resolveResume!: (response: Response) => void;
+    const resumeFetch = vi.fn(
+      () =>
+        new Promise<Response>(resolve => {
+          resolveResume = resolve;
+        })
+    );
+    vi.stubGlobal('fetch', resumeFetch);
+    try {
+      const store = useAiStore();
+      await store.selectConversation('1');
+      const resume = store.attemptResume(pendingAction.confirmationId);
+      await Promise.resolve();
+
+      await store.selectConversation('2');
+      resolveResume(
+        new Response(
+          `data: ${JSON.stringify({
+            type: 'confirmation_resumed',
+            actionId: '9001',
+            confirmationId: pendingAction.confirmationId,
+            tool: pendingAction.tool,
+            toolCallId: pendingAction.toolCallId,
+            summary: 'stale',
+            expiresAt: pendingAction.expiresAt,
+            resumedAt: pendingAction.expiresAt
+          })}\n\n`,
+          { status: 200 }
+        )
+      );
+      await resume;
+
+      expect(store.currentConversationId).toBe('2');
+      expect(store.pendingActionsById).toEqual({});
+      expect(store.streamEvents).toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('reconciles durable pending state when resume returns 404', async () => {
+    vi.mocked(fetchGetConversationDetail)
+      .mockResolvedValueOnce(detail([pendingAction]))
+      .mockResolvedValueOnce(detail([]));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
+    try {
+      const store = useAiStore();
+      await store.selectConversation('1');
+
+      await store.attemptResume(pendingAction.confirmationId);
+
+      expect(store.pendingActionsById).toEqual({});
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('keeps pending state when confirm fails and removes it only after a terminal response', async () => {
@@ -246,6 +329,37 @@ describe('prepared action recovery', () => {
       expect(fetchAiOperationLog).toHaveBeenCalledWith('tc_execute_9001');
       expect(fetchAiOperationLog).toHaveBeenCalledWith('tc_execute_9002');
       expect(store.pendingActionsById).toEqual({});
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not overlap polling requests for the same prepared action', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(fetchGetConversationDetail).mockResolvedValue(detail([pendingAction]));
+      vi.mocked(fetchAiConfirm).mockResolvedValue({
+        data: { actionId: '9001', toolCallId: pendingAction.toolCallId, status: 'running' },
+        error: null
+      } as any);
+      let finishPoll!: (value: any) => void;
+      vi.mocked(fetchAiOperationLog).mockImplementation(
+        () =>
+          new Promise(resolve => {
+            finishPoll = resolve;
+          })
+      );
+      const store = useAiStore();
+      await store.selectConversation('1');
+
+      await store.approveTool();
+      await vi.advanceTimersByTimeAsync(4500);
+
+      expect(fetchAiOperationLog).toHaveBeenCalledTimes(1);
+      finishPoll({ data: { toolCallId: pendingAction.toolCallId, status: 'running' }, error: null });
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(fetchAiOperationLog).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();
     }
