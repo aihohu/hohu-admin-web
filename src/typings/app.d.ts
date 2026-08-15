@@ -1105,6 +1105,14 @@ declare namespace App {
             inputHint: string;
             thinking: string;
             noModel: string;
+            availabilityLoading: string;
+            availabilityForbidden: string;
+            availabilityModuleDisabled: string;
+            availabilityNoAgents: string;
+            availabilityNoModels: string;
+            availabilityModelUnavailable: string;
+            availabilityError: string;
+            resultProjectionForbidden: string;
             copy: string;
             copied: string;
             regenerate: string;
@@ -1268,6 +1276,10 @@ declare namespace App {
             baseUrl: string;
             models: string;
             status: string;
+            egressStatus: string;
+            egressPolicyBlocked: string;
+            egressPolicyAllowed: string;
+            saveBeforeTest: string;
             addProvider: string;
             editProvider: string;
             capabilities: string;

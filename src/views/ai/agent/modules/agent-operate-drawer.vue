@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue';
-import { fetchAgentAdminDetail, fetchUpdateAgentAdmin } from '@/service/api';
-import { fetchGetAvailableModels } from '@/service/api/ai';
+import { fetchAgentAdminDetail, fetchAgentModelOptions, fetchUpdateAgentAdmin } from '@/service/api';
 import { $t } from '@/locales';
 
 interface Props {
@@ -37,10 +36,13 @@ const descInvalid = computed(() => {
   return descLen.value < 50 || descLen.value > 200;
 });
 
-async function loadDetail() {
-  if (!props.editRow) return;
+let loadSequence = 0;
+
+async function loadDetail(sequence: number): Promise<boolean> {
+  if (!props.editRow) return false;
   detailLoading.value = true;
   const { error, data } = await fetchAgentAdminDetail(props.editRow.agentId);
+  if (sequence !== loadSequence || !props.visible) return false;
   if (!error && data) {
     detail.value = data;
     model.value = {
@@ -58,19 +60,29 @@ async function loadDetail() {
     window.$message?.error?.($t('page.ai.agent.loadFailed'));
   }
   detailLoading.value = false;
+  return !error && Boolean(data);
 }
 
-async function loadModelOptions() {
-  // reuse GET /ai/provider/models — flat list of all available models
-  const { error, data } = await fetchGetAvailableModels();
+async function loadModelOptions(sequence: number) {
+  const { error, data } = await fetchAgentModelOptions();
+  if (sequence !== loadSequence || !props.visible) return;
   if (!error && data) {
     const opts = data.map(m => ({
-      label: `${m.providerName} / ${m.model}`,
-      value: `${m.providerCode}:${m.model}`
+      label: m.label,
+      value: m.modelId
     }));
+    const currentPreference = model.value.modelPreference;
+    if (currentPreference && !opts.some(option => option.value === currentPreference)) {
+      opts.unshift({ label: currentPreference, value: currentPreference });
+    }
     modelPreferenceOptions.value = [{ label: $t('page.ai.agent.useGlobalDefault'), value: '' }, ...opts];
   }
-  // silent fail — modelPreference select keeps default option
+  // Keep the global default option when model options cannot be loaded.
+}
+
+async function loadDrawerData(sequence: number) {
+  if (!(await loadDetail(sequence))) return;
+  await loadModelOptions(sequence);
 }
 
 async function handleSubmit() {
@@ -99,15 +111,16 @@ async function handleSubmit() {
 watch(
   () => props.visible,
   v => {
+    const sequence = ++loadSequence;
     if (v) {
-      loadDetail();
-      loadModelOptions();
+      modelPreferenceOptions.value = [{ label: $t('page.ai.agent.useGlobalDefault'), value: '' }];
+      void loadDrawerData(sequence);
     }
   }
 );
 
 // exposed for vitest component tests (descInvalid / model / handleSubmit)
-defineExpose({ descInvalid, model, handleSubmit });
+defineExpose({ descInvalid, model, modelPreferenceOptions, handleSubmit });
 </script>
 
 <template>

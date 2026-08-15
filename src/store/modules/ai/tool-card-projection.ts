@@ -8,6 +8,14 @@ export type ToolCallCardProjection = {
 
 type PendingProjection = Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent;
 
+export function isMessageTombstone(message: Api.Ai.MessageProjection): message is Api.Ai.MessageTombstone {
+  return 'status' in message && message.status === 'redacted';
+}
+
+export function isPendingActionStatus(action: Api.Ai.PendingActionProjection): action is Api.Ai.PendingActionStatus {
+  return 'status' in action && !('actionId' in action);
+}
+
 function pendingForTool(
   pendingActions: Record<string, PendingProjection>,
   toolCallId: string
@@ -51,10 +59,10 @@ function resultFromMessageToolCall(toolCall: NonNullable<Api.Ai.Message['toolCal
 
 /** Build the durable cards owned by one assistant message. */
 export function projectMessageToolCards(
-  message: Api.Ai.Message,
+  message: Api.Ai.MessageProjection,
   pendingActions: Record<string, PendingProjection> = {}
 ): ToolCallCardProjection[] {
-  if (message.role !== 'assistant') return [];
+  if (isMessageTombstone(message) || message.role !== 'assistant') return [];
   const cards: ToolCallCardProjection[] = (message.toolCalls || [])
     .filter(toolCall => Boolean(toolCall.tool && toolCall.tool_call_id))
     .map(toolCall => {
@@ -173,8 +181,8 @@ export function serializeToolCards(cards: ToolCallCardProjection[]): NonNullable
   }));
 }
 
-export function messageCoversToolCalls(message: Api.Ai.Message, expectedToolCallIds: string[]): boolean {
-  if (message.role !== 'assistant') return false;
+export function messageCoversToolCalls(message: Api.Ai.MessageProjection, expectedToolCallIds: string[]): boolean {
+  if (isMessageTombstone(message) || message.role !== 'assistant') return false;
   const actual = new Set((message.toolCalls || []).map(toolCall => toolCall.tool_call_id));
   return expectedToolCallIds.every(toolCallId => actual.has(toolCallId));
 }

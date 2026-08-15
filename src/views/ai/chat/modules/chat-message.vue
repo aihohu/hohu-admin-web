@@ -48,7 +48,7 @@ const renderedContent = computed(() => {
 });
 
 function startEdit() {
-  editContent.value = props.message.content;
+  editContent.value = props.message.content || '';
   isEditing.value = true;
 }
 

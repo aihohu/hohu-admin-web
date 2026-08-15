@@ -6,6 +6,7 @@ import IconIcRoundAutoAwesome from '~icons/ic/round-auto-awesome';
 import IconIcRoundInsertDriveFile from '~icons/ic/round-insert-drive-file';
 import IconIcRoundPerson from '~icons/ic/round-person';
 import { useAiStore } from '@/store/modules/ai';
+import { isMessageTombstone } from '@/store/modules/ai/tool-card-projection';
 import { fetchSaveConversation } from '@/service/api';
 import ChatMessage from './chat-message.vue';
 import ChatInput from './chat-input.vue';
@@ -20,13 +21,28 @@ const inputText = ref('');
 const isUserAtBottom = ref(true);
 const showScrollBtn = ref(false);
 
+const availabilityText = computed(() => {
+  const keys = {
+    loading: 'page.ai.chat.availabilityLoading',
+    forbidden: 'page.ai.chat.availabilityForbidden',
+    module_disabled: 'page.ai.chat.availabilityModuleDisabled',
+    no_agents: 'page.ai.chat.availabilityNoAgents',
+    no_models: 'page.ai.chat.availabilityNoModels',
+    model_unavailable: 'page.ai.chat.availabilityModelUnavailable',
+    error: 'page.ai.chat.availabilityError'
+  } as const;
+  if (aiStore.chatAvailability === 'ready') return '';
+  return t(keys[aiStore.chatAvailability]);
+});
+
 // Only the open stream reads streamEvents. Persisted cards always come from the
 // owning message.toolCalls array and are rendered inside that message wrapper.
 const streamingToolCards = computed(() => aiStore.streamToolCards());
 
-function shouldRenderMessageBubble(message: Api.Ai.Message) {
+function shouldRenderMessageBubble(message: Api.Ai.MessageProjection): message is Api.Ai.Message {
+  if (isMessageTombstone(message)) return false;
   if (message.role !== 'assistant') return true;
-  return Boolean(message.content.trim() || message.parts?.length);
+  return Boolean(message.content?.trim() || message.parts?.length);
 }
 
 /**
@@ -109,7 +125,8 @@ function scrollToBottom() {
 // 最后一条用户消息的 index
 const lastUserMessageIndex = computed(() => {
   for (let i = aiStore.currentMessages.length - 1; i >= 0; i--) {
-    if (aiStore.currentMessages[i].role === 'user') return i;
+    const message = aiStore.currentMessages[i];
+    if (!isMessageTombstone(message) && message.role === 'user') return i;
   }
   return -1;
 });
@@ -117,7 +134,8 @@ const lastUserMessageIndex = computed(() => {
 // 是否是最后一条 assistant 消息
 const isLastAssistant = (idx: number) => {
   for (let i = aiStore.currentMessages.length - 1; i >= 0; i--) {
-    if (aiStore.currentMessages[i].role === 'assistant') return i === idx;
+    const message = aiStore.currentMessages[i];
+    if (!isMessageTombstone(message) && message.role === 'assistant') return i === idx;
   }
   return false;
 };
@@ -125,6 +143,7 @@ const isLastAssistant = (idx: number) => {
 const hasConversation = computed(() => !!aiStore.currentConversationId);
 
 async function handleSend() {
+  if (aiStore.chatAvailability !== 'ready') return;
   const text = inputText.value.trim();
   const hasImages = aiStore.attachedImages.length > 0;
   const hasFiles = aiStore.attachedFiles.length > 0;
@@ -226,8 +245,19 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
 
 <template>
   <div class="chat-main h-full flex flex-col">
+    <div
+      v-if="aiStore.chatAvailability !== 'ready'"
+      class="availability-state"
+      :data-state="aiStore.chatAvailability"
+      data-testid="ai-chat-availability"
+    >
+      <NSpin v-if="aiStore.chatAvailability === 'loading'" size="small" />
+      <IconIcRoundSmartToy v-else class="text-32px" />
+      <div class="availability-title">{{ availabilityText }}</div>
+    </div>
+
     <!-- Empty state: welcome + input -->
-    <template v-if="!hasConversation">
+    <template v-else-if="!hasConversation">
       <div class="flex-1 flex flex-col items-center justify-center px-24px overflow-y-auto">
         <div class="welcome-icon">
           <IconIcRoundSmartToy class="text-36px" />
@@ -264,8 +294,12 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
         <div class="max-w-800px mx-auto px-16px py-16px">
           <template v-for="(msg, idx) in aiStore.currentMessages" :key="msg.messageId">
             <div class="message-group" :class="`message-group--${msg.role}`" :data-message-id="msg.messageId">
+              <div v-if="isMessageTombstone(msg)" class="message-tombstone" data-testid="ai-message-tombstone">
+                <IconIcRoundLock class="text-16px" />
+                <span>{{ t('page.ai.chat.resultProjectionForbidden') }}</span>
+              </div>
               <ChatMessage
-                v-if="shouldRenderMessageBubble(msg)"
+                v-else-if="shouldRenderMessageBubble(msg)"
                 :message="msg"
                 :index="idx"
                 :is-last-user-message="idx === lastUserMessageIndex"
@@ -348,6 +382,16 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
 
           <ChatClarification />
 
+          <div
+            v-for="action in aiStore.redactedPendingActions"
+            :key="action.confirmationId"
+            class="message-tombstone"
+            data-testid="ai-pending-action-redacted"
+          >
+            <IconIcRoundLock class="text-16px" />
+            <span>{{ t('page.ai.chat.resultProjectionForbidden') }}</span>
+          </div>
+
           <!-- Thinking indicator -->
           <div
             v-if="aiStore.isStreaming && !aiStore.streamingText && streamingToolCards.length === 0"
@@ -384,6 +428,38 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
 </template>
 
 <style scoped>
+.availability-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: var(--n-text-color-3, #999);
+  text-align: center;
+}
+
+.availability-title {
+  max-width: 480px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.message-tombstone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(75% - 48px);
+  margin: 4px 0 12px 64px;
+  padding: 10px 14px;
+  border: 1px dashed var(--n-border-color, #d1d5db);
+  border-radius: 8px;
+  color: var(--n-text-color-3, #6b7280);
+  background: var(--n-color-embedded, #f5f7fb);
+  font-size: 13px;
+}
+
 /* Welcome */
 .welcome-icon {
   width: 64px;

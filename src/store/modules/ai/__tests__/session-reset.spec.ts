@@ -11,7 +11,7 @@ vi.mock('@/service/api/ai', () => ({
   fetchAiAgents: vi.fn(),
   fetchAiConfirm: vi.fn(),
   fetchAiOperationLog: vi.fn(),
-  fetchGetAvailableModels: vi.fn(),
+  fetchGetChatModels: vi.fn(),
   fetchRoutingFeedback: vi.fn()
 }));
 
@@ -35,7 +35,7 @@ describe('AI account session reset', () => {
     store.currentMessages = [{ content: 'private message' } as Api.Ai.Message];
     store.availableAgents = [{ code: 'private-agent' } as Api.Ai.Agent];
     store.selectedAgentCode = 'private-agent';
-    store.availableModels = [{ modelId: 'private-model' } as Api.Ai.AvailableModel];
+    store.availableModels = [{ modelId: 'private-model' } as Api.Ai.ModelOption];
     store.selectedModelId = 'private-model';
     store.attachedFiles = [{ fileId: 'private-file' } as Api.Ai.AttachedFile];
     store.pendingActionsById = {

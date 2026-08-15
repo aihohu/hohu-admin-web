@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { SetupStoreId } from '@/enum';
 import { $t } from '@/locales';
 import { localStg } from '@/utils/storage';
@@ -9,10 +9,12 @@ import {
   fetchAiAgents,
   fetchAiConfirm,
   fetchAiOperationLog,
-  fetchGetAvailableModels,
+  fetchGetChatModels,
   fetchRoutingFeedback
 } from '@/service/api/ai';
 import {
+  isMessageTombstone,
+  isPendingActionStatus,
   messageCoversToolCalls,
   projectMessageToolCards,
   projectStreamToolCards,
@@ -26,16 +28,54 @@ export function createChatTraceId(): string {
   return `tr_${hex}`;
 }
 
+type ResourceLoadState = 'idle' | 'loading' | 'ready' | 'empty' | 'forbidden' | 'module_disabled' | 'error';
+export type ChatAvailability =
+  | 'loading'
+  | 'ready'
+  | 'forbidden'
+  | 'module_disabled'
+  | 'no_agents'
+  | 'no_models'
+  | 'model_unavailable'
+  | 'error';
+
+function getBackendErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== 'object' || !('response' in error)) return null;
+  const response = error.response;
+  if (!response || typeof response !== 'object' || !('data' in response)) return null;
+  const data = response.data;
+  if (!data || typeof data !== 'object' || !('errorCode' in data)) return null;
+  return typeof data.errorCode === 'string' ? data.errorCode : null;
+}
+
+function loadStateFromError(error: unknown): ResourceLoadState {
+  const errorCode = getBackendErrorCode(error);
+  if (errorCode === 'AI_MODULE_DISABLED') return 'module_disabled';
+  if (errorCode === 'AI_CHAT_PERMISSION_DENIED') return 'forbidden';
+  if (errorCode === 'AI_AGENT_NOT_AVAILABLE' || errorCode === 'AI_MODEL_NOT_AVAILABLE') return 'empty';
+  return 'error';
+}
+
+async function getResponseErrorCode(response: Response): Promise<string | null> {
+  try {
+    const body: unknown = await response.json();
+    if (!body || typeof body !== 'object' || !('errorCode' in body)) return null;
+    return typeof body.errorCode === 'string' ? body.errorCode : null;
+  } catch {
+    return null;
+  }
+}
+
 export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const conversations = ref<Api.Ai.Conversation[]>([]);
   const currentConversationId = ref<string | null>(null);
-  const currentMessages = ref<Api.Ai.Message[]>([]);
+  const currentMessages = ref<Api.Ai.MessageProjection[]>([]);
   const streamingText = ref('');
   /** 当前 LLM 推理过程文本（Vercel UI Protocol v4 reasoning-delta 累积；展示位待后续 PR） */
   const reasoningText = ref('');
   const isStreaming = ref(false);
   const loading = ref(false);
-  const availableModels = ref<Api.Ai.AvailableModel[]>([]);
+  const availableModels = ref<Api.Ai.ModelOption[]>([]);
   const selectedModelId = ref<string>('');
   const conversationCurrent = ref(1);
   const conversationSize = ref(20);
@@ -49,6 +89,28 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   // Agents available to the current user and the active routing selection.
   const availableAgents = ref<Api.Ai.Agent[]>([]);
   const selectedAgentCode = ref<string>('');
+  const modelLoadState = ref<ResourceLoadState>('idle');
+  const agentLoadState = ref<ResourceLoadState>('idle');
+  const conversationProjectionState = ref<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const runtimeAvailabilityErrorCode = ref<string | null>(null);
+
+  const chatAvailability = computed<ChatAvailability>(() => {
+    if (runtimeAvailabilityErrorCode.value === 'AI_MODULE_DISABLED') return 'module_disabled';
+    if (runtimeAvailabilityErrorCode.value === 'AI_CHAT_PERMISSION_DENIED') return 'forbidden';
+    if (runtimeAvailabilityErrorCode.value === 'AI_AGENT_NOT_AVAILABLE') return 'no_agents';
+    if (runtimeAvailabilityErrorCode.value === 'AI_MODEL_NOT_AVAILABLE') return 'model_unavailable';
+    if (modelLoadState.value === 'module_disabled' || agentLoadState.value === 'module_disabled') {
+      return 'module_disabled';
+    }
+    if (modelLoadState.value === 'forbidden' || agentLoadState.value === 'forbidden') return 'forbidden';
+    if (agentLoadState.value === 'empty') return 'no_agents';
+    if (modelLoadState.value === 'empty') return 'no_models';
+    if (modelLoadState.value === 'error' || agentLoadState.value === 'error') return 'error';
+    if (currentConversationId.value && conversationProjectionState.value === 'error') return 'error';
+    if (currentConversationId.value && conversationProjectionState.value === 'loading') return 'loading';
+    if (modelLoadState.value !== 'ready' || agentLoadState.value !== 'ready') return 'loading';
+    return 'ready';
+  });
 
   // ====== Stream events and human confirmation ======
   /** 当前流的 tool 调用事件列表（tool_call_started + tool_call_result，按 toolCallId 配对） */
@@ -63,6 +125,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const pendingActionsById = ref<Record<string, Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent>>(
     {}
   );
+  const redactedPendingActions = ref<Api.Ai.PendingActionStatus[]>([]);
   /** confirmation restored by attemptResume and cleared when its tool result arrives */
   const pendingConfirmationId = ref<string | null>(null);
   /** tool call polled when a resume request reports that confirmation is already handled */
@@ -134,7 +197,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     if (pendingConfirmationId.value === confirmationId) resumeAttempts.value = attempts;
   }
 
-  function messageToolCards(message: Api.Ai.Message) {
+  function messageToolCards(message: Api.Ai.MessageProjection) {
     return projectMessageToolCards(message, pendingActionsById.value);
   }
 
@@ -142,12 +205,16 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     return projectStreamToolCards(streamEvents.value, pendingActionsById.value);
   }
 
-  function pendingToolCardsAfterMessage(message: Api.Ai.Message) {
-    if (message.role !== 'user') return [];
+  function pendingToolCardsAfterMessage(message: Api.Ai.MessageProjection) {
+    if (isMessageTombstone(message) || message.role !== 'user') return [];
     const actions = Object.values(pendingActionsById.value).filter(action => {
       if (action.sourceUserMessageId !== message.messageId) return false;
       return !currentMessages.value.some(
-        candidate => candidate.role === 'assistant' && candidate.traceId && candidate.traceId === action.traceId
+        candidate =>
+          !isMessageTombstone(candidate) &&
+          candidate.role === 'assistant' &&
+          candidate.traceId &&
+          candidate.traceId === action.traceId
       );
     });
     return actions.flatMap(action =>
@@ -167,8 +234,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     focusPendingConfirmation();
   }
 
-  function reconcilePendingActions(actions: Api.Ai.PendingAction[]) {
-    const activeConfirmationIds = new Set(actions.map(action => action.confirmationId));
+  function reconcilePendingActions(actions: Api.Ai.PendingActionProjection[]) {
+    const safeActions = actions.filter((action): action is Api.Ai.PendingAction => !isPendingActionStatus(action));
+    redactedPendingActions.value = actions.filter(isPendingActionStatus);
+    const activeConfirmationIds = new Set(safeActions.map(action => action.confirmationId));
     for (const confirmationId of resumeAttemptsByConfirmation.keys()) {
       if (!activeConfirmationIds.has(confirmationId)) resumeAttemptsByConfirmation.delete(confirmationId);
     }
@@ -179,7 +248,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       }
     }
     pendingActionsById.value = Object.fromEntries(
-      actions.map(action => [
+      safeActions.map(action => [
         action.actionId,
         {
           type: 'confirmation_required' as const,
@@ -198,6 +267,31 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       ])
     );
     focusPendingConfirmation();
+  }
+
+  function applyConversationProjection(
+    messages: Api.Ai.MessageProjection[],
+    actions: Api.Ai.PendingActionProjection[]
+  ): boolean {
+    const projectionRevoked = messages.some(isMessageTombstone) || actions.some(isPendingActionStatus);
+    if (projectionRevoked) {
+      activeRunSeq += 1;
+      abortController?.abort();
+      abortController = null;
+      abortResumes();
+      stopPolling();
+      isStreaming.value = false;
+      streamingText.value = '';
+      reasoningText.value = '';
+      streamEvents.value = [];
+      streamHandoffPhase.value = 'persisted';
+      activeStreamTraceId.value = null;
+      lastDoneAck.value = null;
+      pendingClarification.value = null;
+    }
+    currentMessages.value = messages;
+    reconcilePendingActions(actions);
+    return projectionRevoked;
   }
 
   function removePendingByToolCallId(toolCallId: string) {
@@ -220,19 +314,18 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     if (!conversationId) return false;
     const detail = await fetchGetConversationDetail(conversationId);
     if (currentConversationId.value !== conversationId || detail.error || !detail.data) return false;
-    currentMessages.value = detail.data.messages;
-    reconcilePendingActions(detail.data.pendingActions || []);
+    applyConversationProjection(detail.data.messages, detail.data.pendingActions || []);
     return true;
   }
 
   function findDurableAssistant(
-    messages: Api.Ai.Message[],
+    messages: Api.Ai.MessageProjection[],
     traceId: string,
     expectedToolCallIds: string[],
     done: Api.Ai.DoneEvent | null
   ): Api.Ai.Message | undefined {
-    return messages.find(message => {
-      if (message.role !== 'assistant') return false;
+    return messages.find((message): message is Api.Ai.Message => {
+      if (isMessageTombstone(message) || message.role !== 'assistant') return false;
       if (done?.messageId && message.messageId !== done.messageId) return false;
       if (message.traceId !== (done?.traceId || traceId)) return false;
       return messageCoversToolCalls(message, expectedToolCallIds);
@@ -261,10 +354,18 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
 
     const pending = detail.data.pendingActions || [];
+    const projectionRevoked = detail.data.messages.some(isMessageTombstone) || pending.some(isPendingActionStatus);
+    if (projectionRevoked) {
+      applyConversationProjection(detail.data.messages, pending);
+      streamHandoffPhase.value = 'persisted';
+      return true;
+    }
     const projectionUnchanged = done?.projection === 'unchanged';
     const durableAssistant = findDurableAssistant(detail.data.messages, traceId, expectedToolCallIds, done);
-    const durableUser = detail.data.messages.some(message => message.role === 'user' && message.traceId === traceId);
-    const durablePending = pending.some(action => action.traceId === traceId);
+    const durableUser = detail.data.messages.some(
+      message => !isMessageTombstone(message) && message.role === 'user' && message.traceId === traceId
+    );
+    const durablePending = pending.some(action => !isPendingActionStatus(action) && action.traceId === traceId);
     const failedButSourceCommitted = done?.persistence === 'failed' && done.projection === 'updated' && durableUser;
 
     if (durablePending && acceptPendingHandoff && !durableAssistant) {
@@ -277,8 +378,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
 
     if (projectionUnchanged || durableAssistant || failedButSourceCommitted) {
-      currentMessages.value = detail.data.messages;
-      reconcilePendingActions(pending);
+      applyConversationProjection(detail.data.messages, pending);
       streamEvents.value = [];
       streamHandoffPhase.value = 'persisted';
       return true;
@@ -313,7 +413,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     const toolCalls = serializeToolCards(cards);
     if (!content && toolCalls.length === 0) return;
     const existing = currentMessages.value.find(
-      message => message.role === 'assistant' && message.traceId === traceId && message.messageId.startsWith('temp-')
+      (message): message is Api.Ai.Message =>
+        !isMessageTombstone(message) &&
+        message.role === 'assistant' &&
+        message.traceId === traceId &&
+        message.messageId.startsWith('temp-')
     );
     if (existing) {
       existing.content = content;
@@ -402,6 +506,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     isStreaming.value = false;
     const seq = ++selectSeq;
     currentConversationId.value = conversationId;
+    conversationProjectionState.value = 'loading';
     streamingText.value = '';
     streamEvents.value = [];
     streamHandoffPhase.value = 'idle';
@@ -409,20 +514,29 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     lastDoneAck.value = null;
     pendingConfirmation.value = null;
     pendingActionsById.value = {};
+    redactedPendingActions.value = [];
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
     pendingClarification.value = null;
     resumeAttemptsByConfirmation.clear();
     resumeAttempts.value = 0;
     currentMessages.value = [];
-    const { data, error } = await fetchGetConversationDetail(conversationId);
-    if (seq !== selectSeq) return;
-    if (!error && data) {
-      currentMessages.value = data.messages;
-      reconcilePendingActions(data.pendingActions || []);
-      streamHandoffPhase.value = 'persisted';
-    } else {
-      window.$message?.error($t('page.ai.chat.loadConversationFailed'));
+    try {
+      const { data, error } = await fetchGetConversationDetail(conversationId);
+      if (seq !== selectSeq) return;
+      if (!error && data) {
+        applyConversationProjection(data.messages, data.pendingActions || []);
+        conversationProjectionState.value = 'ready';
+        streamHandoffPhase.value = 'persisted';
+      } else {
+        conversationProjectionState.value = 'error';
+        window.$message?.error($t('page.ai.chat.loadConversationFailed'));
+      }
+    } catch {
+      if (seq === selectSeq) {
+        conversationProjectionState.value = 'error';
+        window.$message?.error($t('page.ai.chat.loadConversationFailed'));
+      }
     }
   }
 
@@ -435,6 +549,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     stopPolling();
     isStreaming.value = false;
     currentConversationId.value = null;
+    conversationProjectionState.value = 'idle';
     currentMessages.value = [];
     streamingText.value = '';
     streamEvents.value = [];
@@ -443,6 +558,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     lastDoneAck.value = null;
     pendingConfirmation.value = null;
     pendingActionsById.value = {};
+    redactedPendingActions.value = [];
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
     pendingClarification.value = null;
@@ -459,6 +575,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     loading.value = false;
     availableModels.value = [];
     selectedModelId.value = '';
+    modelLoadState.value = 'idle';
     conversationCurrent.value = 1;
     hasMoreConversations.value = true;
     searchTitle.value = null;
@@ -466,6 +583,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     attachedFiles.value = [];
     availableAgents.value = [];
     selectedAgentCode.value = '';
+    agentLoadState.value = 'idle';
+    runtimeAvailabilityErrorCode.value = null;
     reasoningText.value = '';
   }
 
@@ -501,6 +620,16 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         streamEvents.value.push(event);
         break;
       case 'ai_error':
+        if (
+          [
+            'AI_MODULE_DISABLED',
+            'AI_CHAT_PERMISSION_DENIED',
+            'AI_AGENT_NOT_AVAILABLE',
+            'AI_MODEL_NOT_AVAILABLE'
+          ].includes(event.errorCode)
+        ) {
+          runtimeAvailabilityErrorCode.value = event.errorCode;
+        }
         window.$message?.error(
           localizeErrorCode(
             event.errorCode,
@@ -583,6 +712,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** core SSE streaming — does NOT touch messages array */
   async function doStream(injectLastMessageText?: string) {
+    if (chatAvailability.value !== 'ready') return;
     const traceId = createChatTraceId();
     const runSeq = ++activeRunSeq;
     const runConversationId = currentConversationId.value;
@@ -607,6 +737,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     try {
       const baseUrl = getBaseUrl();
       const token = localStg.get('token');
+      const safeMessages = currentMessages.value.filter(
+        (message): message is Api.Ai.Message => !isMessageTombstone(message)
+      );
       const response = await fetch(`${baseUrl}/ai/chat`, {
         method: 'POST',
         headers: {
@@ -618,8 +751,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           traceId,
           trigger: 'submit-message',
           id: `chat-${Date.now()}`,
-          messages: currentMessages.value.map((msg, i) => {
-            const isLast = i === currentMessages.value.length - 1;
+          messages: safeMessages.map((msg, i) => {
+            const isLast = i === safeMessages.length - 1;
             // 后端 chat.py 在 build_run_input 前 filter 非 image 文件 part（避免 PydanticAI 422），
             // 前端发完整 parts（含 Excel）让后端持久化保留文件元数据用于 UI chip 渲染
             if (isLast && injectLastMessageText && msg.role === 'user') {
@@ -639,9 +772,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
             };
           }),
           // Persist the user's original display text; file IDs remain transport-only prompt context.
-          displayContent: injectLastMessageText
-            ? currentMessages.value[currentMessages.value.length - 1]?.content
-            : undefined,
+          displayContent: injectLastMessageText ? safeMessages[safeMessages.length - 1]?.content : undefined,
           conversationId: currentConversationId.value,
           modelId: selectedModelId.value || undefined,
           agentCode: selectedAgentCode.value || undefined
@@ -650,6 +781,18 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       });
 
       if (!response.ok) {
+        const errorCode = await getResponseErrorCode(response);
+        if (
+          errorCode &&
+          [
+            'AI_MODULE_DISABLED',
+            'AI_CHAT_PERMISSION_DENIED',
+            'AI_AGENT_NOT_AVAILABLE',
+            'AI_MODEL_NOT_AVAILABLE'
+          ].includes(errorCode)
+        ) {
+          runtimeAvailabilityErrorCode.value = errorCode;
+        }
         window.$message?.error($t('page.ai.chat.requestFailed', { status: response.status }));
         streamHandoffPhase.value = 'stale';
         return;
@@ -1019,6 +1162,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** send a new user message + stream response */
   async function sendMessage(content: string) {
+    if (chatAvailability.value !== 'ready') return;
     if (streamHandoffPhase.value === 'awaiting_sync' || streamHandoffPhase.value === 'stale') {
       await syncStreamProjection();
     }
@@ -1128,39 +1272,55 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     return false;
   }
 
-  /** load available models from enabled providers */
+  /** Load chat-safe model options from the chat permission boundary. */
   async function loadModels() {
     const seq = sessionSeq;
+    modelLoadState.value = 'loading';
     try {
-      const { data, error } = await fetchGetAvailableModels();
+      const { data, error } = await fetchGetChatModels();
       if (seq !== sessionSeq) return;
       if (!error && data) {
         availableModels.value = data;
-        // auto select first if none selected
-        if (!selectedModelId.value && data.length > 0) {
-          selectedModelId.value = data[0].modelId;
-        }
+        modelLoadState.value = data.length > 0 ? 'ready' : 'empty';
+        if (!data.some(model => model.modelId === selectedModelId.value))
+          selectedModelId.value = data[0]?.modelId || '';
+      } else {
+        availableModels.value = [];
+        selectedModelId.value = '';
+        modelLoadState.value = loadStateFromError(error);
       }
-    } catch {
-      // silent fail
+    } catch (error) {
+      if (seq === sessionSeq) {
+        availableModels.value = [];
+        selectedModelId.value = '';
+        modelLoadState.value = loadStateFromError(error);
+      }
     }
   }
 
   /** load Agents available to the current user and default to automatic routing */
   async function loadAgents() {
     const seq = sessionSeq;
+    agentLoadState.value = 'loading';
     try {
       const { data, error } = await fetchAiAgents();
       if (seq !== sessionSeq) return;
       if (!error && data) {
         availableAgents.value = data;
-        // The backend falls back to its default Agent when automatic routing is disabled.
-        if (!selectedAgentCode.value) {
-          selectedAgentCode.value = 'auto';
-        }
+        agentLoadState.value = data.length > 0 ? 'ready' : 'empty';
+        // The backend owns automatic routing and validates every explicit Agent selection.
+        if (!data.some(agent => agent.code === selectedAgentCode.value)) selectedAgentCode.value = 'auto';
+      } else {
+        availableAgents.value = [];
+        selectedAgentCode.value = '';
+        agentLoadState.value = loadStateFromError(error);
       }
-    } catch {
-      // silent fail
+    } catch (error) {
+      if (seq === sessionSeq) {
+        availableAgents.value = [];
+        selectedAgentCode.value = '';
+        agentLoadState.value = loadStateFromError(error);
+      }
     }
   }
 
@@ -1199,7 +1359,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** initialize */
   async function init() {
-    await Promise.all([loadConversations(), loadModels(), loadAgents()]);
+    runtimeAvailabilityErrorCode.value = null;
+    const conversationId = currentConversationId.value;
+    const projection = conversationId ? selectConversation(conversationId) : Promise.resolve();
+    await Promise.all([projection, loadConversations(), loadModels(), loadAgents()]);
   }
 
   return {
@@ -1214,6 +1377,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     selectedModelId,
     availableAgents,
     selectedAgentCode,
+    chatAvailability,
+    runtimeAvailabilityErrorCode,
     hasMoreConversations,
     attachedImages,
     attachedFiles,
@@ -1224,6 +1389,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     lastDoneAck,
     pendingConfirmation,
     pendingActionsById,
+    redactedPendingActions,
     pendingConfirmationId,
     pendingToolCallId,
     resumeAttempts,
@@ -1238,6 +1404,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     submitRoutingFeedback,
     attemptResume,
     loadConversations,
+    loadModels,
+    loadAgents,
     loadMoreConversations,
     selectConversation,
     clearCurrentConversation,

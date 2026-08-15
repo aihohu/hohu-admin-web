@@ -21,11 +21,8 @@ vi.mock('@/service/api', () => ({
       updateTime: ''
     }
   }),
+  fetchAgentModelOptions: vi.fn().mockResolvedValue({ error: null, data: [] }),
   fetchUpdateAgentAdmin: vi.fn().mockResolvedValue({ error: null })
-}));
-
-vi.mock('@/service/api/ai', () => ({
-  fetchGetAvailableModels: vi.fn().mockResolvedValue({ error: null, data: [] })
 }));
 
 vi.mock('@/locales', () => ({
@@ -112,5 +109,72 @@ describe('agent-operate-drawer', () => {
     await vm.handleSubmit();
     expect(fetchUpdateAgentAdmin).toHaveBeenCalledTimes(1);
     expect(fetchUpdateAgentAdmin).toHaveBeenCalledWith('1', expect.objectContaining({ name: 'User' }));
+  });
+
+  it('submits the stable modelId returned by the Agent model option endpoint', async () => {
+    const { fetchAgentModelOptions, fetchUpdateAgentAdmin } = await import('@/service/api');
+    vi.mocked(fetchAgentModelOptions).mockResolvedValueOnce({
+      data: [
+        { modelId: '9007199254740993', label: 'Provider / Model', providerCode: 'provider', capabilities: ['text'] }
+      ],
+      error: null
+    } as never);
+    const wrapper = await mountWithDetail();
+    const vm = wrapper.vm as unknown as {
+      model: { modelPreference?: string | null };
+      handleSubmit: () => Promise<void>;
+    };
+    vm.model.modelPreference = '9007199254740993';
+
+    await vm.handleSubmit();
+
+    expect(fetchUpdateAgentAdmin).toHaveBeenCalledWith(
+      '1',
+      expect.objectContaining({ modelPreference: '9007199254740993' })
+    );
+  });
+
+  it('loads Agent detail before reconciling a legacy model preference into options', async () => {
+    const { fetchAgentAdminDetail, fetchAgentModelOptions } = await import('@/service/api');
+    let resolveDetail!: (value: unknown) => void;
+    vi.mocked(fetchAgentAdminDetail).mockReturnValueOnce(new Promise(resolve => (resolveDetail = resolve)) as never);
+    vi.mocked(fetchAgentModelOptions).mockResolvedValueOnce({ data: [], error: null } as never);
+    const wrapper = mount(AgentOperateDrawer, {
+      props: {
+        visible: false,
+        editRow: { agentId: '1' } as Api.AiAgent.AdminListItem
+      },
+      global: { stubs }
+    });
+
+    await wrapper.setProps({ visible: true });
+    await Promise.resolve();
+    expect(fetchAgentModelOptions).not.toHaveBeenCalled();
+
+    resolveDetail({
+      error: null,
+      data: {
+        agentId: '1',
+        code: 'user_mgmt',
+        name: 'User',
+        description: 'a'.repeat(60),
+        enabled: true,
+        isBuiltin: true,
+        displayOrder: 1,
+        modelPreference: 'legacy:model',
+        dailyQuotaPerUser: null,
+        riskAppetite: 'balanced',
+        systemPrompt: 'sp',
+        createTime: '',
+        updateTime: ''
+      }
+    });
+    await flushPromises();
+    const vm = wrapper.vm as unknown as {
+      modelPreferenceOptions: Array<{ label: string; value: string }>;
+    };
+
+    expect(fetchAgentModelOptions).toHaveBeenCalledTimes(1);
+    expect(vm.modelPreferenceOptions).toContainEqual({ label: 'legacy:model', value: 'legacy:model' });
   });
 });

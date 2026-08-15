@@ -71,6 +71,18 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       }
     },
     {
+      key: 'egressStatus',
+      title: t('page.ai.provider.egressStatus'),
+      align: 'center',
+      minWidth: 150,
+      render: row =>
+        row.egressStatus === 'EGRESS_POLICY_BLOCKED' ? (
+          <NTag type="error">{t('page.ai.provider.egressPolicyBlocked')}</NTag>
+        ) : (
+          <NTag type="success">{t('page.ai.provider.egressPolicyAllowed')}</NTag>
+        )
+    },
+    {
       key: 'operate',
       title: t('common.operate'),
       align: 'center',

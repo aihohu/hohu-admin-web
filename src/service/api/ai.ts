@@ -37,18 +37,12 @@ export function fetchDeleteProvider(providerId: string) {
   });
 }
 
-/** test model connectivity */
-export function fetchTestModel(data: {
-  providerCode: string;
-  model: string;
-  apiKey?: string;
-  baseUrl?: string;
-  providerId?: string;
-}) {
-  return request<App.Service.Response<{ response: string }>>({
-    url: '/ai/provider/test-model',
+/** Test a model that already belongs to a persisted Provider. */
+export function fetchTestProviderModel(providerId: string, modelId: string) {
+  return request<Api.Ai.ProviderModelTestResult>({
+    url: `/ai/provider/${providerId}/test`,
     method: 'post',
-    data
+    data: { modelId }
   });
 }
 
@@ -88,12 +82,20 @@ export function fetchDeleteProviderModel(providerId: string, modelId: string) {
   });
 }
 
-/** get available models for chat */
-export function fetchGetAvailableModels(capability?: string) {
-  return request<Api.Ai.AvailableModel[]>({
+/** Get the management catalog visible from the Provider page only. */
+export function fetchGetProviderModelCatalog(capability?: string) {
+  return request<Api.Ai.ProviderModelCatalogItem[]>({
     url: '/ai/provider/models',
     method: 'get',
     params: capability ? { capability } : undefined
+  });
+}
+
+/** Get the minimal chat-safe model options for the current user. */
+export function fetchGetChatModels() {
+  return request<Api.Ai.ModelOption[]>({
+    url: '/ai/chat/models',
+    method: 'get'
   });
 }
 

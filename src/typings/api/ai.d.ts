@@ -22,11 +22,13 @@ declare namespace Api {
       /** is enabled */
       isEnabled: boolean;
       /** extra config */
-      config: Record<string, any> | null;
+      config: Record<string, unknown> | null;
       /** create time */
       createTime: string;
       /** update time */
       updateTime: string;
+      /** Runtime egress quarantine status. */
+      egressStatus: 'EGRESS_POLICY_BLOCKED' | null;
     };
 
     /** AI model capability */
@@ -49,11 +51,13 @@ declare namespace Api {
       /** sort order */
       sortOrder: number;
       /** extra config */
-      config: Record<string, any> | null;
+      config: Record<string, unknown> | null;
       /** create by */
       createBy: string | null;
       /** create time */
       createTime: string;
+      /** Runtime egress quarantine status. */
+      egressStatus: 'EGRESS_POLICY_BLOCKED' | null;
     };
 
     /** model create params */
@@ -65,8 +69,16 @@ declare namespace Api {
     /** model update params */
     type AiModelUpdateParams = Partial<AiModelCreateParams>;
 
-    /** available model for chat selection */
-    type AvailableModel = {
+    /** Minimal safe option shared by chat and Agent administration. */
+    type ModelOption = {
+      modelId: string;
+      label: string;
+      providerCode: string;
+      capabilities: ModelCapability[];
+    };
+
+    /** Provider-only model management projection. */
+    type ProviderModelCatalogItem = {
       modelId: string;
       providerId: string;
       providerCode: string;
@@ -74,6 +86,13 @@ declare namespace Api {
       model: string;
       capabilities: ModelCapability[];
       baseUrl: string | null;
+      egressStatus: 'EGRESS_POLICY_BLOCKED' | null;
+    };
+
+    type ProviderModelTestResult = {
+      providerId: string;
+      modelId: string;
+      status: 'ok';
     };
 
     /** spreadsheet or CSV file attached to a chat message for server-side parsing */
@@ -147,7 +166,7 @@ declare namespace Api {
       /** message type: text/tool_call/tool_result */
       messageType: string;
       /** content */
-      content: string;
+      content: string | null;
       /** structured message parts (images, files, etc.) */
       parts: MessagePart[] | null;
       /** persisted tool calls used to restore cards after reopening a conversation */
@@ -183,11 +202,21 @@ declare namespace Api {
       createTime: string;
     };
 
+    /** Fail-closed placeholder returned when a historic result is no longer visible. */
+    type MessageTombstone = {
+      messageId: string;
+      role: 'assistant' | 'system' | 'tool';
+      status: 'redacted';
+      errorCode: 'AI_RESULT_PROJECTION_FORBIDDEN';
+    };
+
+    type MessageProjection = Message | MessageTombstone;
+
     /** conversation detail with messages */
     type ConversationDetail = {
       conversation: Conversation;
-      messages: Message[];
-      pendingActions: PendingAction[];
+      messages: MessageProjection[];
+      pendingActions: PendingActionProjection[];
     };
 
     // ============ Human confirmation and stream events ============
@@ -229,6 +258,16 @@ declare namespace Api {
       presentation: ConfirmationPresentation;
       expiresAt: string;
     };
+
+    /** Minimal terminal status returned after presentation access is revoked. */
+    type PendingActionStatus = {
+      confirmationId: string;
+      status: string;
+      errorCode: 'AI_RESULT_PROJECTION_FORBIDDEN';
+      finishedAt: string | null;
+    };
+
+    type PendingActionProjection = PendingAction | PendingActionStatus;
 
     /** supported tool-result presentation types */
     type ViewType = 'rows_affected' | 'data_list' | 'stats_chart' | 'detail_card' | 'plain_json';

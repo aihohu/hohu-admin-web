@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { jsonClone } from '@sa/utils';
 import {
   fetchSaveProvider,
-  fetchTestModel,
+  fetchTestProviderModel,
   fetchUpdateProvider,
   fetchGetProviderModels,
   fetchAddProviderModel,
@@ -51,6 +51,22 @@ type Model = Api.Ai.ProviderCreateParams;
 
 const model = ref<Model>(createDefaultModel());
 const loading = ref(false);
+const savedProviderFingerprint = ref('');
+
+function providerFingerprint(value: Model): string {
+  return JSON.stringify({
+    providerCode: value.providerCode,
+    name: value.name,
+    apiKey: value.apiKey,
+    baseUrl: value.baseUrl || '',
+    isEnabled: value.isEnabled,
+    config: value.config
+  });
+}
+
+const providerFormDirty = computed(
+  () => props.operateType === 'edit' && providerFingerprint(model.value) !== savedProviderFingerprint.value
+);
 
 const providerModels = ref<Api.Ai.AiModel[]>([]);
 const pendingModels = ref<Api.Ai.AiModelCreateParams[]>([]);
@@ -190,14 +206,13 @@ async function deleteModel(m: Api.Ai.AiModel) {
 }
 
 async function handleTestModel(m: Api.Ai.AiModel) {
+  if (!props.rowData) return;
+  if (providerFormDirty.value) {
+    window.$message?.warning(t('page.ai.provider.saveBeforeTest'));
+    return;
+  }
   testingModelId.value = m.modelId;
-  const { error } = await fetchTestModel({
-    providerId: props.rowData?.providerId,
-    providerCode: model.value.providerCode,
-    model: m.name,
-    apiKey: model.value.apiKey || undefined,
-    baseUrl: m.baseUrl || model.value.baseUrl || undefined
-  });
+  const { error } = await fetchTestProviderModel(props.rowData.providerId, m.modelId);
   testingModelId.value = null;
   if (!error) {
     window.$message?.success(t('page.ai.provider.modelTestSuccess', { name: m.name }));
@@ -228,7 +243,10 @@ function handleInitModel() {
       isEnabled: cloned.isEnabled,
       config: cloned.config
     });
+    savedProviderFingerprint.value = providerFingerprint(model.value);
     loadProviderModels();
+  } else {
+    savedProviderFingerprint.value = providerFingerprint(model.value);
   }
 }
 
@@ -274,6 +292,8 @@ watch(visible, () => {
     restoreValidation();
   }
 });
+
+defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
 </script>
 
 <template>
@@ -309,6 +329,10 @@ watch(visible, () => {
         {{ t('page.ai.provider.models') }}
       </NDivider>
 
+      <NAlert v-if="providerFormDirty" type="warning" :bordered="false">
+        {{ t('page.ai.provider.saveBeforeTest') }}
+      </NAlert>
+
       <!-- Edit mode: server-side models -->
       <NSpin v-if="operateType === 'edit'" :show="modelsLoading">
         <div class="models-list">
@@ -329,6 +353,8 @@ watch(visible, () => {
                   <template #trigger>
                     <NButton
                       v-permission="'ai:provider:test-model'"
+                      :disabled="providerFormDirty"
+                      :data-testid="`ai-provider-test-${m.modelId}`"
                       quaternary
                       circle
                       size="tiny"
@@ -360,6 +386,9 @@ watch(visible, () => {
               </NSpace>
             </div>
             <div v-if="m.baseUrl" class="model-base-url">{{ m.baseUrl }}</div>
+            <NAlert v-if="m.egressStatus === 'EGRESS_POLICY_BLOCKED'" type="error" :bordered="false">
+              {{ t('page.ai.provider.egressPolicyBlocked') }}
+            </NAlert>
           </div>
 
           <NButton

@@ -59,12 +59,12 @@ const currentModel = computed(() => {
   return aiStore.availableModels.find(m => m.modelId === aiStore.selectedModelId);
 });
 
-// 按 provider 分组
+// Group safe model options without relying on Provider management fields.
 const groupedModels = computed(() => {
-  const groups: Record<string, { providerName: string; models: Api.Ai.AvailableModel[] }> = {};
+  const groups: Record<string, { providerCode: string; models: Api.Ai.ModelOption[] }> = {};
   for (const m of aiStore.availableModels) {
     if (!groups[m.providerCode]) {
-      groups[m.providerCode] = { providerName: m.providerName, models: [] };
+      groups[m.providerCode] = { providerCode: m.providerCode, models: [] };
     }
     groups[m.providerCode].models.push(m);
   }
@@ -115,12 +115,12 @@ const modelOptions = computed<DropdownOption[]>(() => {
   const result: DropdownOption[] = [];
   for (const group of groupedModels.value) {
     result.push({
-      key: `group-${group.providerName}`,
+      key: `group-${group.providerCode}`,
       type: 'group',
-      label: group.providerName,
+      label: group.providerCode,
       children: group.models.map(m => ({
         key: m.modelId,
-        label: m.model
+        label: m.label
       }))
     });
   }
@@ -365,7 +365,7 @@ function formatFileSize(bytes: number): string {
         >
           <button class="selector-btn">
             <IconIcRoundMemory class="text-14px opacity-70" />
-            <span>{{ currentModel.model }}</span>
+            <span>{{ currentModel.label }}</span>
             <IconIcRoundArrowDropDown class="text-14px opacity-70" />
           </button>
         </NDropdown>

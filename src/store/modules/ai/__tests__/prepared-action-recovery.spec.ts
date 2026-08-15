@@ -11,7 +11,7 @@ vi.mock('@/service/api/ai', () => ({
   fetchAiAgents: vi.fn(),
   fetchAiConfirm: vi.fn(),
   fetchAiOperationLog: vi.fn(),
-  fetchGetAvailableModels: vi.fn(),
+  fetchGetChatModels: vi.fn(),
   fetchRoutingFeedback: vi.fn()
 }));
 

@@ -4,7 +4,9 @@ import { NButton, NSwitch, NTag, NTooltip } from 'naive-ui';
 import { fetchAgentAdminList } from '@/service/api';
 import { useNaiveTable } from '@/hooks/common/table';
 import { useAuth } from '@/hooks/business/auth';
+import { useAuthStore } from '@/store/modules/auth';
 import { $t } from '@/locales';
+import { canEditAiAgent } from './agent-permission';
 import AgentOperateDrawer from './modules/agent-operate-drawer.vue';
 import AgentSearch from './modules/agent-search.vue';
 
@@ -13,6 +15,8 @@ defineOptions({
 });
 
 const { hasAuth } = useAuth();
+const authStore = useAuthStore();
+const canEdit = computed(() => canEditAiAgent(authStore.userInfo.roles, hasAuth('ai:agent:edit')));
 
 // §决策 #23：list 端点无分页，返回全量。useNaiveTable 走非分页模式（pagination: false），
 // 服务器全量取回后前端按 keyword / enabledFilter 二次筛选。
@@ -98,7 +102,7 @@ const { columns, columnChecks, data, getData, loading, scrollX } = useNaiveTable
       width: 100,
       fixed: 'right',
       render: row =>
-        hasAuth('ai:agent:edit') ? (
+        canEdit.value ? (
           <NButton
             size="small"
             type="primary"
@@ -145,7 +149,7 @@ onMounted(getData);
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <AgentSearch v-model:model="searchParams" @search="handleSearch" />
+    <AgentSearch :model="searchParams" @search="handleSearch" />
     <NCard :title="$t('page.ai.agent.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <TableHeaderOperation
@@ -161,11 +165,11 @@ onMounted(getData);
         :data="filtered"
         size="small"
         :loading="loading"
-        :row-key="(row: Api.AiAgent.AdminListItem) => row.agentId"
+        :row-key="row => row.agentId"
         :scroll-x="scrollX"
         :pagination="false"
       />
-      <AgentOperateDrawer v-model:visible="drawerVisible" :edit-row="editingData" @submitted="getData" />
+      <AgentOperateDrawer v-if="canEdit" v-model:visible="drawerVisible" :edit-row="editingData" @submitted="getData" />
     </NCard>
   </div>
 </template>

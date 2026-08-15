@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import type { ChatAvailability } from '@/store/modules/ai';
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock('@/service/api', () => ({ fetchSaveConversation: vi.fn() }));
@@ -66,18 +67,20 @@ const messages: Api.Ai.Message[] = [
 
 const aiStore = {
   currentConversationId: 'conversation-1',
-  currentMessages: messages,
+  currentMessages: messages as Api.Ai.MessageProjection[],
   attachedImages: [],
   attachedFiles: [],
   availableAgents: [],
+  chatAvailability: 'ready' as ChatAvailability,
+  redactedPendingActions: [],
   isStreaming: false,
   streamingText: '',
   pendingConfirmation: null,
   pendingActionsById: {},
   selectedAgentCode: '',
   selectedModelId: '',
-  messageToolCards: (message: Api.Ai.Message) =>
-    (message.toolCalls || []).map(toolCall => ({
+  messageToolCards: (message: Api.Ai.MessageProjection) =>
+    ('toolCalls' in message ? message.toolCalls || [] : []).map(toolCall => ({
       started: {
         type: 'tool_call_started' as const,
         tool: toolCall.tool,
@@ -122,6 +125,12 @@ const stubs = {
 };
 
 describe('chat tool cards embedded by message owner', () => {
+  beforeEach(() => {
+    aiStore.currentMessages = messages;
+    aiStore.redactedPendingActions = [];
+    aiStore.chatAvailability = 'ready';
+  });
+
   it('renders each persisted card under its own assistant wrapper in array order', () => {
     const wrapper = mount(ChatMain, { global: { stubs } });
     const first = wrapper.get('[data-message-id="assistant-1"]');
@@ -138,5 +147,34 @@ describe('chat tool cards embedded by message owner', () => {
 
     expect(group.find('.stub-message').exists()).toBe(false);
     expect(group.get('.tool-card').attributes('data-tool-id')).toBe('tc-only');
+  });
+
+  it('renders a stable tombstone without restoring result content or tool cards', () => {
+    aiStore.currentMessages = [
+      {
+        messageId: 'assistant-redacted',
+        role: 'assistant',
+        status: 'redacted',
+        errorCode: 'AI_RESULT_PROJECTION_FORBIDDEN'
+      }
+    ];
+
+    const wrapper = mount(ChatMain, { global: { stubs } });
+
+    expect(wrapper.get('[data-testid="ai-message-tombstone"]').text()).toContain(
+      'page.ai.chat.resultProjectionForbidden'
+    );
+    expect(wrapper.find('.stub-message').exists()).toBe(false);
+    expect(wrapper.find('.tool-card').exists()).toBe(false);
+  });
+
+  it('renders a stable no-Agent state without an active chat surface', () => {
+    aiStore.chatAvailability = 'no_agents';
+
+    const wrapper = mount(ChatMain, { global: { stubs } });
+
+    expect(wrapper.get('[data-testid="ai-chat-availability"]').attributes('data-state')).toBe('no_agents');
+    expect(wrapper.text()).toContain('page.ai.chat.availabilityNoAgents');
+    expect(wrapper.find('[data-message-id="assistant-1"]').exists()).toBe(false);
   });
 });

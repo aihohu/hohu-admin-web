@@ -10,12 +10,13 @@ vi.mock('@/service/api/ai', () => ({
   fetchAiAgents: vi.fn(),
   fetchAiConfirm: vi.fn(),
   fetchAiOperationLog: vi.fn(),
-  fetchGetAvailableModels: vi.fn(),
+  fetchGetChatModels: vi.fn(),
   fetchRoutingFeedback: vi.fn()
 }));
 vi.mock('@/utils/storage', () => ({ localStg: { get: vi.fn() } }));
 
 import { fetchGetConversationDetail } from '@/service/api';
+import { fetchAiAgents, fetchGetChatModels } from '@/service/api/ai';
 import { useAiStore } from '..';
 
 const traceId = 'tr_22222222222222222222222222222222';
@@ -241,6 +242,15 @@ describe('stream projection handoff', () => {
     );
     const store = useAiStore();
     store.currentConversationId = 'conversation-1';
+    vi.mocked(fetchGetChatModels).mockResolvedValue({
+      data: [{ modelId: 'model-1', label: 'Provider / Model', providerCode: 'provider', capabilities: ['text'] }],
+      error: null
+    } as never);
+    vi.mocked(fetchAiAgents).mockResolvedValue({
+      data: [{ code: 'shared', name: 'Shared', description: '', modelPreference: null, displayOrder: 0 }],
+      error: null
+    } as never);
+    await Promise.all([store.loadModels(), store.loadAgents()]);
 
     const sending = store.sendMessage('old conversation');
     await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
@@ -252,7 +262,9 @@ describe('stream projection handoff', () => {
     await sending;
 
     expect(store.currentConversationId).toBe('conversation-2');
-    expect(store.currentMessages.map(message => message.content)).toEqual(['new conversation']);
+    expect(store.currentMessages.map(message => ('content' in message ? message.content : message.errorCode))).toEqual([
+      'new conversation'
+    ]);
     expect(store.streamingText).toBe('');
     expect(store.streamEvents).toEqual([]);
   });

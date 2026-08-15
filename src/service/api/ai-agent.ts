@@ -25,6 +25,14 @@ export function fetchUpdateAgentAdmin(agentId: string, data: Api.AiAgent.AdminUp
   });
 }
 
+/** Get the minimal safe model options used by the Agent editor. */
+export function fetchAgentModelOptions() {
+  return request<Api.Ai.ModelOption[]>({
+    url: '/ai/admin/agents/model-options',
+    method: 'get'
+  });
+}
+
 /** get role agent binding */
 export function fetchRoleAgentBinding(roleId: string) {
   return request<Api.AiAgent.RoleAgentBinding>({
