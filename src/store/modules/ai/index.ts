@@ -39,6 +39,18 @@ export type ChatAvailability =
   | 'model_unavailable'
   | 'error';
 
+const runtimeAvailabilityErrorCodes = new Set([
+  'AI_MODULE_DISABLED',
+  'AI_CHAT_PERMISSION_DENIED',
+  'AI_AGENT_FORBIDDEN',
+  'AI_AGENT_NOT_AVAILABLE',
+  'AI_MODEL_NOT_AVAILABLE'
+]);
+
+function isRuntimeAvailabilityErrorCode(errorCode: string | null): errorCode is string {
+  return errorCode !== null && runtimeAvailabilityErrorCodes.has(errorCode);
+}
+
 function getBackendErrorCode(error: unknown): string | null {
   if (!error || typeof error !== 'object' || !('response' in error)) return null;
   const response = error.response;
@@ -52,7 +64,12 @@ function loadStateFromError(error: unknown): ResourceLoadState {
   const errorCode = getBackendErrorCode(error);
   if (errorCode === 'AI_MODULE_DISABLED') return 'module_disabled';
   if (errorCode === 'AI_CHAT_PERMISSION_DENIED') return 'forbidden';
-  if (errorCode === 'AI_AGENT_NOT_AVAILABLE' || errorCode === 'AI_MODEL_NOT_AVAILABLE') return 'empty';
+  if (
+    errorCode === 'AI_AGENT_FORBIDDEN' ||
+    errorCode === 'AI_AGENT_NOT_AVAILABLE' ||
+    errorCode === 'AI_MODEL_NOT_AVAILABLE'
+  )
+    return 'empty';
   return 'error';
 }
 
@@ -97,7 +114,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const chatAvailability = computed<ChatAvailability>(() => {
     if (runtimeAvailabilityErrorCode.value === 'AI_MODULE_DISABLED') return 'module_disabled';
     if (runtimeAvailabilityErrorCode.value === 'AI_CHAT_PERMISSION_DENIED') return 'forbidden';
-    if (runtimeAvailabilityErrorCode.value === 'AI_AGENT_NOT_AVAILABLE') return 'no_agents';
+    if (
+      runtimeAvailabilityErrorCode.value === 'AI_AGENT_FORBIDDEN' ||
+      runtimeAvailabilityErrorCode.value === 'AI_AGENT_NOT_AVAILABLE'
+    )
+      return 'no_agents';
     if (runtimeAvailabilityErrorCode.value === 'AI_MODEL_NOT_AVAILABLE') return 'model_unavailable';
     if (modelLoadState.value === 'module_disabled' || agentLoadState.value === 'module_disabled') {
       return 'module_disabled';
@@ -149,6 +170,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   let selectSeq = 0;
   let activeRunSeq = 0;
   let sessionSeq = 0;
+  let conversationLoadSeq = 0;
+  let modelLoadSeq = 0;
+  let agentLoadSeq = 0;
 
   function abortResumes() {
     for (const controller of resumeControllers.values()) controller.abort();
@@ -156,6 +180,22 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     resumeControllers.clear();
     activeResumeIds.clear();
     resumeExpiryTimers.clear();
+  }
+
+  function invalidateActiveProducers(handoffPhase: 'idle' | 'persisted' = 'idle') {
+    activeRunSeq += 1;
+    abortController?.abort();
+    abortController = null;
+    abortResumes();
+    stopPolling();
+    isStreaming.value = false;
+    streamingText.value = '';
+    reasoningText.value = '';
+    streamEvents.value = [];
+    streamHandoffPhase.value = handoffPhase;
+    activeStreamTraceId.value = null;
+    lastDoneAck.value = null;
+    pendingClarification.value = null;
   }
 
   function scheduleResumeExpiryReconciliation(
@@ -275,19 +315,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   ): boolean {
     const projectionRevoked = messages.some(isMessageTombstone) || actions.some(isPendingActionStatus);
     if (projectionRevoked) {
-      activeRunSeq += 1;
-      abortController?.abort();
-      abortController = null;
-      abortResumes();
-      stopPolling();
-      isStreaming.value = false;
-      streamingText.value = '';
-      reasoningText.value = '';
-      streamEvents.value = [];
-      streamHandoffPhase.value = 'persisted';
-      activeStreamTraceId.value = null;
-      lastDoneAck.value = null;
-      pendingClarification.value = null;
+      invalidateActiveProducers('persisted');
     }
     currentMessages.value = messages;
     reconcilePendingActions(actions);
@@ -312,10 +340,19 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   async function refreshCurrentConversationDetail(): Promise<boolean> {
     const conversationId = currentConversationId.value;
     if (!conversationId) return false;
-    const detail = await fetchGetConversationDetail(conversationId);
-    if (currentConversationId.value !== conversationId || detail.error || !detail.data) return false;
-    applyConversationProjection(detail.data.messages, detail.data.pendingActions || []);
-    return true;
+    try {
+      const detail = await fetchGetConversationDetail(conversationId);
+      if (currentConversationId.value !== conversationId) return false;
+      if (detail.error || !detail.data) {
+        applyRuntimeAvailabilityError(getBackendErrorCode(detail.error));
+        return false;
+      }
+      applyConversationProjection(detail.data.messages, detail.data.pendingActions || []);
+      return true;
+    } catch (error) {
+      applyRuntimeAvailabilityError(getBackendErrorCode(error));
+      return false;
+    }
   }
 
   function findDurableAssistant(
@@ -343,12 +380,14 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     let detail;
     try {
       detail = await fetchGetConversationDetail(conversationId);
-    } catch {
+    } catch (error) {
+      applyRuntimeAvailabilityError(getBackendErrorCode(error));
       if (currentConversationId.value === conversationId) streamHandoffPhase.value = 'stale';
       return false;
     }
     if (currentConversationId.value !== conversationId) return false;
     if (detail.error || !detail.data) {
+      if (applyRuntimeAvailabilityError(getBackendErrorCode(detail.error))) return false;
       streamHandoffPhase.value = 'stale';
       return false;
     }
@@ -449,7 +488,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** load conversation list (first page, reset) */
   async function loadConversations(title?: string | null) {
-    const seq = sessionSeq;
+    const session = sessionSeq;
+    const requestSeq = ++conversationLoadSeq;
     searchTitle.value = title ?? null;
     conversationCurrent.value = 1;
     hasMoreConversations.value = true;
@@ -461,20 +501,30 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         status: null,
         title: searchTitle.value
       });
-      if (seq !== sessionSeq) return;
+      if (session !== sessionSeq || requestSeq !== conversationLoadSeq) return;
       if (!error && data) {
         conversations.value = data.records;
         hasMoreConversations.value = data.records.length >= conversationSize.value;
+      } else {
+        conversations.value = [];
+        hasMoreConversations.value = false;
+        applyRuntimeAvailabilityError(getBackendErrorCode(error));
       }
+    } catch (error) {
+      if (session !== sessionSeq || requestSeq !== conversationLoadSeq) return;
+      conversations.value = [];
+      hasMoreConversations.value = false;
+      applyRuntimeAvailabilityError(getBackendErrorCode(error));
     } finally {
-      if (seq === sessionSeq) loading.value = false;
+      if (session === sessionSeq && requestSeq === conversationLoadSeq) loading.value = false;
     }
   }
 
   /** load more conversations (append next page) */
   async function loadMoreConversations() {
     if (loading.value || !hasMoreConversations.value) return;
-    const seq = sessionSeq;
+    const session = sessionSeq;
+    const requestSeq = ++conversationLoadSeq;
     loading.value = true;
     conversationCurrent.value += 1;
     try {
@@ -484,26 +534,26 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         status: null,
         title: searchTitle.value
       });
-      if (seq !== sessionSeq) return;
+      if (session !== sessionSeq || requestSeq !== conversationLoadSeq) return;
       if (!error && data) {
         conversations.value.push(...data.records);
         hasMoreConversations.value = data.records.length >= conversationSize.value;
       } else {
         hasMoreConversations.value = false;
+        applyRuntimeAvailabilityError(getBackendErrorCode(error));
       }
+    } catch (error) {
+      if (session !== sessionSeq || requestSeq !== conversationLoadSeq) return;
+      hasMoreConversations.value = false;
+      applyRuntimeAvailabilityError(getBackendErrorCode(error));
     } finally {
-      if (seq === sessionSeq) loading.value = false;
+      if (session === sessionSeq && requestSeq === conversationLoadSeq) loading.value = false;
     }
   }
 
   /** select conversation and load messages */
   async function selectConversation(conversationId: string) {
-    activeRunSeq += 1;
-    abortController?.abort();
-    abortController = null;
-    abortResumes();
-    stopPolling();
-    isStreaming.value = false;
+    invalidateActiveProducers();
     const seq = ++selectSeq;
     currentConversationId.value = conversationId;
     conversationProjectionState.value = 'loading';
@@ -529,11 +579,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         conversationProjectionState.value = 'ready';
         streamHandoffPhase.value = 'persisted';
       } else {
+        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
         conversationProjectionState.value = 'error';
         window.$message?.error($t('page.ai.chat.loadConversationFailed'));
       }
-    } catch {
+    } catch (error) {
       if (seq === selectSeq) {
+        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
         conversationProjectionState.value = 'error';
         window.$message?.error($t('page.ai.chat.loadConversationFailed'));
       }
@@ -542,34 +594,67 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** clear current conversation */
   function clearCurrentConversation() {
-    activeRunSeq += 1;
-    abortController?.abort();
-    abortController = null;
-    abortResumes();
-    stopPolling();
-    isStreaming.value = false;
+    invalidateActiveProducers();
     currentConversationId.value = null;
     conversationProjectionState.value = 'idle';
     currentMessages.value = [];
-    streamingText.value = '';
-    streamEvents.value = [];
-    streamHandoffPhase.value = 'idle';
-    activeStreamTraceId.value = null;
-    lastDoneAck.value = null;
     pendingConfirmation.value = null;
     pendingActionsById.value = {};
     redactedPendingActions.value = [];
     pendingConfirmationId.value = null;
     pendingToolCallId.value = null;
-    pendingClarification.value = null;
     resumeAttemptsByConfirmation.clear();
     resumeAttempts.value = 0;
+  }
+
+  function applyRuntimeAvailabilityError(errorCode: string | null): boolean {
+    if (!isRuntimeAvailabilityErrorCode(errorCode)) return false;
+
+    runtimeAvailabilityErrorCode.value = errorCode;
+    conversationLoadSeq += 1;
+    modelLoadSeq += 1;
+    agentLoadSeq += 1;
+    selectSeq += 1;
+    loading.value = false;
+
+    if (errorCode === 'AI_MODEL_NOT_AVAILABLE') {
+      invalidateActiveProducers();
+      availableModels.value = [];
+      selectedModelId.value = '';
+      modelLoadState.value = 'empty';
+      return true;
+    }
+
+    clearCurrentConversation();
+    attachedImages.value = [];
+    attachedFiles.value = [];
+
+    if (errorCode === 'AI_AGENT_FORBIDDEN' || errorCode === 'AI_AGENT_NOT_AVAILABLE') {
+      availableAgents.value = [];
+      selectedAgentCode.value = '';
+      agentLoadState.value = 'empty';
+      return true;
+    }
+
+    conversations.value = [];
+    hasMoreConversations.value = false;
+    availableModels.value = [];
+    selectedModelId.value = '';
+    availableAgents.value = [];
+    selectedAgentCode.value = '';
+    const deniedState = errorCode === 'AI_MODULE_DISABLED' ? 'module_disabled' : 'forbidden';
+    modelLoadState.value = deniedState;
+    agentLoadState.value = deniedState;
+    return true;
   }
 
   /** Clear all account-scoped state and invalidate responses started by the previous login session. */
   function resetStore() {
     sessionSeq += 1;
     selectSeq += 1;
+    conversationLoadSeq += 1;
+    modelLoadSeq += 1;
+    agentLoadSeq += 1;
     clearCurrentConversation();
     conversations.value = [];
     loading.value = false;
@@ -591,7 +676,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   /** delete conversation */
   async function removeConversation(conversationId: string) {
     const { error } = await fetchDeleteConversation(conversationId);
-    if (error) return;
+    if (error) {
+      applyRuntimeAvailabilityError(getBackendErrorCode(error));
+      return;
+    }
     if (currentConversationId.value === conversationId) {
       clearCurrentConversation();
     }
@@ -620,16 +708,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         streamEvents.value.push(event);
         break;
       case 'ai_error':
-        if (
-          [
-            'AI_MODULE_DISABLED',
-            'AI_CHAT_PERMISSION_DENIED',
-            'AI_AGENT_NOT_AVAILABLE',
-            'AI_MODEL_NOT_AVAILABLE'
-          ].includes(event.errorCode)
-        ) {
-          runtimeAvailabilityErrorCode.value = event.errorCode;
-        }
+        applyRuntimeAvailabilityError(event.errorCode);
         window.$message?.error(
           localizeErrorCode(
             event.errorCode,
@@ -782,19 +861,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
       if (!response.ok) {
         const errorCode = await getResponseErrorCode(response);
-        if (
-          errorCode &&
-          [
-            'AI_MODULE_DISABLED',
-            'AI_CHAT_PERMISSION_DENIED',
-            'AI_AGENT_NOT_AVAILABLE',
-            'AI_MODEL_NOT_AVAILABLE'
-          ].includes(errorCode)
-        ) {
-          runtimeAvailabilityErrorCode.value = errorCode;
-        }
+        const availabilityRevoked = applyRuntimeAvailabilityError(errorCode);
         window.$message?.error($t('page.ai.chat.requestFailed', { status: response.status }));
-        streamHandoffPhase.value = 'stale';
+        if (!availabilityRevoked) streamHandoffPhase.value = 'stale';
         return;
       }
 
@@ -967,6 +1036,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         return;
       }
       if (!response.ok) {
+        const errorCode = await getResponseErrorCode(response);
+        if (applyRuntimeAvailabilityError(errorCode)) return;
         window.$message?.error($t('page.ai.chat.resumeFailed', { message: response.status }));
         return;
       }
@@ -994,6 +1065,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       }
     } catch (error: any) {
       if (isActiveResume() && error.name !== 'AbortError') {
+        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
         window.$message?.error($t('page.ai.chat.resumeFailed', { message: error.message }));
       }
     } finally {
@@ -1023,6 +1095,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         action
       });
       if (error || !data) {
+        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
         window.$message?.error($t('page.ai.chat.confirmationFailed'));
         await refreshCurrentConversationDetail();
         return;
@@ -1041,6 +1114,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       if (!data.actionId) removePendingByToolCallId(data.toolCallId);
       startPollingResult(data.toolCallId, confirmation);
     } catch (e: any) {
+      if (applyRuntimeAvailabilityError(getBackendErrorCode(e))) return;
       window.$message?.error($t('page.ai.chat.confirmationFailedWithMessage', { message: e.message }));
     }
   }
@@ -1082,7 +1156,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       try {
         const { data, error } = await fetchAiOperationLog(toolCallId);
         if (!isActivePoll()) return;
-        if (error || !data) return;
+        if (error || !data) {
+          applyRuntimeAvailabilityError(getBackendErrorCode(error));
+          return;
+        }
         const terminalStatus = ['success', 'failed', 'rejected', 'expired'];
         if (terminalStatus.includes(data.status)) {
           stopPolling(toolCallId);
@@ -1274,11 +1351,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** Load chat-safe model options from the chat permission boundary. */
   async function loadModels() {
-    const seq = sessionSeq;
+    const session = sessionSeq;
+    const requestSeq = ++modelLoadSeq;
     modelLoadState.value = 'loading';
     try {
       const { data, error } = await fetchGetChatModels();
-      if (seq !== sessionSeq) return;
+      if (session !== sessionSeq || requestSeq !== modelLoadSeq) return;
       if (!error && data) {
         availableModels.value = data;
         modelLoadState.value = data.length > 0 ? 'ready' : 'empty';
@@ -1287,12 +1365,14 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       } else {
         availableModels.value = [];
         selectedModelId.value = '';
+        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
         modelLoadState.value = loadStateFromError(error);
       }
     } catch (error) {
-      if (seq === sessionSeq) {
+      if (session === sessionSeq && requestSeq === modelLoadSeq) {
         availableModels.value = [];
         selectedModelId.value = '';
+        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
         modelLoadState.value = loadStateFromError(error);
       }
     }
@@ -1300,11 +1380,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** load Agents available to the current user and default to automatic routing */
   async function loadAgents() {
-    const seq = sessionSeq;
+    const session = sessionSeq;
+    const requestSeq = ++agentLoadSeq;
     agentLoadState.value = 'loading';
     try {
       const { data, error } = await fetchAiAgents();
-      if (seq !== sessionSeq) return;
+      if (session !== sessionSeq || requestSeq !== agentLoadSeq) return;
       if (!error && data) {
         availableAgents.value = data;
         agentLoadState.value = data.length > 0 ? 'ready' : 'empty';
@@ -1313,12 +1394,14 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       } else {
         availableAgents.value = [];
         selectedAgentCode.value = '';
+        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
         agentLoadState.value = loadStateFromError(error);
       }
     } catch (error) {
-      if (seq === sessionSeq) {
+      if (session === sessionSeq && requestSeq === agentLoadSeq) {
         availableAgents.value = [];
         selectedAgentCode.value = '';
+        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
         agentLoadState.value = loadStateFromError(error);
       }
     }
@@ -1346,12 +1429,14 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     try {
       const { error } = await fetchRoutingFeedback(messageId, payload);
       if (error) {
+        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return false;
         window.$message?.error($t('page.ai.chat.feedbackSubmitFailed', { message: error.message }));
         return false;
       }
       window.$message?.success($t('page.ai.chat.feedbackSubmitted'));
       return true;
     } catch (e: any) {
+      if (applyRuntimeAvailabilityError(getBackendErrorCode(e))) return false;
       window.$message?.error($t('page.ai.chat.feedbackSubmitFailed', { message: e.message }));
       return false;
     }
