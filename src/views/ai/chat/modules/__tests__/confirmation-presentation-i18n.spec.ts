@@ -28,6 +28,7 @@ const zh: Record<string, string> = {
   'common.exportModal.estimatedRowsLabel': '预计导出行数',
   'page.system.user.addUser': '新增用户',
   'page.system.user.editUser': '编辑用户',
+  'page.ai.chat.updateUserDepartments': '调整用户部门',
   'page.system.user.resetPwd.title': '重置密码',
   'page.system.user.userName': '用户名',
   'page.system.user.nickname': '昵称',
@@ -47,7 +48,9 @@ const zh: Record<string, string> = {
   'page.ai.chat.confirmCreateUserSummary': '将创建用户 {userName} 并应用系统默认密码与角色策略',
   'page.ai.chat.confirmResetPasswordSummary': '将把用户 {userId} 的密码重置为系统默认策略',
   'page.ai.chat.confirmUpdateUserSingleSummary': '将把用户“{userName}”的{fieldName}更新为“{value}”',
-  'page.ai.chat.confirmUpdateUserMultipleSummary': '将更新用户“{userName}”的 {count} 个资料字段，请核对下方新值'
+  'page.ai.chat.confirmUpdateUserMultipleSummary': '将更新用户“{userName}”的 {count} 个资料字段，请核对下方新值',
+  'page.ai.chat.confirmUpdateDeptSummary': '将把用户“{userName}”的完整部门集合替换为下方新集合',
+  'page.ai.chat.departmentAssignments': '完整部门集合'
 };
 
 const t = (key: string, params?: Record<string, string | number>) => {
@@ -190,6 +193,43 @@ describe('confirmation presentation i18n', () => {
       )
     ).toEqual({
       summary: '',
+      affectedCount: 1,
+      affectedExamples: []
+    });
+  });
+
+  it('localizes the complete user department replacement confirmation', () => {
+    const fields: Api.Ai.ConfirmationPresentationField[] = [
+      { label: 'user_id', value: '十四篇（7493097707360227328）' },
+      { label: 'dept_assignments', value: '★ Old (81001) → ★ New (81002)' },
+      { label: 'affectedCount', value: 1, tone: 'warning' }
+    ];
+
+    expect(localizeConfirmationTool('user.update_dept', t)).toBe('调整用户部门 (user.update_dept)');
+    expect(localizeConfirmationSummary('user.update_dept', 'raw backend summary', t, fields)).toBe(
+      '将把用户“十四篇（7493097707360227328）”的完整部门集合替换为下方新集合'
+    );
+    expect(localizeConfirmationField('user.update_dept', fields[0], t)).toMatchObject({
+      displayLabel: '目标用户',
+      displayValue: '十四篇（7493097707360227328）'
+    });
+    expect(localizeConfirmationField('user.update_dept', fields[1], t)).toMatchObject({
+      displayLabel: '完整部门集合',
+      displayValue: '★ Old (81001) → ★ New (81002)'
+    });
+    expect(
+      localizeConfirmationDryRun(
+        'user.update_dept',
+        {
+          summary: '后端中文摘要',
+          affectedCount: 1,
+          affectedExamples: ['原部门：旧部门', '新部门：新部门']
+        },
+        t,
+        fields
+      )
+    ).toEqual({
+      summary: '将把用户“十四篇（7493097707360227328）”的完整部门集合替换为下方新集合',
       affectedCount: 1,
       affectedExamples: []
     });

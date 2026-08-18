@@ -12,12 +12,14 @@ const USER_EXPORT_TOOL = 'user.export';
 const USER_CREATE_TOOL = 'user.create';
 const USER_RESET_PASSWORD_TOOL = 'user.reset_password';
 const USER_UPDATE_TOOL = 'user.update';
+const USER_UPDATE_DEPT_TOOL = 'user.update_dept';
 const LOCALIZED_DRY_RUN_TOOLS = new Set([
   USER_IMPORT_TOOL,
   USER_EXPORT_TOOL,
   USER_CREATE_TOOL,
   USER_RESET_PASSWORD_TOOL,
-  USER_UPDATE_TOOL
+  USER_UPDATE_TOOL,
+  USER_UPDATE_DEPT_TOOL
 ]);
 
 const USER_IMPORT_FIELD_LABEL_KEYS: Record<string, App.I18n.I18nKey> = {
@@ -81,6 +83,12 @@ const USER_UPDATE_FIELD_VALUE_KEYS: Record<string, Record<string, App.I18n.I18nK
   }
 };
 
+const USER_UPDATE_DEPT_FIELD_LABEL_KEYS: Record<string, App.I18n.I18nKey> = {
+  user_id: 'page.ai.chat.targetUser',
+  dept_assignments: 'page.ai.chat.departmentAssignments',
+  affectedCount: 'page.ai.chat.confirmAffected'
+};
+
 function findFieldValue(fields: ConfirmationField[], label: string): string | number {
   return fields.find(field => field.label === label)?.value ?? '—';
 }
@@ -91,6 +99,7 @@ export function localizeConfirmationTool(tool: string, t: Translate): string {
   if (tool === USER_CREATE_TOOL) return `${t('page.system.user.addUser')} (${tool})`;
   if (tool === USER_RESET_PASSWORD_TOOL) return `${t('page.system.user.resetPwd.title')} (${tool})`;
   if (tool === USER_UPDATE_TOOL) return `${t('page.system.user.editUser')} (${tool})`;
+  if (tool === USER_UPDATE_DEPT_TOOL) return `${t('page.ai.chat.updateUserDepartments')} (${tool})`;
   return tool;
 }
 
@@ -127,6 +136,9 @@ export function localizeConfirmationSummary(
         count: changedFields.length
       });
     }
+  }
+  if (tool === USER_UPDATE_DEPT_TOOL) {
+    return t('page.ai.chat.confirmUpdateDeptSummary', { userName: findFieldValue(fields, 'user_id') });
   }
   return summary;
 }
@@ -175,6 +187,15 @@ export function localizeConfirmationField(
       ...field,
       displayLabel: labelKey ? t(labelKey) : field.label,
       displayValue: valueKey ? t(valueKey) : field.value
+    };
+  }
+
+  if (tool === USER_UPDATE_DEPT_TOOL) {
+    const labelKey = USER_UPDATE_DEPT_FIELD_LABEL_KEYS[field.label];
+    return {
+      ...field,
+      displayLabel: labelKey ? t(labelKey) : field.label,
+      displayValue: field.value
     };
   }
 
