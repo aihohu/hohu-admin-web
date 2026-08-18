@@ -8,6 +8,8 @@ const TOOL_DESCRIPTION_KEYS: Record<string, App.I18n.I18nKey> = {
   'user.lookup': 'page.ai.chat.toolDescriptions.userLookup',
   'user.list': 'page.ai.chat.toolDescriptions.userList',
   'user.update_dept': 'page.ai.chat.toolDescriptions.userUpdateDept',
+  'user.role_lookup': 'page.ai.chat.toolDescriptions.userRoleLookup',
+  'user.update_roles': 'page.ai.chat.toolDescriptions.userUpdateRoles',
   'user.update_email': 'page.ai.chat.toolDescriptions.userUpdateEmail',
   'user.batch_delete': 'page.ai.chat.toolDescriptions.userBatchDelete',
   'user.disable': 'page.ai.chat.toolDescriptions.userDisable',

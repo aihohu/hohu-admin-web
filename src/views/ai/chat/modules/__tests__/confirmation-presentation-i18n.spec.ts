@@ -29,6 +29,7 @@ const zh: Record<string, string> = {
   'page.system.user.addUser': '新增用户',
   'page.system.user.editUser': '编辑用户',
   'page.ai.chat.updateUserDepartments': '调整用户部门',
+  'page.ai.chat.updateUserRoles': '调整用户角色',
   'page.system.user.resetPwd.title': '重置密码',
   'page.system.user.userName': '用户名',
   'page.system.user.nickname': '昵称',
@@ -50,7 +51,9 @@ const zh: Record<string, string> = {
   'page.ai.chat.confirmUpdateUserSingleSummary': '将把用户“{userName}”的{fieldName}更新为“{value}”',
   'page.ai.chat.confirmUpdateUserMultipleSummary': '将更新用户“{userName}”的 {count} 个资料字段，请核对下方新值',
   'page.ai.chat.confirmUpdateDeptSummary': '将把用户“{userName}”的完整部门集合替换为下方新集合',
-  'page.ai.chat.departmentAssignments': '完整部门集合'
+  'page.ai.chat.confirmUpdateRolesSummary': '将把用户“{userName}”的完整角色集合替换为下方新集合',
+  'page.ai.chat.departmentAssignments': '完整部门集合',
+  'page.ai.chat.roleAssignments': '完整角色集合'
 };
 
 const t = (key: string, params?: Record<string, string | number>) => {
@@ -230,6 +233,43 @@ describe('confirmation presentation i18n', () => {
       )
     ).toEqual({
       summary: '将把用户“十四篇（7493097707360227328）”的完整部门集合替换为下方新集合',
+      affectedCount: 1,
+      affectedExamples: []
+    });
+  });
+
+  it('localizes the complete user role replacement confirmation', () => {
+    const fields: Api.Ai.ConfirmationPresentationField[] = [
+      { label: 'user_id', value: '十四篇（7493097707360227328）' },
+      { label: 'role_ids', value: 'Old (R_OLD / 801) → New (R_NEW / 901)' },
+      { label: 'affectedCount', value: 1, tone: 'warning' }
+    ];
+
+    expect(localizeConfirmationTool('user.update_roles', t)).toBe('调整用户角色 (user.update_roles)');
+    expect(localizeConfirmationSummary('user.update_roles', 'raw backend summary', t, fields)).toBe(
+      '将把用户“十四篇（7493097707360227328）”的完整角色集合替换为下方新集合'
+    );
+    expect(localizeConfirmationField('user.update_roles', fields[0], t)).toMatchObject({
+      displayLabel: '目标用户',
+      displayValue: '十四篇（7493097707360227328）'
+    });
+    expect(localizeConfirmationField('user.update_roles', fields[1], t)).toMatchObject({
+      displayLabel: '完整角色集合',
+      displayValue: 'Old (R_OLD / 801) → New (R_NEW / 901)'
+    });
+    expect(
+      localizeConfirmationDryRun(
+        'user.update_roles',
+        {
+          summary: '后端中文摘要',
+          affectedCount: 1,
+          affectedExamples: ['原角色：Old', '新角色：New']
+        },
+        t,
+        fields
+      )
+    ).toEqual({
+      summary: '将把用户“十四篇（7493097707360227328）”的完整角色集合替换为下方新集合',
       affectedCount: 1,
       affectedExamples: []
     });
