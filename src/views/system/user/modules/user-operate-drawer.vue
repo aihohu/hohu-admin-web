@@ -2,7 +2,15 @@
 import { computed, ref, watch } from 'vue';
 import { jsonClone } from '@sa/utils';
 import { enableStatusOptions, userGenderOptions } from '@/constants/business';
-import { fetchGetAllRoles, fetchGetDeptTreeOption, fetchSaveUser, fetchUpdateUser } from '@/service/api';
+import {
+  fetchGetAssignableRoles,
+  fetchGetDeptTreeOption,
+  fetchSaveUser,
+  fetchUpdateUser,
+  fetchUpdateUserDepartments,
+  fetchUpdateUserRoles
+} from '@/service/api';
+import { useAuth } from '@/hooks/business/auth';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
 
@@ -24,6 +32,7 @@ interface Emits {
 }
 
 const emit = defineEmits<Emits>();
+const { hasAuth } = useAuth();
 
 const visible = defineModel<boolean>('visible', {
   default: false
@@ -40,9 +49,17 @@ const title = computed(() => {
   return titles[props.operateType];
 });
 
-const model = ref(createDefaultModel());
+type UserFormModel = Api.SystemManage.UpdateUserParams & {
+  password: string;
+  roleIds: string[];
+};
 
-function createDefaultModel(): Api.SystemManage.CreateUserParams {
+const canAssignRoles = computed(() => hasAuth('system:user:role-auth'));
+const canAssignDepartments = computed(() => hasAuth('system:dept:list'));
+
+const model = ref<UserFormModel>(createDefaultModel());
+
+function createDefaultModel(): UserFormModel {
   return {
     userName: '',
     password: '',
@@ -50,55 +67,90 @@ function createDefaultModel(): Api.SystemManage.CreateUserParams {
     nickname: '',
     userPhone: '',
     userEmail: '',
-    roles: [],
-    status: '1',
-    deptIds: []
+    roleIds: [],
+    status: '1'
   };
 }
 
-type RuleKey = Extract<
-  keyof Api.SystemManage.CreateUserParams,
-  'userName' | 'nickname' | 'password' | 'roles' | 'status'
->;
+type RuleKey = Extract<keyof UserFormModel, 'userName' | 'nickname' | 'password' | 'roleIds' | 'status'>;
 
-const rules: Record<RuleKey, App.Global.FormRule[]> = {
+const rules = computed<Record<RuleKey, App.Global.FormRule[]>>(() => ({
   userName: formRules.userName,
   nickname: [defaultRequiredRule],
   password: formRules.pwd,
-  roles: [
-    {
-      required: true,
-      type: 'array',
-      message: $t('page.system.user.form.userRoleRequired')
-    }
-  ],
+  roleIds: canAssignRoles.value
+    ? [
+        {
+          required: true,
+          type: 'array',
+          message: $t('page.system.user.form.userRoleRequired')
+        }
+      ]
+    : [],
   status: [defaultRequiredRule]
-};
+}));
 
 const loading = ref(false);
+const initializing = ref(false);
+const initialRoleIds = ref<string[]>([]);
+const initialDeptAssignments = ref<Api.SystemManage.UserDeptItem[]>([]);
+let initializationGeneration = 0;
 
 /** the enabled role options */
 const roleOptions = ref<CommonType.Option<string>[]>([]);
 
-async function getRoleOptions() {
-  const { error, data } = await fetchGetAllRoles();
+async function fetchRoleCandidates(query?: string) {
+  const { error, data } = await fetchGetAssignableRoles({ query, limit: 20 });
+  return error ? [] : data;
+}
 
-  if (!error) {
-    const options = data.map(item => ({
-      label: item.roleName,
-      value: item.roleCode
-    }));
+function mergeRoleOptions(roles: Api.SystemManage.AssignableRole[]) {
+  const options = new Map(roleOptions.value.map(option => [option.value, option]));
+  roles.forEach(role => {
+    options.set(role.roleId, { label: role.roleName, value: role.roleId });
+  });
+  roleOptions.value = [...options.values()];
+}
 
-    roleOptions.value = options;
+async function getRoleOptions(generation: number, currentRoleCodes: string[]) {
+  const resultSets = await Promise.all([
+    fetchRoleCandidates(),
+    ...currentRoleCodes.map(roleCode => fetchRoleCandidates(roleCode))
+  ]);
+  if (generation !== initializationGeneration) return;
+  const roles = [...new Map(resultSets.flat().map(role => [role.roleId, role])).values()];
+  mergeRoleOptions(roles);
+
+  if (currentRoleCodes.length > 0) {
+    const roleIdByCode = new Map(roles.map(role => [role.roleCode, role.roleId]));
+    model.value.roleIds = currentRoleCodes.flatMap(roleCode => {
+      const roleId = roleIdByCode.get(roleCode);
+      return roleId ? [roleId] : [];
+    });
+    initialRoleIds.value = [...model.value.roleIds].sort();
   }
+}
+
+async function handleRoleSearch(query: string) {
+  const normalized = query.trim();
+  if (!normalized) return;
+  mergeRoleOptions(await fetchRoleCandidates(normalized));
+}
+
+function canonicalDeptAssignments(assignments: Api.SystemManage.UserDeptItem[]) {
+  return [...assignments].sort((left, right) => left.deptId.localeCompare(right.deptId));
+}
+
+function assignmentsChanged(current: Api.SystemManage.UserDeptItem[]) {
+  return JSON.stringify(canonicalDeptAssignments(current)) !== JSON.stringify(initialDeptAssignments.value);
 }
 
 /** dept tree options (id/label format from /tree-option endpoint) */
 const deptTreeData = ref<Api.SystemManage.DeptTreeOption[]>([]);
 
-async function loadDeptTree() {
+async function loadDeptTree(generation: number) {
   const { data } = await fetchGetDeptTreeOption();
-  if (data) {
+  if (data && generation === initializationGeneration) {
     deptTreeData.value = data;
   }
 }
@@ -147,12 +199,24 @@ function handleInitModel() {
   checkedDeptKeys.value = [];
   indeterminateDeptKeys.value = [];
   primaryDeptId.value = '';
+  roleOptions.value = [];
+  initialRoleIds.value = [];
+  initialDeptAssignments.value = [];
 
   if (props.operateType === 'edit' && props.rowData) {
-    Object.assign(model.value, jsonClone(props.rowData));
+    const row = jsonClone(props.rowData);
+    Object.assign(model.value, {
+      userName: row.userName,
+      userGender: row.userGender,
+      nickname: row.nickname,
+      userPhone: row.userPhone,
+      userEmail: row.userEmail,
+      status: row.status
+    });
     const userDepts = props.rowData.userDepts || [];
     checkedDeptKeys.value = userDepts.map(d => d.deptId);
     primaryDeptId.value = userDepts.find(d => d.isPrimary)?.deptId || userDepts[0]?.deptId || '';
+    initialDeptAssignments.value = canonicalDeptAssignments(userDepts);
   }
 }
 
@@ -160,7 +224,14 @@ function closeDrawer() {
   visible.value = false;
 }
 
+function recoverFromPartialUpdate() {
+  window.$message?.warning($t('page.system.user.form.partialUpdateWarning'));
+  closeDrawer();
+  emit('submitted');
+}
+
 async function handleSubmit() {
+  if (initializing.value) return;
   try {
     await validate();
   } catch {
@@ -172,18 +243,54 @@ async function handleSubmit() {
   }
   loading.value = true;
   try {
-    const payload: Api.SystemManage.CreateUserParams = {
-      ...model.value,
-      deptIds: allSelectedDeptIds.value.map(id => ({
-        deptId: id,
-        isPrimary: id === primaryDeptId.value
-      }))
+    const profile: Api.SystemManage.UpdateUserParams = {
+      userName: model.value.userName,
+      userGender: model.value.userGender,
+      nickname: model.value.nickname,
+      userPhone: model.value.userPhone,
+      userEmail: model.value.userEmail,
+      status: model.value.status
     };
+    const deptAssignments = allSelectedDeptIds.value.map(id => ({
+      deptId: id,
+      isPrimary: id === primaryDeptId.value
+    }));
 
     let res;
     if (props.operateType === 'edit' && props.rowData) {
-      res = await fetchUpdateUser(props.rowData.userId, payload);
+      let associationCommitted = false;
+      if (
+        canAssignRoles.value &&
+        JSON.stringify([...model.value.roleIds].sort()) !== JSON.stringify(initialRoleIds.value)
+      ) {
+        res = await fetchUpdateUserRoles(props.rowData.userId, {
+          roleIds: model.value.roleIds
+        });
+        if (res.error) return;
+        associationCommitted = true;
+      }
+      if (canAssignDepartments.value && assignmentsChanged(deptAssignments)) {
+        res = await fetchUpdateUserDepartments(props.rowData.userId, {
+          deptAssignments
+        });
+        if (res.error) {
+          if (associationCommitted) recoverFromPartialUpdate();
+          return;
+        }
+        associationCommitted = true;
+      }
+      res = await fetchUpdateUser(props.rowData.userId, profile);
+      if (res.error) {
+        if (associationCommitted) recoverFromPartialUpdate();
+        return;
+      }
     } else {
+      const payload: Api.SystemManage.CreateUserParams = {
+        ...profile,
+        password: model.value.password,
+        deptIds: canAssignDepartments.value ? deptAssignments : [],
+        ...(canAssignRoles.value ? { roleIds: model.value.roleIds } : {})
+      };
       res = await fetchSaveUser(payload);
     }
 
@@ -200,12 +307,24 @@ async function handleSubmit() {
   }
 }
 
-watch(visible, () => {
-  if (visible.value) {
-    handleInitModel();
-    restoreValidation();
-    getRoleOptions();
-    loadDeptTree();
+watch(visible, async isVisible => {
+  if (!isVisible) {
+    initializationGeneration += 1;
+    initializing.value = false;
+    return;
+  }
+  const generation = ++initializationGeneration;
+  const currentRoleCodes = props.operateType === 'edit' && props.rowData ? [...props.rowData.roles] : [];
+  handleInitModel();
+  restoreValidation();
+  initializing.value = true;
+  try {
+    await Promise.all([
+      canAssignRoles.value ? getRoleOptions(generation, currentRoleCodes) : Promise.resolve(),
+      canAssignDepartments.value ? loadDeptTree(generation) : Promise.resolve()
+    ]);
+  } finally {
+    if (generation === initializationGeneration) initializing.value = false;
   }
 });
 </script>
@@ -245,15 +364,18 @@ watch(visible, () => {
             <NRadio v-for="item in enableStatusOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
           </NRadioGroup>
         </NFormItem>
-        <NFormItem :label="$t('page.system.user.userRole')" path="roles">
+        <NFormItem v-if="canAssignRoles" :label="$t('page.system.user.userRole')" path="roleIds">
           <NSelect
-            v-model:value="model.roles"
+            v-model:value="model.roleIds"
             multiple
+            filterable
+            remote
             :options="roleOptions"
             :placeholder="$t('page.system.user.form.userRole')"
+            @search="handleRoleSearch"
           />
         </NFormItem>
-        <NFormItem :label="$t('page.system.user.userDept')" path="deptIds">
+        <NFormItem v-if="canAssignDepartments" :label="$t('page.system.user.userDept')" path="deptIds">
           <NTree
             v-model:checked-keys="checkedDeptKeys"
             :data="deptTreeData"
@@ -282,7 +404,9 @@ watch(visible, () => {
       <template #footer>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
-          <NButton type="primary" :loading="loading" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
+          <NButton type="primary" :loading="loading || initializing" :disabled="initializing" @click="handleSubmit">
+            {{ $t('common.confirm') }}
+          </NButton>
         </NSpace>
       </template>
     </NDrawerContent>

@@ -148,12 +148,34 @@ declare namespace Api {
       userDepts: UserDeptItem[];
     }>;
 
-    type CreateUserParams = Pick<
+    type UserProfileParams = Pick<
       Api.SystemManage.User,
-      'userName' | 'password' | 'userGender' | 'nickname' | 'userPhone' | 'userEmail' | 'roles' | 'status'
-    > & {
+      'userName' | 'userGender' | 'nickname' | 'userPhone' | 'userEmail' | 'status'
+    >;
+
+    type CreateUserParams = UserProfileParams & {
+      password: string;
+      /** explicit complete role set; omission uses the backend default role */
+      roleIds?: string[];
       /** dept associations (required: at least one primary if non-empty) */
       deptIds: Api.SystemManage.UserDeptItem[];
+    };
+
+    type UpdateUserParams = UserProfileParams;
+
+    type UserRoleUpdateParams = {
+      roleIds: string[];
+    };
+
+    type UserDepartmentUpdateParams = {
+      deptAssignments: UserDeptItem[];
+    };
+
+    type AssignableRole = {
+      roleId: string;
+      roleCode: string;
+      roleName: string;
+      dataScope: string;
     };
 
     /** user search params */
@@ -501,18 +523,16 @@ declare namespace Api {
       userId: string;
       userName: string;
       nickname: string | null;
-      userEmail: string | null;
-      userPhone: string | null;
-      status: string | null;
+      status: string;
       isMember: boolean;
       isPrimary: boolean;
     };
 
     /** dept users management data */
-    type DeptUsersOut = {
-      deptId: string;
-      deptName: string;
-      users: DeptUserItem[];
+    type DeptUsersOut = Common.PaginatingQueryRecord<DeptUserItem>;
+
+    type DeptUsersQuery = Pick<CommonSearchParams, 'current' | 'size'> & {
+      query?: string;
     };
 
     /** dept users update params */

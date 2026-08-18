@@ -67,6 +67,15 @@ export function fetchGetAllRoles() {
   });
 }
 
+/** get roles that the current operator may delegate to a user */
+export function fetchGetAssignableRoles(params?: { query?: string; limit?: number }) {
+  return request<Api.SystemManage.AssignableRole[]>({
+    url: '/system/user/assignable-roles',
+    method: 'get',
+    params
+  });
+}
+
 /** get user list */
 export function fetchGetUserList(params?: Api.SystemManage.UserSearchParams) {
   return request<Api.SystemManage.UserList>({
@@ -84,9 +93,25 @@ export function fetchSaveUser(data: Api.SystemManage.CreateUserParams) {
   });
 }
 
-export function fetchUpdateUser(userId: string, data: Api.SystemManage.CreateUserParams) {
+export function fetchUpdateUser(userId: string, data: Api.SystemManage.UpdateUserParams) {
   return request<App.Service.Response<any>>({
     url: `/system/user/${userId}`,
+    method: 'put',
+    data
+  });
+}
+
+export function fetchUpdateUserRoles(userId: string, data: Api.SystemManage.UserRoleUpdateParams) {
+  return request<App.Service.Response<any>>({
+    url: `/system/user/${userId}/roles`,
+    method: 'put',
+    data
+  });
+}
+
+export function fetchUpdateUserDepartments(userId: string, data: Api.SystemManage.UserDepartmentUpdateParams) {
+  return request<App.Service.Response<any>>({
+    url: `/system/user/${userId}/departments`,
     method: 'put',
     data
   });
@@ -465,10 +490,11 @@ export function fetchBatchDeleteDept(data: string[]) {
 }
 
 /** get dept users (members + candidates) */
-export function fetchGetDeptUsers(deptId: string) {
+export function fetchGetDeptUsers(deptId: string, params: Api.SystemManage.DeptUsersQuery) {
   return request<Api.SystemManage.DeptUsersOut>({
     url: `/system/dept/${deptId}/users`,
-    method: 'get'
+    method: 'get',
+    params
   });
 }
 

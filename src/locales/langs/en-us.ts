@@ -537,7 +537,8 @@ const local: App.I18n.Schema = {
           userStatus: 'Please select user status',
           userRole: 'Please select user role',
           userRoleRequired: 'Please select at least one user role',
-          primaryDeptRequired: 'Please select a primary department'
+          primaryDeptRequired: 'Please select a primary department',
+          partialUpdateWarning: 'Some changes were saved before a later step failed. The user list has been refreshed.'
         },
         addUser: 'Add User',
         editUser: 'Edit User',

@@ -755,6 +755,7 @@ declare namespace App {
               userRole: string;
               userRoleRequired: string;
               primaryDeptRequired: string;
+              partialUpdateWarning: string;
             };
             addUser: string;
             editUser: string;

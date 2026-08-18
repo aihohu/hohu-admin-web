@@ -531,7 +531,8 @@ const local: App.I18n.Schema = {
           userStatus: '请选择用户状态',
           userRole: '请选择用户角色',
           userRoleRequired: '请至少选择一个用户角色',
-          primaryDeptRequired: '请选择主部门'
+          primaryDeptRequired: '请选择主部门',
+          partialUpdateWarning: '部分修改已保存，但后续步骤失败；用户列表已刷新为服务端最新状态'
         },
         addUser: '新增用户',
         editUser: '编辑用户',

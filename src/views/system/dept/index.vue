@@ -106,8 +106,11 @@ const { columns, columnChecks, data, loading, getData, scrollX } = useNaiveTable
       width: 280,
       render: row => (
         <div class="flex-center gap-8px">
-          {hasAuth('system:dept:edit') && (
-            <NButton type="info" ghost size="small" onClick={() => manageUsers(row.deptId)}>
+          {hasAuth('system:dept:list') &&
+            hasAuth('system:dept:edit') &&
+            hasAuth('system:user:list') &&
+            hasAuth('system:user:edit') && (
+            <NButton type="info" ghost size="small" onClick={() => manageUsers(row)}>
               {$t('page.system.dept.manageUsers')}
             </NButton>
           )}
@@ -153,6 +156,7 @@ const {
 /** users modal state */
 const usersModalVisible = ref(false);
 const usersModalDeptId = ref<string>('');
+const usersModalDeptName = ref<string>('');
 
 // Replay cached tool filters when arriving from an AI result card.
 onMounted(async () => {
@@ -174,8 +178,9 @@ onMounted(async () => {
   await getData();
 });
 
-function manageUsers(deptId: string) {
-  usersModalDeptId.value = deptId;
+function manageUsers(dept: Api.SystemManage.DeptTree) {
+  usersModalDeptId.value = dept.deptId;
+  usersModalDeptName.value = dept.deptName;
   usersModalVisible.value = true;
 }
 
@@ -255,7 +260,12 @@ async function handleDelete(id: string) {
         :row-data="editingData"
         @submitted="getData"
       />
-      <DeptUsersModal v-model:visible="usersModalVisible" :dept-id="usersModalDeptId" @updated="getData" />
+      <DeptUsersModal
+        v-model:visible="usersModalVisible"
+        :dept-id="usersModalDeptId"
+        :dept-name="usersModalDeptName"
+        @updated="getData"
+      />
     </NCard>
   </div>
 </template>

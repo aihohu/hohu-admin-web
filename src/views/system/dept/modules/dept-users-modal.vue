@@ -10,6 +10,8 @@ defineOptions({
 interface Props {
   /** the dept id */
   deptId: string;
+  /** the dept name from the scoped tree row */
+  deptName: string;
 }
 
 const props = defineProps<Props>();
@@ -26,8 +28,9 @@ const visible = defineModel<boolean>('visible', {
 
 const loading = ref(false);
 const submitting = ref(false);
-const deptName = ref('');
+const loadedSuccessfully = ref(false);
 const users = ref<Api.SystemManage.DeptUserItem[]>([]);
+let loadGeneration = 0;
 
 /** final member user ids (NTransfer target) */
 const memberIds = ref<string[]>([]);
@@ -36,27 +39,44 @@ const memberIds = ref<string[]>([]);
 const transferOptions = computed(() =>
   users.value.map(u => ({
     label: u.nickname ? `${u.userName} (${u.nickname})` : u.userName,
-    value: u.userId
+    value: u.userId,
+    disabled: u.isPrimary
   }))
 );
 
 const memberCount = computed(() => memberIds.value.length);
 
 async function loadData() {
+  const generation = ++loadGeneration;
   loading.value = true;
+  loadedSuccessfully.value = false;
   try {
-    const { error, data } = await fetchGetDeptUsers(props.deptId);
-    if (!error && data) {
-      deptName.value = data.deptName;
-      users.value = data.users;
-      memberIds.value = data.users.filter(u => u.isMember).map(u => u.userId);
+    const records: Api.SystemManage.DeptUserItem[] = [];
+    let current = 1;
+    let hasMore = true;
+    do {
+      const { error, data } = await fetchGetDeptUsers(props.deptId, {
+        current,
+        size: 100
+      });
+      if (error || !data || generation !== loadGeneration) return;
+      records.push(...data.records);
+      hasMore = data.current * data.size < data.total;
+      current = data.current + 1;
+    } while (hasMore);
+
+    if (generation === loadGeneration) {
+      users.value = records;
+      memberIds.value = records.filter(user => user.isMember).map(user => user.userId);
+      loadedSuccessfully.value = true;
     }
   } finally {
-    loading.value = false;
+    if (generation === loadGeneration) loading.value = false;
   }
 }
 
 async function handleSubmit() {
+  if (loading.value || submitting.value || !loadedSuccessfully.value) return;
   submitting.value = true;
   try {
     const { error, response } = await fetchUpdateDeptUsers(props.deptId, {
@@ -75,10 +95,13 @@ async function handleSubmit() {
 
 watch(visible, val => {
   if (val) {
-    deptName.value = '';
     users.value = [];
     memberIds.value = [];
     loadData();
+  } else {
+    loadGeneration += 1;
+    loading.value = false;
+    loadedSuccessfully.value = false;
   }
 });
 </script>
@@ -86,7 +109,7 @@ watch(visible, val => {
 <template>
   <NModal
     v-model:show="visible"
-    :title="$t('page.system.dept.manageUsers') + (deptName ? ` - ${deptName}` : '')"
+    :title="$t('page.system.dept.manageUsers') + (props.deptName ? ` - ${props.deptName}` : '')"
     preset="card"
     class="w-640px"
     :mask-closable="false"
@@ -111,7 +134,7 @@ watch(visible, val => {
     <template #footer>
       <NSpace justify="end">
         <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
-        <NButton type="primary" :loading="submitting" :disabled="loading" @click="handleSubmit">
+        <NButton type="primary" :loading="submitting" :disabled="loading || !loadedSuccessfully" @click="handleSubmit">
           {{ $t('common.confirm') }}
         </NButton>
       </NSpace>
