@@ -59,11 +59,7 @@ defineExpose({ handleSubmit, checkedIds, allAgents });
       <NCheckboxGroup v-model:value="checkedIds">
         <NSpace vertical>
           <div v-for="agent in allAgents" :key="agent.agentId" class="flex-y-center gap-12px">
-            <NCheckbox
-              :value="agent.agentId"
-              :disabled="agent.isShared"
-              :data-testid="`role-agent-checkbox-${agent.code}`"
-            >
+            <NCheckbox :value="agent.agentId" :data-testid="`role-agent-checkbox-${agent.code}`">
               {{ agent.name }} ({{ agent.code }})
             </NCheckbox>
             <NTag v-if="agent.isShared" size="small" type="info">{{ $t('page.ai.aiAgentAuth.sharedTag') }}</NTag>

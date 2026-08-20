@@ -18,7 +18,8 @@ const messages: Record<string, string> = {
   'errorCode.AI_USER_ROLE_LOOKUP_LIMIT_INVALID': 'Role result limit must be between 1 and 20',
   'errorCode.USER_ROLE_AUTHORITY_EXCEEDED': 'The role set exceeds your delegation boundary',
   'errorCode.AI_PREPARED_ACTION_SNAPSHOT_STALE': 'Approval facts changed; start again',
-  'errorCode.AI_LOOKUP_NO_MATCH': 'No matching user was found'
+  'errorCode.AI_LOOKUP_NO_MATCH': 'No matching user was found',
+  'errorCode.AI_LOOKUP_AMBIGUOUS': 'Multiple users match; provide a stable user ID or more exact selectors'
 };
 
 const t = (key: App.I18n.I18nKey) => messages[key] ?? key;
@@ -53,6 +54,9 @@ describe('tool call i18n', () => {
     );
     expect(localizeToolError('AI_PREPARED_ACTION_SNAPSHOT_STALE', t, te)).toBe('Approval facts changed; start again');
     expect(localizeToolError('AI_LOOKUP_NO_MATCH', t, te)).toBe('No matching user was found');
+    expect(localizeToolError('AI_LOOKUP_AMBIGUOUS', t, te)).toBe(
+      'Multiple users match; provide a stable user ID or more exact selectors'
+    );
     expect(localizeToolError('AI_TOOL_TIMEOUT', t, te)).toBe('Operation timed out');
     expect(localizeToolError('UNKNOWN_CODE', t, te)).toBe('UNKNOWN_CODE');
   });

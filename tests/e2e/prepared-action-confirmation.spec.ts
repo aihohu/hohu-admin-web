@@ -55,6 +55,25 @@ const exportPendingAction = {
   presentation: exportPresentation
 };
 
+const availableAgents = [
+  {
+    code: 'user_mgmt',
+    name: 'User Management',
+    description: 'E2E Agent',
+    modelPreference: null,
+    displayOrder: 1
+  }
+];
+
+const availableModels = [
+  {
+    modelId: 'mock-model',
+    label: 'Mock Model',
+    providerCode: 'mock',
+    capabilities: ['text']
+  }
+];
+
 function response(data: unknown) {
   return { code: 200, msg: 'success', data };
 }
@@ -116,8 +135,8 @@ async function mockChatShell(page: Page, state: { pending: boolean; terminal: bo
       })
     })
   );
-  await page.route('**/ai/provider/models*', route => route.fulfill({ json: response([]) }));
-  await page.route('**/ai/agents*', route => route.fulfill({ json: response([]) }));
+  await page.route('**/ai/chat/models*', route => route.fulfill({ json: response(availableModels) }));
+  await page.route('**/ai/agents*', route => route.fulfill({ json: response(availableAgents) }));
 }
 
 async function mockExportConfirmation(page: Page) {
@@ -135,8 +154,8 @@ async function mockExportConfirmation(page: Page) {
       })
     })
   );
-  await page.route('**/ai/provider/models*', route => route.fulfill({ json: response([]) }));
-  await page.route('**/ai/agents*', route => route.fulfill({ json: response([]) }));
+  await page.route('**/ai/chat/models*', route => route.fulfill({ json: response(availableModels) }));
+  await page.route('**/ai/agents*', route => route.fulfill({ json: response(availableAgents) }));
 }
 
 async function openConversation(page: Page) {

@@ -1582,7 +1582,11 @@ declare namespace App {
         AI_AGENT_QUOTA_INVALID: string;
         AI_AGENT_ID_INVALID: string;
         AI_ROLE_NOT_FOUND: string;
-        AI_ROLE_AGENT_BIND_SHARED_FORBIDDEN: string;
+        AI_ROLE_AGENT_SET_DUPLICATE: string;
+        AI_ROLE_AGENT_AUTHORITY_EXCEEDED: string;
+        AI_ROLE_GLOBAL_IMPACT_OUT_OF_SCOPE: string;
+        AI_ROLE_SELF_MUTATION_FORBIDDEN: string;
+        AI_ROLE_PROTECTED: string;
         AI_IMPORT_FILE_TOO_LARGE: string;
         AI_IMPORT_INVALID_MIME: string;
         AI_IMPORT_TOO_MANY_ROWS: string;
@@ -1638,6 +1642,7 @@ declare namespace App {
         AI_USER_PRIMARY_DEPT_NOT_FOUND: string;
         AI_USER_CREATE_INVALID: string;
         AI_LOOKUP_NO_MATCH: string;
+        AI_LOOKUP_AMBIGUOUS: string;
         AI_USER_RESET_NOT_FOUND: string;
         AI_USER_RESET_SELF_FORBIDDEN: string;
         AI_IMPORT_REASON_REQUIRED: string;

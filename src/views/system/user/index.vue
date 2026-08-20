@@ -1,7 +1,7 @@
 <script setup lang="tsx">
 import { onMounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { NButton, NPopconfirm, NTag } from 'naive-ui';
+import { NButton, NPopconfirm, NSpace, NTag } from 'naive-ui';
 import { enableStatusRecord, userGenderRecord } from '@/constants/business';
 import { REG_PWD } from '@/constants/reg';
 import {

@@ -46,6 +46,25 @@ const messages = [
   assistant('8813', '8804', ['tc-only'], '')
 ];
 
+const availableAgents = [
+  {
+    code: 'user_mgmt',
+    name: 'User Management',
+    description: 'E2E Agent',
+    modelPreference: null,
+    displayOrder: 1
+  }
+];
+
+const availableModels = [
+  {
+    modelId: 'mock-model',
+    label: 'Mock Model',
+    providerCode: 'mock',
+    capabilities: ['text']
+  }
+];
+
 test('reload keeps every tool card inside its owning assistant message', async ({ page }) => {
   await page.route('**/ai/conversation/list*', route =>
     route.fulfill({ json: response({ records: [conversation], current: 1, size: 20, total: 1 }) })
@@ -53,8 +72,8 @@ test('reload keeps every tool card inside its owning assistant message', async (
   await page.route(`**/ai/conversation/${conversation.conversationId}`, route =>
     route.fulfill({ json: response({ conversation, messages, pendingActions: [] }) })
   );
-  await page.route('**/ai/provider/models*', route => route.fulfill({ json: response([]) }));
-  await page.route('**/ai/agents*', route => route.fulfill({ json: response([]) }));
+  await page.route('**/ai/chat/models*', route => route.fulfill({ json: response(availableModels) }));
+  await page.route('**/ai/agents*', route => route.fulfill({ json: response(availableAgents) }));
 
   await page.goto('/ai/chat');
   await page.getByText(conversation.title, { exact: true }).click();

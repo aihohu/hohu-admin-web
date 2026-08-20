@@ -185,6 +185,9 @@ test('管理员修改 Role → Agent 绑定后恢复原绑定', async ({ page })
   if (!targetAgent || targetAgent.isShared) throw new Error('E2E requires a non-shared user_mgmt Agent');
   const originallyBound = snapshot.boundAgentIds.includes(targetAgent.agentId);
 
+  await page.getByTestId('role-code-search').locator('input').fill(role.roleCode);
+  await page.getByTestId('role-search-actions').getByRole('button', { name: '搜索' }).click();
+
   try {
     await page.getByTestId(`role-ai-agent-auth-${role.roleCode}`).click();
     const modal = page.getByTestId('role-ai-agent-modal');

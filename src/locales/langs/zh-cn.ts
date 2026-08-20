@@ -1158,8 +1158,8 @@ const local: App.I18n.Schema = {
       },
       aiAgentAuth: {
         title: 'AI Agent 授权',
-        sharedHint: 'shared Agent 直通所有用户，无需勾选',
-        sharedTag: 'shared 直通'
+        sharedHint: '所有 Agent（包括 shared）都必须显式绑定，并由服务端校验角色委派上界',
+        sharedTag: '平台能力'
       }
     },
     marketplace: {
@@ -1386,7 +1386,11 @@ const local: App.I18n.Schema = {
     AI_AGENT_QUOTA_INVALID: 'daily_quota_per_user 必须 ≥ 1 或 null',
     AI_AGENT_ID_INVALID: 'agent_id 必须为数字字符串',
     AI_ROLE_NOT_FOUND: '角色不存在',
-    AI_ROLE_AGENT_BIND_SHARED_FORBIDDEN: 'shared Agent 直通所有用户，无需绑定',
+    AI_ROLE_AGENT_SET_DUPLICATE: 'Agent 完整集合不能包含重复项',
+    AI_ROLE_AGENT_AUTHORITY_EXCEEDED: '角色 Agent 授权超出当前操作者的委派上界',
+    AI_ROLE_GLOBAL_IMPACT_OUT_OF_SCOPE: '该角色包含当前操作者无权管理的成员或授权影响',
+    AI_ROLE_SELF_MUTATION_FORBIDDEN: '不能修改自己所属角色的授权',
+    AI_ROLE_PROTECTED: '保护角色只能由超级管理员修改',
     AI_IMPORT_FILE_TOO_LARGE: '文件超过 10MB',
     AI_IMPORT_INVALID_MIME: '不支持的文件格式（仅 xlsx / csv）',
     AI_IMPORT_TOO_MANY_ROWS: '行数超过 50000，请分批导入',
@@ -1442,6 +1446,7 @@ const local: App.I18n.Schema = {
     AI_USER_PRIMARY_DEPT_NOT_FOUND: '主部门不存在或已禁用',
     AI_USER_CREATE_INVALID: '用户资料格式不合法',
     AI_LOOKUP_NO_MATCH: '未找到匹配的用户',
+    AI_LOOKUP_AMBIGUOUS: '多个用户匹配当前条件，请提供稳定用户 ID 或更多精确条件',
     AI_USER_RESET_NOT_FOUND: '用户不存在或不在可见范围',
     AI_USER_RESET_SELF_FORBIDDEN: '不能通过 AI 重置当前登录账号，请使用个人改密功能',
     AI_IMPORT_REASON_REQUIRED: '请填写业务理由',

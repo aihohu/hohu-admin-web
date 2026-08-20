@@ -1166,8 +1166,9 @@ const local: App.I18n.Schema = {
       },
       aiAgentAuth: {
         title: 'AI Agent Authorization',
-        sharedHint: 'Shared Agent is granted to all users automatically, no need to select',
-        sharedTag: 'Shared Pass-through'
+        sharedHint:
+          'Every Agent, including shared, requires an explicit binding validated against the delegation ceiling',
+        sharedTag: 'Platform capability'
       }
     },
     marketplace: {
@@ -1394,7 +1395,11 @@ const local: App.I18n.Schema = {
     AI_AGENT_QUOTA_INVALID: 'daily_quota_per_user must be >= 1 or null',
     AI_AGENT_ID_INVALID: 'agent_id must be a numeric string',
     AI_ROLE_NOT_FOUND: 'AI role not found',
-    AI_ROLE_AGENT_BIND_SHARED_FORBIDDEN: 'Shared Agent is granted to all users, no binding required',
+    AI_ROLE_AGENT_SET_DUPLICATE: 'The complete Agent set must not contain duplicates',
+    AI_ROLE_AGENT_AUTHORITY_EXCEEDED: "The role's Agent grants exceed your delegation ceiling",
+    AI_ROLE_GLOBAL_IMPACT_OUT_OF_SCOPE: 'The role has members or authorization effects outside your management scope',
+    AI_ROLE_SELF_MUTATION_FORBIDDEN: 'You cannot change authorization on a role assigned to yourself',
+    AI_ROLE_PROTECTED: 'Only a super administrator can modify this protected role',
     AI_IMPORT_FILE_TOO_LARGE: 'File exceeds 10MB',
     AI_IMPORT_INVALID_MIME: 'Unsupported file format (xlsx / csv only)',
     AI_IMPORT_TOO_MANY_ROWS: 'Rows exceed 50000, please import in batches',
@@ -1450,6 +1455,7 @@ const local: App.I18n.Schema = {
     AI_USER_PRIMARY_DEPT_NOT_FOUND: 'The primary department is missing or disabled',
     AI_USER_CREATE_INVALID: 'The user profile is invalid',
     AI_LOOKUP_NO_MATCH: 'No matching user was found',
+    AI_LOOKUP_AMBIGUOUS: 'Multiple users match; provide a stable user ID or more exact selectors',
     AI_USER_RESET_NOT_FOUND: 'The user does not exist or is outside your visible scope',
     AI_USER_RESET_SELF_FORBIDDEN: 'Use profile password change instead of resetting your current account through AI',
     AI_IMPORT_REASON_REQUIRED: 'Reason is required',

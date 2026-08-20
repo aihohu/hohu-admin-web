@@ -48,7 +48,11 @@ function search() {
               path="roleCode"
               class="pr-24px"
             >
-              <NInput v-model:value="model.roleCode" :placeholder="$t('page.system.role.form.roleCode')" />
+              <NInput
+                v-model:value="model.roleCode"
+                data-testid="role-code-search"
+                :placeholder="$t('page.system.role.form.roleCode')"
+              />
             </NFormItemGi>
             <NFormItemGi
               span="24 s:12 m:6 l:5"
