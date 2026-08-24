@@ -21,7 +21,22 @@ export function useAuth() {
     return codes.some(code => buttons.includes(code));
   }
 
+  function hasRole(codes: string | string[]) {
+    if (!authStore.isLogin) {
+      return false;
+    }
+
+    const roleCodes = Array.isArray(codes) ? codes : [codes];
+    return roleCodes.some(code => authStore.userInfo.roles.includes(code));
+  }
+
+  function hasSuperAdminAuth(code: string) {
+    return hasRole('R_SUPER') && authStore.userInfo.buttons.includes(code);
+  }
+
   return {
-    hasAuth
+    hasAuth,
+    hasRole,
+    hasSuperAdminAuth
   };
 }

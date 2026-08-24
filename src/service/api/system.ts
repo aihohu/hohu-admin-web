@@ -9,6 +9,14 @@ export function fetchGetRoleList(params?: Api.SystemManage.RoleSearchParams) {
   });
 }
 
+/** get one fully authorized role definition for editing */
+export function fetchGetRoleDetail(roleId: string) {
+  return request<Api.SystemManage.Role>({
+    url: `/system/role/${roleId}`,
+    method: 'get'
+  });
+}
+
 export function fetchGetRoleMenuList(roleId: string) {
   return request<string[]>({
     url: `/system/role/menus/${roleId}`,
@@ -24,7 +32,7 @@ export function fetchSaveRole(data: Api.SystemManage.CreateRoleParams) {
   });
 }
 
-export function fetchUpdateRole(roleId: string, data: Api.SystemManage.CreateRoleParams) {
+export function fetchUpdateRole(roleId: string, data: Api.SystemManage.UpdateRoleParams) {
   return request<App.Service.Response<any>>({
     url: `/system/role/${roleId}`,
     method: 'put',
@@ -464,7 +472,7 @@ export function fetchSaveDept(data: Api.SystemManage.DeptCreateParams) {
 }
 
 /** update dept */
-export function fetchUpdateDept(deptId: string, data: Api.SystemManage.DeptCreateParams) {
+export function fetchUpdateDept(deptId: string, data: Api.SystemManage.DeptUpdateParams) {
   return request<App.Service.Response<any>>({
     url: `/system/dept/${deptId}`,
     method: 'put',

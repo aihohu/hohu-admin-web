@@ -96,19 +96,30 @@ function closeDrawer() {
   visible.value = false;
 }
 
+function buildUpdatePayload(): Api.SystemManage.UpdateRoleParams {
+  const payload: Api.SystemManage.UpdateRoleParams = {
+    roleName: model.value.roleName || '',
+    roleDesc: model.value.roleDesc,
+    dataScope: model.value.dataScope || '1',
+    status: model.value.status || '1'
+  };
+  if (payload.dataScope === '2') {
+    payload.deptIds = model.value.deptIds;
+  }
+  return payload;
+}
+
 async function handleSubmit() {
   await validate();
   loading.value = true;
   try {
-    const submitData = { ...model.value };
-    if (submitData.dataScope !== '2') {
-      delete (submitData as any).deptIds;
-    }
-
     let res;
     if (props.operateType === 'edit' && props.rowData) {
-      res = await fetchUpdateRole(props.rowData.roleId, submitData);
+      res = await fetchUpdateRole(props.rowData.roleId, buildUpdatePayload());
     } else {
+      const { deptIds, ...basePayload } = model.value;
+      const submitData: Api.SystemManage.CreateRoleParams =
+        model.value.dataScope === '2' ? { ...basePayload, deptIds } : basePayload;
       res = await fetchSaveRole(submitData);
     }
     const { error, response } = res;
@@ -143,6 +154,8 @@ watch(visible, () => {
         <NFormItem :label="$t('page.system.role.roleCode')" path="roleCode">
           <NInput
             v-model:value="model.roleCode"
+            data-testid="role-code-input"
+            :disabled="props.operateType === 'edit'"
             :placeholder="$t('page.system.role.form.roleCode')"
             @input="(val: string) => (model.roleCode = val.toUpperCase())"
           />

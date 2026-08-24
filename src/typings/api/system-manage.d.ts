@@ -85,12 +85,23 @@ declare namespace Api {
       deptIds: string[];
     }>;
 
+    /** minimal role metadata returned by tenant-wide role reads */
+    type RoleSummary = Pick<Role, 'roleId' | 'roleName' | 'roleCode' | 'dataScope' | 'status'> & {
+      delegable: boolean;
+      blockedReasonCode: string | null;
+    };
+
     /** role model params */
-    type CreateRoleParams = CommonType.RecordNullable<
-      Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'roleDesc' | 'dataScope' | 'status'> & {
-        deptIds?: string[];
-      } & CommonSearchParams
-    >;
+    type CreateRoleParams = Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'dataScope' | 'status'> & {
+      roleDesc: string | null;
+      deptIds?: string[];
+    };
+
+    /** mutable role definition fields; roleCode is immutable */
+    type UpdateRoleParams = Pick<Api.SystemManage.Role, 'roleName' | 'dataScope' | 'status'> & {
+      roleDesc: string | null;
+      deptIds?: string[];
+    };
 
     /** role search params */
     type RoleSearchParams = CommonType.RecordNullable<
@@ -98,10 +109,10 @@ declare namespace Api {
     >;
 
     /** role list */
-    type RoleList = Common.PaginatingQueryRecord<Role>;
+    type RoleList = Common.PaginatingQueryRecord<RoleSummary>;
 
     /** all role */
-    type AllRole = Pick<Role, 'roleId' | 'roleName' | 'roleCode'>;
+    type AllRole = RoleSummary;
 
     /**
      * user gender
@@ -481,19 +492,19 @@ declare namespace Api {
       /** dept id */
       deptId: string;
       /** parent dept id */
-      parentId: string;
+      parentId: string | null;
       /** ancestors */
-      ancestors: string;
+      ancestors: string | null;
       /** dept name */
       deptName: string;
       /** order num */
       orderNum: number;
       /** leader */
-      leader: string;
+      leader: string | null;
       /** phone */
-      phone: string;
+      phone: string | null;
       /** email */
-      email: string;
+      email: string | null;
     }>;
 
     /** dept tree node */
@@ -516,6 +527,11 @@ declare namespace Api {
     type DeptCreateParams = Pick<
       Api.SystemManage.Dept,
       'parentId' | 'deptName' | 'orderNum' | 'leader' | 'phone' | 'email' | 'status'
+    >;
+
+    type DeptUpdateParams = Pick<
+      Api.SystemManage.Dept,
+      'deptName' | 'orderNum' | 'leader' | 'phone' | 'email' | 'status'
     >;
 
     /** dept user item (for dept-users management) */

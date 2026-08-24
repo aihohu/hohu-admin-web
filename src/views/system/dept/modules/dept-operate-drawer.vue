@@ -111,13 +111,24 @@ function closeDrawer() {
   visible.value = false;
 }
 
+function buildUpdatePayload(): Api.SystemManage.DeptUpdateParams {
+  return {
+    deptName: model.value.deptName,
+    orderNum: model.value.orderNum,
+    leader: model.value.leader,
+    phone: model.value.phone,
+    email: model.value.email,
+    status: model.value.status
+  };
+}
+
 async function handleSubmit() {
   await validate();
   loading.value = true;
   try {
     let res;
     if (props.operateType === 'edit' && props.rowData) {
-      res = await fetchUpdateDept(props.rowData.deptId, model.value);
+      res = await fetchUpdateDept(props.rowData.deptId, buildUpdatePayload());
     } else {
       res = await fetchSaveDept(model.value);
     }
@@ -155,6 +166,7 @@ watch(visible, () => {
             label-field="label"
             children-field="children"
             :placeholder="$t('page.system.dept.form.parentId')"
+            :disabled="props.operateType === 'edit'"
           />
         </NFormItem>
         <NFormItem :label="$t('page.system.dept.deptName')" path="deptName">

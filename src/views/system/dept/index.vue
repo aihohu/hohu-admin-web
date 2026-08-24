@@ -16,7 +16,7 @@ import DeptSearch from './modules/dept-search.vue';
 import DeptUsersModal from './modules/dept-users-modal.vue';
 
 const appStore = useAppStore();
-const { hasAuth } = useAuth();
+const { hasAuth, hasSuperAdminAuth } = useAuth();
 const route = useRoute();
 
 const searchParams: Api.SystemManage.DeptSearchParams = reactive({
@@ -124,7 +124,7 @@ const { columns, columnChecks, data, loading, getData, scrollX } = useNaiveTable
               {$t('common.edit')}
             </NButton>
           )}
-          {hasAuth('system:dept:delete') && (
+          {hasSuperAdminAuth('system:dept:delete') && (
             <NPopconfirm onPositiveClick={() => handleDelete(row.deptId)}>
               {{
                 default: () => $t('common.confirmDelete'),
@@ -237,6 +237,7 @@ async function handleDelete(id: string) {
           :loading="loading"
           add-auth="system:dept:add"
           delete-auth="system:dept:batch-delete"
+          :show-delete="hasSuperAdminAuth('system:dept:batch-delete')"
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"

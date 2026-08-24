@@ -30,6 +30,13 @@ const zh: Record<string, string> = {
   'page.system.user.editUser': '编辑用户',
   'page.ai.chat.updateUserDepartments': '调整用户部门',
   'page.ai.chat.updateUserRoles': '调整用户角色',
+  'page.ai.chat.createRole': '创建角色',
+  'page.ai.chat.updateRole': '更新角色',
+  'page.ai.chat.updateRoleMenus': '替换角色菜单',
+  'page.ai.chat.updateRoleAgents': '替换角色 Agent',
+  'page.ai.chat.createDepartment': '创建部门',
+  'page.ai.chat.updateDepartment': '更新部门',
+  'page.ai.chat.moveDepartment': '移动部门',
   'page.system.user.resetPwd.title': '重置密码',
   'page.system.user.userName': '用户名',
   'page.system.user.nickname': '昵称',
@@ -53,7 +60,24 @@ const zh: Record<string, string> = {
   'page.ai.chat.confirmUpdateDeptSummary': '将把用户“{userName}”的完整部门集合替换为下方新集合',
   'page.ai.chat.confirmUpdateRolesSummary': '将把用户“{userName}”的完整角色集合替换为下方新集合',
   'page.ai.chat.departmentAssignments': '完整部门集合',
-  'page.ai.chat.roleAssignments': '完整角色集合'
+  'page.ai.chat.roleAssignments': '完整角色集合',
+  'page.ai.chat.targetRole': '目标角色',
+  'page.ai.chat.targetDepartment': '目标部门',
+  'page.ai.chat.roleCode': '角色编码',
+  'page.ai.chat.roleDefinitionFields': '角色定义字段',
+  'page.ai.chat.departmentFields': '部门字段',
+  'page.ai.chat.completeMenuSet': '完整菜单集合',
+  'page.ai.chat.completeAgentSet': '完整 Agent 集合',
+  'page.ai.chat.parentDepartment': '上级部门',
+  'page.ai.chat.newParentDepartment': '新上级部门',
+  'page.ai.chat.affectedUsers': '受影响用户',
+  'page.ai.chat.confirmRoleCreateSummary': '将创建角色“{roleName}”',
+  'page.ai.chat.confirmRoleUpdateSummary': '将更新角色“{roleId}”的定义',
+  'page.ai.chat.confirmRoleMenusSummary': '将替换角色“{roleId}”的完整菜单集合',
+  'page.ai.chat.confirmRoleAgentsSummary': '将替换角色“{roleId}”的完整 Agent 集合',
+  'page.ai.chat.confirmDeptCreateSummary': '将创建部门“{deptName}”',
+  'page.ai.chat.confirmDeptUpdateSummary': '将更新部门“{deptId}”',
+  'page.ai.chat.confirmDeptMoveSummary': '将移动部门“{deptId}”'
 };
 
 const t = (key: string, params?: Record<string, string | number>) => {
@@ -273,6 +297,42 @@ describe('confirmation presentation i18n', () => {
       affectedCount: 1,
       affectedExamples: []
     });
+  });
+
+  it('localizes Phase 3 role and department write confirmations', () => {
+    const roleFields: Api.Ai.ConfirmationPresentationField[] = [
+      { label: 'role_id', value: 'Auditor (R_AUDITOR / 200)' },
+      { label: 'menu_ids', value: '100, 101' },
+      { label: 'affected_users', value: 3 },
+      { label: 'affectedCount', value: 3, tone: 'warning' }
+    ];
+    const deptFields: Api.Ai.ConfirmationPresentationField[] = [
+      { label: 'dept_id', value: 'Platform (300)' },
+      { label: 'new_parent_id', value: 'Engineering (100)' },
+      { label: 'affected_users', value: 4 },
+      { label: 'affectedCount', value: 4, tone: 'warning' }
+    ];
+
+    expect(localizeConfirmationTool('role.update_menus', t)).toBe('替换角色菜单 (role.update_menus)');
+    expect(localizeConfirmationSummary('role.update_menus', 'raw', t, roleFields)).toBe(
+      '将替换角色“Auditor (R_AUDITOR / 200)”的完整菜单集合'
+    );
+    expect(localizeConfirmationField('role.update_menus', roleFields[1], t)).toMatchObject({
+      displayLabel: '完整菜单集合'
+    });
+    expect(localizeConfirmationTool('dept.move', t)).toBe('移动部门 (dept.move)');
+    expect(localizeConfirmationSummary('dept.move', 'raw', t, deptFields)).toBe('将移动部门“Platform (300)”');
+    expect(localizeConfirmationField('dept.move', deptFields[1], t)).toMatchObject({
+      displayLabel: '新上级部门'
+    });
+    expect(
+      localizeConfirmationDryRun(
+        'dept.move',
+        { summary: '后端摘要', affectedCount: 4, affectedExamples: ['raw'] },
+        t,
+        deptFields
+      )
+    ).toEqual({ summary: '将移动部门“Platform (300)”', affectedCount: 4, affectedExamples: [] });
   });
 
   it('keeps unknown dry-run presentations unchanged', () => {

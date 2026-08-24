@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { enableStatusRecord, roleDataScopeRecord } from '@/constants/business';
-import { fetchBatchDeleteRole, fetchDeleteRole, fetchGetRoleList } from '@/service/api';
+import { fetchBatchDeleteRole, fetchDeleteRole, fetchGetRoleDetail, fetchGetRoleList } from '@/service/api';
 import { fetchAiQueryCache } from '@/service/api/ai';
 import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
@@ -16,13 +16,14 @@ import MenuAuthModal from './modules/menu-auth-modal.vue';
 import AiAgentAuthModal from './modules/ai-agent-auth-modal.vue';
 
 const appStore = useAppStore();
-const { hasAuth } = useAuth();
+const { hasAuth, hasSuperAdminAuth } = useAuth();
 const route = useRoute();
 const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
 const { bool: aiAgentAuthVisible, setTrue: openAiAgentAuthModal } = useBoolean();
 
 const currentRoleId = shallowRef<string>('');
 const aiAgentAuthRoleId = shallowRef<string>('');
+const editingRole = shallowRef<Api.SystemManage.Role | null>(null);
 
 const searchParams: Api.SystemManage.RoleSearchParams = reactive({
   current: 1,
@@ -66,11 +67,6 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       minWidth: 120
     },
     {
-      key: 'roleDesc',
-      title: $t('page.system.role.roleDesc'),
-      minWidth: 120
-    },
-    {
       key: 'dataScope',
       title: $t('page.system.role.dataScope.label'),
       align: 'center',
@@ -108,12 +104,12 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       minWidth: 360,
       render: row => (
         <div class="flex-center flex-nowrap gap-8px whitespace-nowrap">
-          {hasAuth('system:role:menu-auth') && (
+          {row.delegable && hasAuth('system:role:menu-auth') && (
             <NButton type="info" ghost size="small" onClick={() => onMenuAuthClick(row.roleId)}>
               {$t('page.system.role.menuAuth')}
             </NButton>
           )}
-          {hasAuth('system:role:ai-agent-auth') && (
+          {row.delegable && hasAuth('system:role:ai-agent-auth') && (
             <NButton
               type="primary"
               ghost
@@ -124,12 +120,12 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
               {$t('page.ai.aiAgentAuth.title')}
             </NButton>
           )}
-          {hasAuth('system:role:edit') && (
+          {row.delegable && hasAuth('system:role:edit') && (
             <NButton type="primary" ghost size="small" onClick={() => edit(row.roleId)}>
               {$t('common.edit')}
             </NButton>
           )}
-          {hasAuth('system:role:delete') && (
+          {hasSuperAdminAuth('system:role:delete') && (
             <NPopconfirm onPositiveClick={() => handleDelete(row.roleId)}>
               {{
                 default: () => $t('common.confirmDelete'),
@@ -149,10 +145,9 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
 
 const {
   drawerVisible,
+  openDrawer,
   operateType,
-  editingData,
   handleAdd,
-  handleEdit,
   checkedRowKeys,
   onBatchDeleted,
   onDeleted
@@ -193,8 +188,12 @@ async function handleDelete(id: string) {
   }
 }
 
-function edit(id: string) {
-  handleEdit(id);
+async function edit(id: string) {
+  const { data: detail, error } = await fetchGetRoleDetail(id);
+  if (error || !detail) return;
+  operateType.value = 'edit';
+  editingRole.value = detail;
+  openDrawer();
 }
 
 function onMenuAuthClick(id: string) {
@@ -219,6 +218,7 @@ function onAiAgentAuthClick(id: string) {
           :loading="loading"
           add-auth="system:role:add"
           delete-auth="system:role:batch-delete"
+          :show-delete="hasSuperAdminAuth('system:role:batch-delete')"
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"
@@ -241,7 +241,7 @@ function onAiAgentAuthClick(id: string) {
       <RoleOperateDrawer
         v-model:visible="drawerVisible"
         :operate-type="operateType"
-        :row-data="editingData"
+        :row-data="editingRole"
         @submitted="getDataByPage"
       />
     </NCard>

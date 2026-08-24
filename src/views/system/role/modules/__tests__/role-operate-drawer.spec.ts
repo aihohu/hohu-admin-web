@@ -11,13 +11,14 @@ const mocks = vi.hoisted(() => ({
       pId: '0',
       children: [{ id: '101', label: '前端组', pId: '100' }]
     }
-  ] as Api.SystemManage.DeptTreeOption[]
+  ] as Api.SystemManage.DeptTreeOption[],
+  fetchUpdateRole: vi.fn()
 }));
 
 vi.mock('@/service/api', () => ({
   fetchGetDeptTreeOption: vi.fn().mockResolvedValue({ error: null, data: mocks.deptTreeOptions }),
   fetchSaveRole: vi.fn().mockResolvedValue({ error: null, response: { data: { msg: 'saved' } } }),
-  fetchUpdateRole: vi.fn().mockResolvedValue({ error: null, response: { data: { msg: 'updated' } } })
+  fetchUpdateRole: mocks.fetchUpdateRole
 }));
 
 vi.mock('@/hooks/common/form', async importOriginal => {
@@ -63,6 +64,7 @@ const stubs = {
 describe('role-operate-drawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchUpdateRole.mockResolvedValue({ error: null, response: { data: { msg: 'updated' } } });
   });
 
   it('自定义数据权限使用可显示部门名称的树选项', async () => {
@@ -84,5 +86,39 @@ describe('role-operate-drawer', () => {
     expect(tree.props('data')).toEqual(mocks.deptTreeOptions);
     expect(tree.props('keyField')).toBe('id');
     expect(tree.props('labelField')).toBe('label');
+  });
+
+  it('keeps roleCode immutable and omits it from update payloads', async () => {
+    const row = {
+      roleId: '200',
+      roleName: 'Department operator',
+      roleCode: 'R_DEPT_OPERATOR',
+      roleDesc: 'Scoped operator',
+      dataScope: '4',
+      deptIds: [],
+      status: '1'
+    } as unknown as Api.SystemManage.Role;
+    const wrapper = mount(RoleOperateDrawer, {
+      props: { visible: false, operateType: 'edit', rowData: row },
+      global: { stubs }
+    });
+
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+
+    const vm = wrapper.vm as unknown as {
+      model: { roleCode: string };
+      handleSubmit: () => Promise<void>;
+    };
+    vm.model.roleCode = 'R_MUTATED';
+    await vm.handleSubmit();
+
+    expect(wrapper.get('[data-testid="role-code-input"]').attributes('disabled')).toBeDefined();
+    expect(mocks.fetchUpdateRole).toHaveBeenCalledWith('200', {
+      roleName: 'Department operator',
+      roleDesc: 'Scoped operator',
+      dataScope: '4',
+      status: '1'
+    });
   });
 });
