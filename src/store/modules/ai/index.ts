@@ -611,6 +611,30 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     if (!isRuntimeAvailabilityErrorCode(errorCode)) return false;
 
     runtimeAvailabilityErrorCode.value = errorCode;
+
+    if (errorCode === 'AI_CHAT_PERMISSION_DENIED') {
+      invalidateActiveProducers();
+      currentMessages.value = currentMessages.value.filter(message => !message.messageId.startsWith('temp-'));
+      pendingActionsById.value = {};
+      redactedPendingActions.value = [];
+      pendingConfirmation.value = null;
+      pendingConfirmationId.value = null;
+      pendingToolCallId.value = null;
+      resumeAttemptsByConfirmation.clear();
+      resumeAttempts.value = 0;
+      modelLoadSeq += 1;
+      agentLoadSeq += 1;
+      availableModels.value = [];
+      selectedModelId.value = '';
+      availableAgents.value = [];
+      selectedAgentCode.value = '';
+      attachedImages.value = [];
+      attachedFiles.value = [];
+      modelLoadState.value = 'forbidden';
+      agentLoadState.value = 'forbidden';
+      return true;
+    }
+
     conversationLoadSeq += 1;
     modelLoadSeq += 1;
     agentLoadSeq += 1;

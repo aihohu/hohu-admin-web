@@ -141,6 +141,7 @@ const isLastAssistant = (idx: number) => {
 };
 
 const hasConversation = computed(() => !!aiStore.currentConversationId);
+const canShowRecovery = computed(() => hasConversation.value && aiStore.chatAvailability === 'forbidden');
 
 async function handleSend() {
   if (aiStore.chatAvailability !== 'ready') return;
@@ -246,7 +247,7 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
 <template>
   <div class="chat-main h-full flex flex-col">
     <div
-      v-if="aiStore.chatAvailability !== 'ready'"
+      v-if="aiStore.chatAvailability !== 'ready' && !canShowRecovery"
       class="availability-state"
       :data-state="aiStore.chatAvailability"
       data-testid="ai-chat-availability"
@@ -290,6 +291,14 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
 
     <!-- Active conversation -->
     <template v-else>
+      <div
+        v-if="aiStore.chatAvailability !== 'ready'"
+        class="recovery-availability"
+        :data-state="aiStore.chatAvailability"
+        data-testid="ai-recovery-availability"
+      >
+        {{ availabilityText }}
+      </div>
       <div ref="messageListRef" class="flex-1 overflow-y-auto msg-scroll-area" @scroll="handleScroll">
         <div class="max-w-800px mx-auto px-16px py-16px">
           <template v-for="(msg, idx) in aiStore.currentMessages" :key="msg.messageId">
@@ -409,6 +418,7 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
       </div>
 
       <ChatInput
+        v-if="aiStore.chatAvailability === 'ready'"
         v-model="inputText"
         :is-streaming="aiStore.isStreaming"
         @send="handleSend"
@@ -444,6 +454,15 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
   max-width: 480px;
   font-size: 14px;
   line-height: 1.6;
+}
+
+.recovery-availability {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--n-border-color, #e5e7eb);
+  color: var(--n-text-color-3, #6b7280);
+  background: var(--n-color-embedded, #f5f7fb);
+  font-size: 12px;
+  text-align: center;
 }
 
 .message-tombstone {

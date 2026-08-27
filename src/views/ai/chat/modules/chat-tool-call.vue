@@ -207,7 +207,13 @@ function onReject() {
 </script>
 
 <template>
-  <div class="tool-card" :data-status="cardStatus">
+  <div
+    class="tool-card"
+    :data-status="cardStatus"
+    :data-tool="started.tool"
+    :data-tool-call-id="started.toolCallId"
+    :data-trace-id="started.traceId"
+  >
     <div class="tool-card-head" @click="expanded = !expanded">
       <div class="tool-icon" :class="`tool-icon--${cardStatus}`">{{ iconChar }}</div>
       <span class="tool-name">{{ started.tool }}</span>

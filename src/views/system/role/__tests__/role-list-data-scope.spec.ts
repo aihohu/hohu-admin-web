@@ -2,8 +2,10 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { computed, defineComponent, ref } from 'vue';
 
+const routeHarness = vi.hoisted(() => ({ query: {} as Record<string, unknown> }));
+
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ query: {} })
+  useRoute: () => ({ query: routeHarness.query })
 }));
 
 vi.mock('@sa/hooks', () => ({
@@ -94,6 +96,8 @@ describe('role list data scope', () => {
   beforeEach(() => {
     authState.permissions.clear();
     authState.superAdmin = false;
+    routeHarness.query = {};
+    window.$message = { error: vi.fn(), info: vi.fn() } as unknown as typeof window.$message;
   });
 
   it('表格按翻译内容自适应列宽且操作文案不换行', async () => {
@@ -234,5 +238,126 @@ describe('role list data scope', () => {
     const children = (rendered as unknown as { children: unknown[] }).children;
 
     expect(children.filter(Boolean)).toHaveLength(0);
+  });
+
+  it('renders status and every permitted delegated or super-admin action', async () => {
+    authState.superAdmin = true;
+    for (const permission of [
+      'system:role:menu-auth',
+      'system:role:ai-agent-auth',
+      'system:role:edit',
+      'system:role:delete',
+      'system:role:batch-delete'
+    ]) {
+      authState.permissions.add(permission);
+    }
+    const wrapper = mount(RoleList, {
+      global: {
+        stubs: {
+          RoleSearch: true,
+          NCard: { template: '<div><slot /><slot name="header-extra" /></div>' },
+          TableHeaderOperation: TableHeaderOperationStub,
+          NDataTable: NDataTableStub,
+          RoleOperateDrawer: true,
+          MenuAuthModal: true,
+          AiAgentAuthModal: true
+        }
+      }
+    });
+    const state = (wrapper.vm.$ as unknown as { setupState: Record<string, any> }).setupState;
+    const statusColumn = state.columns.find((column: Record<string, unknown>) => column.key === 'status');
+    const operateColumn = state.columns.find((column: Record<string, unknown>) => column.key === 'operate');
+    const indexColumn = state.columns.find((column: Record<string, unknown>) => column.key === 'index');
+    expect(indexColumn.render({}, 2)).toBe(3);
+    expect(statusColumn.render({ status: null }, 0)).toBeNull();
+    expect(statusColumn.render({ status: '1' }, 0).props.type).toBe('success');
+    expect(statusColumn.render({ status: '2' }, 0).props.type).toBe('warning');
+    const rendered = operateColumn.render({ roleId: '9', roleCode: 'R_ALL', delegable: true }, 0);
+    expect(rendered.children.filter(Boolean)).toHaveLength(4);
+    expect(wrapper.findComponent(TableHeaderOperationStub).props('showDelete')).toBe(true);
+
+    state.onMenuAuthClick('9');
+    state.onAiAgentAuthClick('9');
+    expect(state.currentRoleId).toBe('9');
+    expect(state.aiAgentAuthRoleId).toBe('9');
+  });
+
+  it('handles delete, batch delete, and edit API success and error outcomes', async () => {
+    const { fetchBatchDeleteRole, fetchDeleteRole, fetchGetRoleDetail } = await import('@/service/api');
+    vi.mocked(fetchBatchDeleteRole)
+      .mockResolvedValueOnce({ data: null, error: new Error('batch') } as never)
+      .mockResolvedValueOnce({ data: null, error: null } as never);
+    vi.mocked(fetchDeleteRole)
+      .mockResolvedValueOnce({ data: null, error: new Error('delete') } as never)
+      .mockResolvedValueOnce({ data: null, error: null } as never);
+    vi.mocked(fetchGetRoleDetail)
+      .mockResolvedValueOnce({ data: null, error: new Error('detail') } as never)
+      .mockResolvedValueOnce({ data: null, error: null } as never)
+      .mockResolvedValueOnce({
+        data: {
+          roleId: '9',
+          roleName: 'Scoped role',
+          roleCode: 'R_SCOPED',
+          roleDesc: null,
+          dataScope: '1',
+          status: '1',
+          createTime: ''
+        } as unknown as Api.SystemManage.Role,
+        error: null
+      } as never);
+    const wrapper = mount(RoleList, {
+      global: {
+        stubs: {
+          RoleSearch: true,
+          NCard: { template: '<div><slot /><slot name="header-extra" /></div>' },
+          TableHeaderOperation: true,
+          NDataTable: NDataTableStub,
+          RoleOperateDrawer: true,
+          MenuAuthModal: true,
+          AiAgentAuthModal: true
+        }
+      }
+    });
+    const state = (wrapper.vm.$ as unknown as { setupState: Record<string, any> }).setupState;
+    await state.handleBatchDelete();
+    await state.handleBatchDelete();
+    await state.handleDelete('9');
+    await state.handleDelete('9');
+    await state.edit('9');
+    await state.edit('9');
+    await state.edit('9');
+    expect(state.operateType).toBe('edit');
+    expect(state.editingRole.roleId).toBe('9');
+  });
+
+  it.each([
+    [{ ai_query_id: 'cache-error' }, { data: null, error: new Error('cache') }, 'error'],
+    [{ ai_query_id: 'cache-missing' }, { data: null, error: null }, 'info'],
+    [{ ai_query_id: 'cache-empty' }, { data: {}, error: null }, null],
+    [{ ai_query_id: 'cache-invalid' }, { data: { filters: { status: '3' } }, error: null }, null],
+    [{ ai_query_id: 'cache-status-one' }, { data: { filters: { status: '1' } }, error: null }, null],
+    [{ ai_query_id: 'cache-valid' }, { data: { filters: { status: '2' } }, error: null }, null]
+  ])('replays cached AI filters with explicit unavailable states', async (query, result, messageKind) => {
+    const { fetchAiQueryCache } = await import('@/service/api/ai');
+    routeHarness.query = query;
+    vi.mocked(fetchAiQueryCache).mockResolvedValueOnce(result as never);
+    const wrapper = mount(RoleList, {
+      global: {
+        stubs: {
+          RoleSearch: true,
+          NCard: { template: '<div><slot /><slot name="header-extra" /></div>' },
+          TableHeaderOperation: true,
+          NDataTable: NDataTableStub,
+          RoleOperateDrawer: true,
+          MenuAuthModal: true,
+          AiAgentAuthModal: true
+        }
+      }
+    });
+    await flushPromises();
+    const state = (wrapper.vm.$ as unknown as { setupState: Record<string, any> }).setupState;
+    if (messageKind) expect(window.$message?.[messageKind as 'error' | 'info']).toHaveBeenCalled();
+    if (query.ai_query_id === 'cache-valid') expect(state.searchParams.status).toBe('2');
+    if (query.ai_query_id === 'cache-status-one') expect(state.searchParams.status).toBe('1');
   });
 });

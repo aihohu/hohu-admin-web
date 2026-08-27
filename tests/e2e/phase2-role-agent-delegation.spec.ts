@@ -192,7 +192,7 @@ test('multi-role delegated admin can bind only Agents inside the combined author
       createdRoleIds.push(role.roleId);
     }
 
-    const [authRoleId, grantRoleId] = createdRoleIds;
+    const [authRoleId, grantRoleId, targetRoleId] = createdRoleIds;
     await api<null>(page, token, 'PUT', `/system/role/menu/${authRoleId}`, menuIds);
     await api<null>(page, token, 'PUT', `/ai/role-agent/${grantRoleId}`, {
       agentIds: [delegatedAgent.agentId]
@@ -230,18 +230,27 @@ test('multi-role delegated admin can bind only Agents inside the combined author
     await openTargetBinding.click();
     modal = delegatedPage.getByTestId('role-ai-agent-modal');
     await expect(modal).toBeVisible();
-    await modal.getByTestId('role-agent-checkbox-dept_mgmt').click();
-    await modal.getByTestId('role-agent-submit').click();
-    await expect(
-      delegatedPage.locator('.n-message--error-type').filter({ hasText: '超出当前操作者的委派上界' })
-    ).toBeVisible();
+    await expect(modal.getByTestId('role-agent-checkbox-dept_mgmt')).toHaveCount(0);
+
+    const delegatedToken = await delegatedPage.evaluate(() => {
+      const value = window.localStorage.getItem('SOY_token');
+      return value ? (JSON.parse(value) as string) : null;
+    });
+    if (!delegatedToken) throw new Error('Task 14 delegated token was not persisted');
+    const denied = await delegatedPage.request.put(`/proxy-default/ai/role-agent/${targetRoleId}`, {
+      headers: { Authorization: `Bearer ${delegatedToken}` },
+      data: { agentIds: [delegatedAgent.agentId, blockedAgent.agentId] }
+    });
+    const deniedBody = (await denied.json()) as BackendResponse<null>;
+    expect(denied.status()).toBe(403);
+    expect(deniedBody.errorCode).toBe('AI_ROLE_AGENT_AUTHORITY_EXCEEDED');
     await modal.getByRole('button', { name: '取消' }).click();
 
     await openTargetBinding.click();
     modal = delegatedPage.getByTestId('role-ai-agent-modal');
     await expect(modal).toBeVisible();
     await expect(modal.getByRole('checkbox', { name: /user_mgmt/ })).toBeChecked();
-    await expect(modal.getByRole('checkbox', { name: /dept_mgmt/ })).not.toBeChecked();
+    await expect(modal.getByRole('checkbox', { name: /dept_mgmt/ })).toHaveCount(0);
   } finally {
     await delegatedContext?.close();
     if (createdUserId) {

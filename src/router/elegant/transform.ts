@@ -171,6 +171,7 @@ const routeMap: RouteMap = {
   "ai_chat": "/ai/chat",
   "ai_provider": "/ai/provider",
   "ai_routing-feedback": "/ai/routing-feedback",
+  "ai_trace": "/ai/trace",
   "app": "/app",
   "home": "/home",
   "iframe-page": "/iframe-page/:url",

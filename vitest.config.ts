@@ -15,6 +15,31 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: false,
-    include: ['src/**/__tests__/**/*.spec.ts']
+    include: ['src/**/__tests__/**/*.spec.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'json'],
+      exclude: [
+        'packages/**',
+        'src/components/**',
+        'src/hooks/common/**',
+        'src/layouts/**',
+        'src/locales/**',
+        'src/router/**',
+        'src/service/request/**',
+        'src/store/modules/app/**',
+        'src/store/modules/auth/**',
+        'src/store/modules/contributes/**',
+        'src/store/modules/route/**',
+        'src/store/modules/tab/**',
+        'src/store/modules/theme/**'
+      ],
+      thresholds: {
+        branches: 70,
+        functions: 70,
+        lines: 70,
+        statements: 70
+      }
+    }
   }
 });

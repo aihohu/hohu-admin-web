@@ -118,7 +118,7 @@ const stubs = {
     props: ['started'],
     template: '<div class="tool-card" :data-tool-id="started.toolCallId">{{ started.tool }}</div>'
   },
-  ChatInput: true,
+  ChatInput: { template: '<div class="stub-input" />' },
   ChatConfirmationDrawer: true,
   ChatClarification: true,
   NSpin: true
@@ -176,5 +176,15 @@ describe('chat tool cards embedded by message owner', () => {
     expect(wrapper.get('[data-testid="ai-chat-availability"]').attributes('data-state')).toBe('no_agents');
     expect(wrapper.text()).toContain('page.ai.chat.availabilityNoAgents');
     expect(wrapper.find('[data-message-id="assistant-1"]').exists()).toBe(false);
+  });
+
+  it('keeps an existing conversation and recovery controls visible after chat permission revocation', () => {
+    aiStore.chatAvailability = 'forbidden';
+
+    const wrapper = mount(ChatMain, { global: { stubs } });
+
+    expect(wrapper.get('[data-testid="ai-recovery-availability"]').attributes('data-state')).toBe('forbidden');
+    expect(wrapper.get('[data-message-id="assistant-1"]').attributes('data-message-id')).toBe('assistant-1');
+    expect(wrapper.find('.stub-input').exists()).toBe(false);
   });
 });

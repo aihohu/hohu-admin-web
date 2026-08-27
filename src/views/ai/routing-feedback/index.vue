@@ -67,19 +67,21 @@ const columns = computed<DataTableColumn<Api.AiRoutingFeedback.ListItem>[]>(() =
     title: 'TraceId',
     key: 'traceId',
     width: 200,
-    render: (row: Api.AiRoutingFeedback.ListItem) =>
-      row.traceId
+    render: (row: Api.AiRoutingFeedback.ListItem) => {
+      const traceId = row.traceId;
+      return traceId
         ? h(
             'a',
             {
               class: 'text-primary underline cursor-pointer',
               onClick: () => {
-                window.open(`/monitor/operation-log?traceId=${row.traceId}`, '_blank');
+                window.open(`/ai/trace?traceId=${encodeURIComponent(traceId)}`, '_blank');
               }
             },
-            `${row.traceId.slice(0, 8)}...`
+            `${traceId.slice(0, 8)}...`
           )
-        : '-'
+        : '-';
+    }
   }
 ]);
 

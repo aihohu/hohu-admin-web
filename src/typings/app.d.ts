@@ -1411,6 +1411,31 @@ declare namespace App {
             originalAgentPlaceholder: string;
             correctedAgentPlaceholder: string;
           };
+          trace: {
+            title: string;
+            filters: string;
+            traceId: string;
+            actorId: string;
+            actor: string;
+            agent: string;
+            tool: string;
+            status: string;
+            operationCount: string;
+            queuedAt: string;
+            finishedAt: string;
+            actions: string;
+            detail: string;
+            loading: string;
+            search: string;
+            reset: string;
+            conversationId: string;
+            sourceMessage: string;
+            targets: string;
+            lifecycle: string;
+            confirmationId: string;
+            errorCode: string;
+            duration: string;
+          };
           aiAgentAuth: {
             title: string;
             sharedHint: string;

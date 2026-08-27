@@ -79,11 +79,24 @@ describe('prepared action recovery', () => {
     expect(JSON.stringify(store.pendingActionsById)).not.toContain('preview_token');
   });
 
-  it('keeps the current conversation when deletion is rejected', async () => {
+  it('clears current conversation and pending actions after deletion', async () => {
+    vi.mocked(fetchGetConversationDetail).mockResolvedValue(detail([pendingAction]));
+    vi.mocked(fetchDeleteConversation).mockResolvedValue({ data: null, error: null } as any);
+    const store = useAiStore();
+    await store.selectConversation('1');
+
+    await store.removeConversation('1');
+
+    expect(store.currentConversationId).toBeNull();
+    expect(store.pendingConfirmation).toBeNull();
+    expect(store.pendingActionsById).toEqual({});
+  });
+
+  it('keeps the current conversation when a running action rejects deletion', async () => {
     vi.mocked(fetchGetConversationDetail).mockResolvedValue(detail([pendingAction]));
     vi.mocked(fetchDeleteConversation).mockResolvedValue({
       data: null,
-      error: { message: 'AI_CHAT_RUN_IN_PROGRESS' }
+      error: { message: 'AI_ACTION_RUNNING' }
     } as any);
     const store = useAiStore();
     await store.selectConversation('1');

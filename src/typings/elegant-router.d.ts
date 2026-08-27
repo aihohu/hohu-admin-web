@@ -25,6 +25,7 @@ declare module "@elegant-router/types" {
     "ai_chat": "/ai/chat";
     "ai_provider": "/ai/provider";
     "ai_routing-feedback": "/ai/routing-feedback";
+    "ai_trace": "/ai/trace";
     "app": "/app";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
@@ -121,6 +122,7 @@ declare module "@elegant-router/types" {
     | "ai_chat"
     | "ai_provider"
     | "ai_routing-feedback"
+    | "ai_trace"
     | "app"
     | "home"
     | "marketplace-detail"

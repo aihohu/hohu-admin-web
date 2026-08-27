@@ -36,4 +36,22 @@ describe('useAuth destructive permission composition', () => {
     authState.userInfo.roles = ['R_ADMIN'];
     expect(hasSuperAdminAuth('system:role:delete')).toBe(false);
   });
+
+  it('evaluates logged-out, exact, and any-of permission and role checks', () => {
+    const { hasAuth, hasRole } = useAuth();
+    authState.isLogin = false;
+    expect(hasAuth('system:role:list')).toBe(false);
+    expect(hasRole('R_SUPER')).toBe(false);
+
+    authState.isLogin = true;
+    authState.userInfo.buttons = ['system:role:list'];
+    authState.userInfo.roles = ['R_AUDITOR'];
+    expect(hasAuth('system:role:list')).toBe(true);
+    expect(hasAuth('system:role:delete')).toBe(false);
+    expect(hasAuth(['system:role:delete', 'system:role:list'])).toBe(true);
+    expect(hasAuth(['system:role:delete'])).toBe(false);
+    expect(hasRole('R_AUDITOR')).toBe(true);
+    expect(hasRole(['R_SUPER', 'R_AUDITOR'])).toBe(true);
+    expect(hasRole(['R_SUPER'])).toBe(false);
+  });
 });

@@ -77,4 +77,34 @@ describe('AI chat availability', () => {
 
     expect(store.chatAvailability).toBe('model_unavailable');
   });
+
+  it('preserves readable conversations when chat execution permission is revoked', async () => {
+    vi.mocked(fetchGetConversationList).mockResolvedValue({
+      data: {
+        records: [
+          {
+            conversationId: 'conversation-1',
+            title: 'Pending recovery',
+            modelName: null,
+            systemPrompt: null,
+            status: 0,
+            createTime: '',
+            updateTime: ''
+          }
+        ],
+        total: 1,
+        current: 1,
+        size: 20
+      },
+      error: null
+    } as never);
+    vi.mocked(fetchGetChatModels).mockResolvedValue(failed('AI_CHAT_PERMISSION_DENIED'));
+    vi.mocked(fetchAiAgents).mockResolvedValue(failed('AI_CHAT_PERMISSION_DENIED'));
+    const store = useAiStore();
+
+    await store.init();
+
+    expect(store.chatAvailability).toBe('forbidden');
+    expect(store.conversations.map(item => item.conversationId)).toEqual(['conversation-1']);
+  });
 });

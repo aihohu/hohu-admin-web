@@ -16,6 +16,7 @@ describe('dynamic AI message i18n', () => {
       'The conversation lock expired. Refresh and try again.'
     );
     expect(localizeErrorCode('UNKNOWN_CODE', 'Backend fallback', t, te)).toBe('Backend fallback');
+    expect(localizeErrorCode('UNKNOWN_CODE', '', t, te)).toBe('UNKNOWN_CODE');
   });
 
   it('localizes clarification reasons and preserves legacy message fallback', () => {

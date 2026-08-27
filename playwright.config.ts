@@ -7,7 +7,7 @@ export default defineConfig({
   retries: 0,
   timeout: 30_000,
   use: {
-    baseURL: 'http://localhost:9527',
+    baseURL: process.env.AI_E2E_BASE_URL || 'http://localhost:9527',
     channel: 'chrome',
     headless: process.env.PLAYWRIGHT_HEADED !== '1'
   },
@@ -18,9 +18,14 @@ export default defineConfig({
     },
     {
       name: 'chrome',
-      testIgnore: /.*\.setup\.ts/,
+      testIgnore: [/.*\.setup\.ts/, /provider-smoke\.spec\.ts/],
       use: { storageState: adminAuthFile },
       dependencies: ['setup']
+    },
+    {
+      name: 'provider',
+      testMatch: /provider-smoke\.spec\.ts/,
+      use: { storageState: { cookies: [], origins: [] } }
     }
   ]
 });

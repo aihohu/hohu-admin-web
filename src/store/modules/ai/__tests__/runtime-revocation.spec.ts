@@ -88,7 +88,7 @@ describe('AI runtime authorization revocation', () => {
     expect(store.chatAvailability).toBe('forbidden');
   });
 
-  it('aborts active producers and clears account projections on entry denial', async () => {
+  it('aborts active producers while preserving readable recovery projections on entry denial', async () => {
     const store = useAiStore();
     await Promise.all([store.loadModels(), store.loadAgents()]);
     store.currentConversationId = 'conversation-1';
@@ -126,10 +126,9 @@ describe('AI runtime authorization revocation', () => {
 
     expect(abortedByDenial).toBe(true);
     expect(store.chatAvailability).toBe('forbidden');
-    expect(store.conversations).toEqual([]);
-    expect(store.currentConversationId).toBeNull();
-    expect(store.currentMessages).toEqual([]);
-    expect(JSON.stringify(store.$state)).not.toContain('private');
+    expect(store.conversations).toEqual([{ conversationId: 'conversation-1', title: 'private title' }]);
+    expect(store.currentConversationId).toBe('conversation-1');
+    expect(store.currentMessages).toEqual([message()]);
   });
 
   it('treats an explicit Agent denial as a fail-closed runtime state', async () => {
@@ -175,8 +174,8 @@ describe('AI runtime authorization revocation', () => {
     await store.approveTool('action-1');
 
     expect(store.chatAvailability).toBe('forbidden');
-    expect(store.currentMessages).toEqual([]);
+    expect(store.currentMessages).toEqual([message()]);
     expect(store.pendingActionsById).toEqual({});
-    expect(JSON.stringify(store.$state)).not.toContain('private');
+    expect(JSON.stringify(store.$state)).not.toContain('private confirmation');
   });
 });

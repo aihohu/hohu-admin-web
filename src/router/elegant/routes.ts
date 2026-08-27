@@ -83,6 +83,15 @@ export const generatedRoutes: GeneratedRoute[] = [
           title: 'ai_routing-feedback',
           i18nKey: 'route.ai_routing-feedback'
         }
+      },
+      {
+        name: 'ai_trace',
+        path: '/ai/trace',
+        component: 'view.ai_trace',
+        meta: {
+          title: 'ai_trace',
+          i18nKey: 'route.ai_trace'
+        }
       }
     ]
   },

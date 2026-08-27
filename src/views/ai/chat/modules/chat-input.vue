@@ -341,7 +341,7 @@ function formatFileSize(bytes: number): string {
           :render-label="renderAgentLabel"
           @select="handleAgentSelect"
         >
-          <button class="selector-btn">
+          <button class="selector-btn" data-testid="ai-agent-selector">
             <IconIcRoundSmartToy class="text-14px opacity-70" />
             <span>
               {{
@@ -363,7 +363,7 @@ function formatFileSize(bytes: number): string {
           placement="top-start"
           @select="handleModelSelect"
         >
-          <button class="selector-btn">
+          <button class="selector-btn" data-testid="ai-model-selector">
             <IconIcRoundMemory class="text-14px opacity-70" />
             <span>{{ currentModel.label }}</span>
             <IconIcRoundArrowDropDown class="text-14px opacity-70" />

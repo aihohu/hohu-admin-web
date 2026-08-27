@@ -34,7 +34,8 @@
     "commit:zh": "sa git-commit -l=zh-cn",
     "dev": "vite --mode test",
     "dev:prod": "vite --mode prod",
-    "e2e": "playwright test",
+    "e2e": "playwright test --project=chrome",
+    "e2e:provider": "playwright test --project=provider",
     "fmt": "oxfmt",
     "gen-route": "sa gen-route",
     "lint": "oxlint --fix && eslint --fix .",
@@ -42,6 +43,7 @@
     "preview": "vite preview",
     "release": "sa release",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "vue-tsc --noEmit --skipLibCheck",
     "update-pkg": "sa update-pkg"
