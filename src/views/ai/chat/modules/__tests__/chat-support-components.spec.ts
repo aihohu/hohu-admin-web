@@ -131,6 +131,47 @@ describe('chat confirmation, clarification, and sidebar support', () => {
     wrapper.unmount();
   });
 
+  it('labels Role impact as users and highlights immediate password invalidation', async () => {
+    store.pendingConfirmation = {
+      type: 'confirmation_required',
+      confirmationId: 'role-confirmation',
+      actionId: 'role-action',
+      tool: 'role.update',
+      toolCallId: 'role-call',
+      interactionFlow: 'direct',
+      traceId: 'role-trace',
+      summary: 'Update role',
+      presentation: { title: 'role.update', fields: [], warnings: [] },
+      dryRun: { affectedCount: 0, summary: 'Update role', affectedExamples: [] },
+      expiresAt: '2026-08-24T08:01:00Z'
+    };
+    const roleWrapper = mount(ChatConfirmationDrawer, {
+      props: { show: true },
+      attachTo: document.body,
+      global: { stubs: { IconIcRoundRefresh: true, IconIcRoundAccessTime: true } }
+    });
+    await roleWrapper.vm.$nextTick();
+    expect(document.body.textContent).toContain('page.ai.chat.affectedUsers');
+    roleWrapper.unmount();
+
+    store.pendingConfirmation = {
+      ...store.pendingConfirmation,
+      confirmationId: 'password-confirmation',
+      actionId: 'password-action',
+      tool: 'user.reset_password',
+      toolCallId: 'password-call',
+      presentation: { title: 'user.reset_password', fields: [], warnings: [] }
+    };
+    const passwordWrapper = mount(ChatConfirmationDrawer, {
+      props: { show: true },
+      attachTo: document.body,
+      global: { stubs: { IconIcRoundRefresh: true, IconIcRoundAccessTime: true } }
+    });
+    await passwordWrapper.vm.$nextTick();
+    expect(document.body.textContent).toContain('page.ai.chat.resetPasswordOldPasswordWarning');
+    passwordWrapper.unmount();
+  });
+
   it('renders clarification candidates and delegates choose or dismiss actions', async () => {
     store.pendingClarification = {
       type: 'clarification_required',

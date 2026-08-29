@@ -234,6 +234,9 @@ defineExpose({ openTrace, query });
                 <NDescriptionsItem :label="$t('page.ai.trace.queuedAt')">
                   {{ formatTime(operation.queuedAt) }}
                 </NDescriptionsItem>
+                <NDescriptionsItem :label="$t('page.ai.trace.startedAt')">
+                  {{ formatTime(operation.startedAt) }}
+                </NDescriptionsItem>
                 <NDescriptionsItem :label="$t('page.ai.trace.finishedAt')">
                   {{ formatTime(operation.finishedAt) }}
                 </NDescriptionsItem>

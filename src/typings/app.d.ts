@@ -1149,6 +1149,7 @@ declare namespace App {
             confirmSummary: string;
             confirmImpact: string;
             confirmAffected: string;
+            resetPasswordOldPasswordWarning: string;
             deptLookup: string;
             userId: string;
             targetUser: string;
@@ -1422,6 +1423,7 @@ declare namespace App {
             status: string;
             operationCount: string;
             queuedAt: string;
+            startedAt: string;
             finishedAt: string;
             actions: string;
             detail: string;
@@ -1621,6 +1623,7 @@ declare namespace App {
         AI_CHAT_GUARD_LOST: string;
         AI_MESSAGE_PERSIST_FAILED: string;
         AI_UNVERIFIED_WRITE_CLAIM: string;
+        AI_TOOL_PERM_DENIED: string;
         AI_ROUTING_FAILED: string;
         AI_IP_BLOCKED: string;
         AI_USER_AUTO_DISABLED: string;

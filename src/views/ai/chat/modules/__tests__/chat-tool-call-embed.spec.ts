@@ -70,7 +70,7 @@ const aiStore = {
   currentMessages: messages as Api.Ai.MessageProjection[],
   attachedImages: [],
   attachedFiles: [],
-  availableAgents: [],
+  availableAgents: [] as Api.Ai.Agent[],
   chatAvailability: 'ready' as ChatAvailability,
   redactedPendingActions: [],
   isStreaming: false,
@@ -126,7 +126,9 @@ const stubs = {
 
 describe('chat tool cards embedded by message owner', () => {
   beforeEach(() => {
+    aiStore.currentConversationId = 'conversation-1';
     aiStore.currentMessages = messages;
+    aiStore.availableAgents = [];
     aiStore.redactedPendingActions = [];
     aiStore.chatAvailability = 'ready';
   });
@@ -186,5 +188,20 @@ describe('chat tool cards embedded by message owner', () => {
     expect(wrapper.get('[data-testid="ai-recovery-availability"]').attributes('data-state')).toBe('forbidden');
     expect(wrapper.get('[data-message-id="assistant-1"]').attributes('data-message-id')).toBe('assistant-1');
     expect(wrapper.find('.stub-input').exists()).toBe(false);
+  });
+
+  it('only renders scenario cards backed by a currently authorized Agent', () => {
+    aiStore.currentConversationId = '';
+    aiStore.currentMessages = [];
+    aiStore.availableAgents = [
+      { code: 'user_mgmt', name: 'User', description: '', modelPreference: null, displayOrder: 1 }
+    ];
+
+    const wrapper = mount(ChatMain, { global: { stubs } });
+
+    expect(wrapper.findAll('.scene-card')).toHaveLength(2);
+    expect(wrapper.text()).toContain('page.ai.chat.sceneUserTitle');
+    expect(wrapper.text()).not.toContain('page.ai.chat.sceneFileTitle');
+    expect(wrapper.text()).not.toContain('page.ai.chat.sceneJobTitle');
   });
 });

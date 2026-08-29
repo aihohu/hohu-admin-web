@@ -235,7 +235,7 @@ async function submitFeedback() {
           <div class="msg-actions">
             <NTooltip v-if="AI_MESSAGE_REVISION_ACTIONS_ENABLED && isLastUserMessage" trigger="hover">
               <template #trigger>
-                <button class="msg-action-btn" @click="startEdit">
+                <button class="msg-action-btn" :aria-label="t('common.edit')" @click="startEdit">
                   <IconIcRoundEdit class="text-14px" />
                 </button>
               </template>
@@ -243,7 +243,7 @@ async function submitFeedback() {
             </NTooltip>
             <NTooltip trigger="hover">
               <template #trigger>
-                <button class="msg-action-btn" @click="copyMessageContent">
+                <button class="msg-action-btn" :aria-label="t('page.ai.chat.copy')" @click="copyMessageContent">
                   <IconIcRoundContentCopy class="text-14px" />
                 </button>
               </template>
@@ -262,7 +262,7 @@ async function submitFeedback() {
         <div class="msg-actions">
           <NTooltip v-if="AI_MESSAGE_REVISION_ACTIONS_ENABLED && isLastAssistantMessage" trigger="hover">
             <template #trigger>
-              <button class="msg-action-btn" @click="emit('regenerate')">
+              <button class="msg-action-btn" :aria-label="t('page.ai.chat.regenerate')" @click="emit('regenerate')">
                 <IconIcRoundRefresh class="text-14px" />
               </button>
             </template>
@@ -270,7 +270,7 @@ async function submitFeedback() {
           </NTooltip>
           <NTooltip v-if="canFeedback" trigger="hover">
             <template #trigger>
-              <button class="msg-action-btn" @click="openFeedback">
+              <button class="msg-action-btn" :aria-label="t('page.ai.chat.routingFeedback')" @click="openFeedback">
                 <IconIcRoundThumbsUpDown class="text-14px" />
               </button>
             </template>
@@ -278,7 +278,7 @@ async function submitFeedback() {
           </NTooltip>
           <NTooltip trigger="hover">
             <template #trigger>
-              <button class="msg-action-btn" @click="copyMessageContent">
+              <button class="msg-action-btn" :aria-label="t('page.ai.chat.copy')" @click="copyMessageContent">
                 <IconIcRoundContentCopy class="text-14px" />
               </button>
             </template>

@@ -118,6 +118,18 @@ describe('chat message behavior', () => {
     expect(navigator.clipboard.writeText).toHaveBeenNthCalledWith(3, '');
   });
 
+  it('gives every icon-only message action an accessible name', () => {
+    const assistant = mountMessage(message());
+    const assistantActions = assistant.findAll('.msg-action-btn');
+    expect(assistantActions.length).toBeGreaterThan(0);
+    expect(assistantActions.every(button => Boolean(button.attributes('aria-label')))).toBe(true);
+
+    const user = mountMessage(message({ role: 'user' }));
+    const userActions = user.findAll('.msg-action-btn');
+    expect(userActions.length).toBeGreaterThan(0);
+    expect(userActions.every(button => Boolean(button.attributes('aria-label')))).toBe(true);
+  });
+
   it('renders text, images, and file metadata across size and extension fallbacks', async () => {
     const wrapper = mountMessage(
       message({

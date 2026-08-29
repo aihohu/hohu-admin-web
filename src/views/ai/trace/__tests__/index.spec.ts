@@ -120,6 +120,7 @@ describe('AI Trace audit page', () => {
     const rendered = document.body.textContent || '';
     expect(rendered).toContain('user.lookup');
     expect(rendered).toContain('user:42');
+    expect(rendered).toContain('page.ai.trace.startedAt');
     expect(rendered).not.toContain('TRACE_SENTINEL_RAW_ARGS');
     expect(rendered).not.toContain('TRACE_SENTINEL_MESSAGE_CONTENT');
     wrapper.unmount();

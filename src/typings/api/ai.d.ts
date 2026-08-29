@@ -151,7 +151,7 @@ declare namespace Api {
     /** message part (Vercel AI SDK format) */
     type MessagePart =
       | { type: 'text'; text: string }
-      | { type: 'file'; url: string; mediaType: string; filename?: string; fileSize?: number };
+      | { type: 'file'; url: string; mediaType: string; filename?: string; fileSize?: number; fileId?: string };
 
     /** AI message */
     type Message = {

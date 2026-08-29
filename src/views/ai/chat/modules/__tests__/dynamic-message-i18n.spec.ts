@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import enUs from '@/locales/langs/en-us';
+import zhCn from '@/locales/langs/zh-cn';
 import { localizeClarificationMessage, localizeErrorCode } from '../dynamic-message-i18n';
 
 const messages: Record<string, string> = {
@@ -11,6 +13,11 @@ const t = (key: App.I18n.I18nKey) => messages[key] ?? key;
 const te = (key: App.I18n.I18nKey) => key in messages;
 
 describe('dynamic AI message i18n', () => {
+  it('defines the runtime tool-permission revocation code in global locales', () => {
+    expect(enUs.errorCode.AI_TOOL_PERM_DENIED).toBe('Tool permission was revoked. Start the operation again.');
+    expect(zhCn.errorCode.AI_TOOL_PERM_DENIED).toBe('工具权限已被撤销，请重新发起操作');
+  });
+
   it('localizes stream errors by stable error code without using backend-language copy', () => {
     expect(localizeErrorCode('AI_CHAT_GUARD_LOST', '会话执行锁已失效，请刷新后重试', t, te)).toBe(
       'The conversation lock expired. Refresh and try again.'

@@ -7,7 +7,8 @@ import {
   localizeConfirmationDryRun,
   localizeConfirmationField,
   localizeConfirmationSummary,
-  localizeConfirmationTool
+  localizeConfirmationTool,
+  ROLE_MEMBER_IMPACT_TOOLS
 } from './confirmation-presentation-i18n';
 
 const { t, te } = useI18n();
@@ -95,11 +96,22 @@ const presentationFields = computed(() =>
 );
 const presentationWarnings = computed(() => {
   const presentation = confirmation.value?.presentation;
-  if (presentation?.warningKeys?.length) {
-    return presentation.warningKeys.map(key => (te(key) ? t(key) : key));
+  const warnings = presentation?.warningKeys?.length
+    ? presentation.warningKeys.map(key => (te(key) ? t(key) : key))
+    : [...(presentation?.warnings || [])];
+  if (
+    confirmation.value?.tool === 'user.reset_password' &&
+    !warnings.includes(t('page.ai.chat.resetPasswordOldPasswordWarning'))
+  ) {
+    warnings.push(t('page.ai.chat.resetPasswordOldPasswordWarning'));
   }
-  return presentation?.warnings || [];
+  return warnings;
 });
+const impactLabel = computed(() =>
+  ROLE_MEMBER_IMPACT_TOOLS.has(confirmation.value?.tool || '')
+    ? t('page.ai.chat.affectedUsers')
+    : t('page.ai.chat.confirmAffected')
+);
 const displayDryRun = computed(() => {
   const dryRun = confirmation.value?.dryRun;
   if (!dryRun) return null;
@@ -157,7 +169,7 @@ const showDrawer = computed({
         <div v-if="confirmation.dryRun" class="confirm-section">
           <div class="confirm-label">{{ t('page.ai.chat.confirmImpact') }}</div>
           <div class="confirm-impact">
-            <NStatistic :label="t('page.ai.chat.confirmAffected')" :value="displayDryRun?.affectedCount ?? 0" />
+            <NStatistic :label="impactLabel" :value="displayDryRun?.affectedCount ?? 0" />
             <div v-if="displayDryRun?.summary" class="confirm-impact-summary">
               {{ displayDryRun.summary }}
             </div>

@@ -11,6 +11,20 @@ vi.mock('@/locales', () => ({ $t: (key: string) => key }));
 import ExceptionBase from '../exception-base.vue';
 
 describe('ExceptionBase', () => {
+  it('exposes the denied-state title to assistive technology', () => {
+    const wrapper = mount(ExceptionBase, {
+      props: { type: '403' },
+      global: {
+        stubs: {
+          SvgIcon: true,
+          NButton: { template: '<button><slot /></button>' }
+        }
+      }
+    });
+
+    expect(wrapper.get('h1').text()).toBe('route.403');
+  });
+
   it('uses the constant root route when the scoped home route is unavailable', async () => {
     const wrapper = mount(ExceptionBase, {
       props: { type: '403' },

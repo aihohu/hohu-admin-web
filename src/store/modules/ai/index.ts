@@ -173,6 +173,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   let conversationLoadSeq = 0;
   let modelLoadSeq = 0;
   let agentLoadSeq = 0;
+  let suppressProviderOutput = false;
 
   function abortResumes() {
     for (const controller of resumeControllers.values()) controller.abort();
@@ -720,6 +721,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         break;
       case 'tool_call_result':
         streamEvents.value.push(event);
+        if (!event.ok && event.errorCode === 'AI_IMPORT_FIELD_ERRORS') {
+          suppressProviderOutput = true;
+          streamingText.value = '';
+          reasoningText.value = '';
+        }
         // A completed tool no longer needs confirmation recovery.
         removePendingByToolCallId(event.toolCallId);
         break;
@@ -777,11 +783,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
     // Vercel UI Protocol v4: text-delta / reasoning-delta
     if (event.type === 'text-delta' && typeof event.delta === 'string') {
-      streamingText.value += event.delta;
+      if (!suppressProviderOutput) streamingText.value += event.delta;
       return false;
     }
     if (event.type === 'reasoning-delta' && typeof event.delta === 'string') {
-      reasoningText.value += event.delta;
+      if (!suppressProviderOutput) reasoningText.value += event.delta;
       return false;
     }
 
@@ -831,6 +837,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     isStreaming.value = true;
     streamingText.value = '';
     reasoningText.value = '';
+    suppressProviderOutput = false;
     streamEvents.value = [];
     focusPendingConfirmation();
     // A new stream invalidates clarification candidates from the previous run.
@@ -1308,7 +1315,14 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     // attachedFiles（Excel/CSV）也注入 parts，让 chat-message 渲染文件 chip
     // url 用空串（非 image 文件无预览 URL，chip 只展示 fileName + fileSize）
     for (const f of attachedFiles.value) {
-      parts.push({ type: 'file', url: '', mediaType: f.mimeType, filename: f.fileName, fileSize: f.fileSize });
+      parts.push({
+        type: 'file',
+        url: '',
+        mediaType: f.mimeType,
+        filename: f.fileName,
+        fileSize: f.fileSize,
+        fileId: f.fileId
+      });
     }
 
     // add user message locally

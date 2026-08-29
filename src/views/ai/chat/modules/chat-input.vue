@@ -38,9 +38,16 @@ const ACCEPTED_FILE_MIMES = [
   'application/csv',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 ];
+const canAttachDataFile = computed(() => aiStore.availableAgents.some(agent => agent.code === 'shared'));
+const acceptedUploadTypes = computed(() =>
+  canAttachDataFile.value
+    ? 'image/jpeg,image/png,image/gif,image/webp,.csv,.xlsx'
+    : 'image/jpeg,image/png,image/gif,image/webp'
+);
 
 function isAcceptedFile(file: File): boolean {
   if (file.type.startsWith('image/')) return false; // 图片走 addImage
+  if (!canAttachDataFile.value) return false;
   if (ACCEPTED_FILE_MIMES.includes(file.type)) return true;
   const name = file.name.toLowerCase();
   return ACCEPTED_FILE_EXTS.some(ext => name.endsWith(ext));
@@ -288,7 +295,7 @@ function formatFileSize(bytes: number): string {
         <input
           ref="fileInputRef"
           type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp,.csv,.xlsx"
+          :accept="acceptedUploadTypes"
           multiple
           class="hidden-input"
           @change="handleFileSelect"

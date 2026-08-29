@@ -29,6 +29,12 @@ const iconMap: Record<ExceptionType, string> = {
 };
 
 const icon = computed(() => iconMap[props.type]);
+const titleKeyMap: Record<ExceptionType, App.I18n.I18nKey> = {
+  '403': 'route.403',
+  '404': 'route.404',
+  '500': 'route.500'
+};
+const title = computed(() => $t(titleKeyMap[props.type]));
 </script>
 
 <template>
@@ -36,6 +42,7 @@ const icon = computed(() => iconMap[props.type]);
     <div class="flex text-400px text-primary">
       <SvgIcon :local-icon="icon" />
     </div>
+    <h1 class="text-24px font-semibold">{{ title }}</h1>
     <NButton type="primary" @click="toHome">{{ $t('common.backToHome') }}</NButton>
   </div>
 </template>

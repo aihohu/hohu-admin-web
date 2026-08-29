@@ -12,7 +12,8 @@ const store = reactive({
   ],
   selectedModelId: 'model-1',
   availableAgents: [
-    { code: 'user_mgmt', name: 'User Agent', description: 'Manage users', modelPreference: null, displayOrder: 1 }
+    { code: 'user_mgmt', name: 'User Agent', description: 'Manage users', modelPreference: null, displayOrder: 1 },
+    { code: 'shared', name: 'File Agent', description: 'Parse files', modelPreference: null, displayOrder: 2 }
   ],
   selectedAgentCode: 'auto',
   addImage: vi.fn((fileUrl: string, mediaType: string, fileName: string) =>
@@ -60,6 +61,10 @@ describe('chat input behavior', () => {
     store.attachedFiles = [];
     store.selectedAgentCode = 'auto';
     store.selectedModelId = 'model-1';
+    store.availableAgents = [
+      { code: 'user_mgmt', name: 'User Agent', description: 'Manage users', modelPreference: null, displayOrder: 1 },
+      { code: 'shared', name: 'File Agent', description: 'Parse files', modelPreference: null, displayOrder: 2 }
+    ];
     store.addImage.mockClear();
     store.removeImage.mockClear();
     store.addFile.mockClear();
@@ -123,6 +128,23 @@ describe('chat input behavior', () => {
     await input.trigger('change');
     await flushPromises();
     expect((window as any).$message.error).toHaveBeenCalledWith('page.ai.chat.fileUploadFailed');
+  });
+
+  it('rejects spreadsheet uploads when the file Agent is not authorized', async () => {
+    store.availableAgents = store.availableAgents.filter(agent => agent.code !== 'shared');
+    const wrapper = render();
+    const input = wrapper.get('input[type="file"]');
+    expect(input.attributes('accept')).not.toContain('.csv');
+    Object.defineProperty(input.element, 'files', {
+      configurable: true,
+      value: [new File(['name'], 'users.csv', { type: 'text/csv' })]
+    });
+
+    await input.trigger('change');
+    await flushPromises();
+
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect((window as any).$message.warning).toHaveBeenCalledWith('page.ai.chat.fileTypeUnsupported');
   });
 
   it('handles pasted and dropped files and renders removable size previews', async () => {

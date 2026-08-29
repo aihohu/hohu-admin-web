@@ -204,36 +204,39 @@ void quickActions; // template 已改用 sceneCards，保留 quickActions 防 i1
 
 // Scenario cards preselect an Agent and fill a starter prompt.
 // icon 用 PascalCase 组件引用（unplugin-icons auto-import），避免 kebab 字符串未注册
-const sceneCards = computed(() => [
-  {
-    icon: IconIcRoundAutoAwesome,
-    title: t('page.ai.chat.sceneDataTitle'),
-    desc: t('page.ai.chat.sceneDataDesc'),
-    agentCode: 'user_mgmt',
-    prompt: t('page.ai.chat.sceneDataPrompt')
-  },
-  {
-    icon: IconIcRoundPerson,
-    title: t('page.ai.chat.sceneUserTitle'),
-    desc: t('page.ai.chat.sceneUserDesc'),
-    agentCode: 'user_mgmt',
-    prompt: t('page.ai.chat.sceneUserPrompt')
-  },
-  {
-    icon: IconIcRoundInsertDriveFile,
-    title: t('page.ai.chat.sceneFileTitle'),
-    desc: t('page.ai.chat.sceneFileDesc'),
-    agentCode: 'shared',
-    prompt: t('page.ai.chat.sceneFilePrompt')
-  },
-  {
-    icon: IconIcRoundAccessTime,
-    title: t('page.ai.chat.sceneJobTitle'),
-    desc: t('page.ai.chat.sceneJobDesc'),
-    agentCode: 'job_mgmt',
-    prompt: t('page.ai.chat.sceneJobPrompt')
-  }
-]);
+const sceneCards = computed(() => {
+  const authorizedAgentCodes = new Set(aiStore.availableAgents.map(agent => agent.code));
+  return [
+    {
+      icon: IconIcRoundAutoAwesome,
+      title: t('page.ai.chat.sceneDataTitle'),
+      desc: t('page.ai.chat.sceneDataDesc'),
+      agentCode: 'user_mgmt',
+      prompt: t('page.ai.chat.sceneDataPrompt')
+    },
+    {
+      icon: IconIcRoundPerson,
+      title: t('page.ai.chat.sceneUserTitle'),
+      desc: t('page.ai.chat.sceneUserDesc'),
+      agentCode: 'user_mgmt',
+      prompt: t('page.ai.chat.sceneUserPrompt')
+    },
+    {
+      icon: IconIcRoundInsertDriveFile,
+      title: t('page.ai.chat.sceneFileTitle'),
+      desc: t('page.ai.chat.sceneFileDesc'),
+      agentCode: 'shared',
+      prompt: t('page.ai.chat.sceneFilePrompt')
+    },
+    {
+      icon: IconIcRoundAccessTime,
+      title: t('page.ai.chat.sceneJobTitle'),
+      desc: t('page.ai.chat.sceneJobDesc'),
+      agentCode: 'job_mgmt',
+      prompt: t('page.ai.chat.sceneJobPrompt')
+    }
+  ].filter(scene => authorizedAgentCodes.has(scene.agentCode));
+});
 
 function handleSceneClick(scene: { agentCode: string; prompt: string }) {
   // 预选 agent（若该 agent 在 availableAgents 中）

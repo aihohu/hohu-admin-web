@@ -18,6 +18,7 @@ const ROLE_CREATE_TOOL = 'role.create';
 const ROLE_UPDATE_TOOL = 'role.update';
 const ROLE_UPDATE_MENUS_TOOL = 'role.update_menus';
 const ROLE_UPDATE_AGENTS_TOOL = 'role.update_agents';
+export const ROLE_MEMBER_IMPACT_TOOLS = new Set([ROLE_UPDATE_TOOL, ROLE_UPDATE_MENUS_TOOL, ROLE_UPDATE_AGENTS_TOOL]);
 const DEPT_CREATE_TOOL = 'dept.create';
 const DEPT_UPDATE_TOOL = 'dept.update';
 const DEPT_MOVE_TOOL = 'dept.move';
@@ -303,7 +304,12 @@ export function localizeConfirmationField(
   }
 
   if (PHASE3_WRITE_TOOLS.has(tool)) {
-    const labelKey = tool.startsWith('role.') ? ROLE_FIELD_LABEL_KEYS[field.label] : DEPT_FIELD_LABEL_KEYS[field.label];
+    const labelKey =
+      field.label === 'affectedCount' && ROLE_MEMBER_IMPACT_TOOLS.has(tool)
+        ? 'page.ai.chat.affectedUsers'
+        : tool.startsWith('role.')
+          ? ROLE_FIELD_LABEL_KEYS[field.label]
+          : DEPT_FIELD_LABEL_KEYS[field.label];
     return {
       ...field,
       displayLabel: labelKey ? t(labelKey) : field.label,
