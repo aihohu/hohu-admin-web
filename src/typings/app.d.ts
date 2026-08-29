@@ -1620,6 +1620,7 @@ declare namespace App {
         AI_USAGE_LIMIT_EXCEEDED: string;
         AI_CHAT_GUARD_LOST: string;
         AI_MESSAGE_PERSIST_FAILED: string;
+        AI_UNVERIFIED_WRITE_CLAIM: string;
         AI_ROUTING_FAILED: string;
         AI_IP_BLOCKED: string;
         AI_USER_AUTO_DISABLED: string;

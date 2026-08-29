@@ -20,7 +20,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const { routerPushByKey } = useRouterPush();
+const { toHome } = useRouterPush();
 
 const iconMap: Record<ExceptionType, string> = {
   '403': 'no-permission',
@@ -36,7 +36,7 @@ const icon = computed(() => iconMap[props.type]);
     <div class="flex text-400px text-primary">
       <SvgIcon :local-icon="icon" />
     </div>
-    <NButton type="primary" @click="routerPushByKey('home')">{{ $t('common.backToHome') }}</NButton>
+    <NButton type="primary" @click="toHome">{{ $t('common.backToHome') }}</NButton>
   </div>
 </template>
 

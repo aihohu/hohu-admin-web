@@ -1434,6 +1434,7 @@ const local: App.I18n.Schema = {
     AI_USAGE_LIMIT_EXCEEDED: 'AI call limit exceeded. Rephrase and try again.',
     AI_CHAT_GUARD_LOST: 'The conversation lock expired. Refresh and try again.',
     AI_MESSAGE_PERSIST_FAILED: 'The AI response could not be saved. Refresh to verify the conversation state.',
+    AI_UNVERIFIED_WRITE_CLAIM: 'No verified write-tool result was received, so no business change was confirmed.',
     AI_ROUTING_FAILED: 'Routing failed. Retry or select an agent manually.',
     AI_IP_BLOCKED: 'This IP is temporarily restricted due to abnormal AI usage. Contact an administrator.',
     AI_USER_AUTO_DISABLED: 'AI access was disabled for 24 hours. Contact an administrator if this was not you.',

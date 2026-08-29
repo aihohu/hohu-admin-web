@@ -1425,6 +1425,7 @@ const local: App.I18n.Schema = {
     AI_USAGE_LIMIT_EXCEEDED: 'AI 调用次数超限，请换种问法后重试',
     AI_CHAT_GUARD_LOST: '会话执行锁已失效，请刷新后重试',
     AI_MESSAGE_PERSIST_FAILED: 'AI 回复持久化失败，请刷新会话确认状态',
+    AI_UNVERIFIED_WRITE_CLAIM: '未收到可验证的写工具结果，因此没有确认任何业务变更',
     AI_ROUTING_FAILED: '路由失败，请重试或手动选择 Agent',
     AI_IP_BLOCKED: '当前 IP 因异常 AI 调用被临时限制，请联系管理员',
     AI_USER_AUTO_DISABLED: 'AI 功能已被自动禁用（24 小时），如非本人操作请联系管理员',

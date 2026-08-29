@@ -732,6 +732,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         streamEvents.value.push(event);
         break;
       case 'ai_error':
+        if (event.errorCode === 'AI_UNVERIFIED_WRITE_CLAIM') {
+          streamingText.value = '';
+          reasoningText.value = '';
+        }
         applyRuntimeAvailabilityError(event.errorCode);
         window.$message?.error(
           localizeErrorCode(
