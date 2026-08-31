@@ -8,7 +8,11 @@ interface Props {
   uiSchema?: Record<string, any>;
   disabled?: boolean;
 }
-const props = withDefaults(defineProps<Props>(), { value: null });
+const props = withDefaults(defineProps<Props>(), {
+  value: null,
+  fieldDef: () => ({}),
+  uiSchema: () => ({})
+});
 const emit = defineEmits<{ 'update:value': [value: number | null] }>();
 
 const type = computed<'date' | 'datetime'>(() => {
@@ -23,7 +27,7 @@ const type = computed<'date' | 'datetime'>(() => {
     :value="value"
     :type="type"
     :disabled="disabled"
-    :placeholder="fieldDef?.title || '选择日期'"
+    :placeholder="uiSchema?.placeholder || fieldDef?.title || '选择日期'"
     @update:value="(v: number | null) => emit('update:value', v)"
   />
 </template>

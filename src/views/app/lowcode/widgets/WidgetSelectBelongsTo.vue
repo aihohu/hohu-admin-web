@@ -10,7 +10,12 @@ interface Props {
   manifest?: Record<string, any>;
   disabled?: boolean;
 }
-const props = withDefaults(defineProps<Props>(), { value: null });
+const props = withDefaults(defineProps<Props>(), {
+  value: null,
+  fieldDef: () => ({}),
+  uiSchema: () => ({}),
+  manifest: () => ({})
+});
 const emit = defineEmits<{ 'update:value': [value: any] }>();
 
 const options = ref<{ label: string; value: any }[]>([]);
@@ -45,7 +50,7 @@ onMounted(async () => {
     :options="options"
     :loading="loading"
     :disabled="disabled"
-    :placeholder="fieldDef?.title || '请选择'"
+    :placeholder="uiSchema?.placeholder || fieldDef?.title || '请选择'"
     clearable
     filterable
     @update:value="(v: any) => emit('update:value', v)"

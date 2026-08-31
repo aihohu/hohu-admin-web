@@ -8,14 +8,19 @@ interface Props {
   placeholder?: string;
   disabled?: boolean;
 }
-withDefaults(defineProps<Props>(), { value: '' });
+withDefaults(defineProps<Props>(), {
+  value: '',
+  fieldDef: () => ({}),
+  uiSchema: () => ({}),
+  placeholder: ''
+});
 const emit = defineEmits<{ 'update:value': [value: string] }>();
 </script>
 
 <template>
   <NInput
     :value="value"
-    :placeholder="placeholder || fieldDef?.title || ''"
+    :placeholder="placeholder || uiSchema?.placeholder || fieldDef?.title || ''"
     :disabled="disabled"
     @update:value="(v: string) => emit('update:value', v)"
   />

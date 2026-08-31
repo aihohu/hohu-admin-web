@@ -7,7 +7,11 @@ interface Props {
   uiSchema?: Record<string, any>;
   disabled?: boolean;
 }
-withDefaults(defineProps<Props>(), { value: null });
+withDefaults(defineProps<Props>(), {
+  value: null,
+  fieldDef: () => ({}),
+  uiSchema: () => ({})
+});
 const emit = defineEmits<{ 'update:value': [value: number | null] }>();
 </script>
 
@@ -15,7 +19,7 @@ const emit = defineEmits<{ 'update:value': [value: number | null] }>();
   <NInputNumber
     :value="value"
     :disabled="disabled"
-    :placeholder="fieldDef?.title || ''"
+    :placeholder="uiSchema?.placeholder || fieldDef?.title || ''"
     @update:value="(v: number | null) => emit('update:value', v)"
   />
 </template>

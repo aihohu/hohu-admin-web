@@ -22,8 +22,11 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  itemAlign: undefined,
   showAdd: true,
-  showDelete: true
+  showDelete: true,
+  addAuth: undefined,
+  deleteAuth: undefined
 });
 
 interface Emits {

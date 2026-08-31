@@ -1198,6 +1198,8 @@ declare namespace App {
             clarificationQuotaExceeded: string;
             clarificationSelectionRequired: string;
             confirmArgs: string;
+            confirmTechnicalDetails: string;
+            confirmTechnicalDetailsHint: string;
             confirmSecondsLeft: string;
             toolRunning: string;
             toolSuccess: string;

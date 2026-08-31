@@ -8,7 +8,11 @@ interface Props {
   uiSchema?: Record<string, any>;
   disabled?: boolean;
 }
-const props = withDefaults(defineProps<Props>(), { value: null });
+const props = withDefaults(defineProps<Props>(), {
+  value: null,
+  fieldDef: () => ({}),
+  uiSchema: () => ({})
+});
 const emit = defineEmits<{ 'update:value': [value: Record<string, any>] }>();
 
 // Maintain a text buffer: parse on blur, surface invalid JSON as a warning
@@ -61,6 +65,7 @@ function onCommit() {
     type="textarea"
     :disabled="disabled"
     :rows="4"
+    :aria-label="fieldDef?.title"
     :placeholder="uiSchema?.placeholder || placeholder"
     :status="parseError ? 'error' : undefined"
     @blur="onCommit"

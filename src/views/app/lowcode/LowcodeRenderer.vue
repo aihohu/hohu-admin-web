@@ -41,7 +41,6 @@ const uiSchema = computed(() => currentPage.value?.ui_schema || {});
         :page="currentPage"
         :data-schema="dataSchema"
         :ui-schema="uiSchema"
-        :breakpoint="breakpoint"
       />
       <FormPage
         v-else-if="currentPage.page_type === 'form'"

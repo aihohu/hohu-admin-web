@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildConfirmationTechnicalFields,
   localizeConfirmationDryRun,
   localizeConfirmationField,
   localizeConfirmationSummary,
@@ -44,6 +45,8 @@ const zh: Record<string, string> = {
   'page.system.user.userEmail': '邮箱',
   'page.system.user.userGender': '性别',
   'page.system.user.userStatus': '用户状态',
+  'page.system.role.roleStatus': '角色状态',
+  'page.system.dept.deptStatus': '部门状态',
   'page.system.user.gender.unknown': '未知',
   'page.system.user.gender.male': '男',
   'page.system.user.gender.female': '女',
@@ -72,12 +75,12 @@ const zh: Record<string, string> = {
   'page.ai.chat.newParentDepartment': '新上级部门',
   'page.ai.chat.affectedUsers': '受影响用户',
   'page.ai.chat.confirmRoleCreateSummary': '将创建角色“{roleName}”',
-  'page.ai.chat.confirmRoleUpdateSummary': '将更新角色“{roleId}”的定义',
-  'page.ai.chat.confirmRoleMenusSummary': '将替换角色“{roleId}”的完整菜单集合',
-  'page.ai.chat.confirmRoleAgentsSummary': '将替换角色“{roleId}”的完整 Agent 集合',
+  'page.ai.chat.confirmRoleUpdateSummary': '将更新角色“{roleName}”的定义',
+  'page.ai.chat.confirmRoleMenusSummary': '将替换角色“{roleName}”的完整菜单集合',
+  'page.ai.chat.confirmRoleAgentsSummary': '将替换角色“{roleName}”的完整 Agent 集合',
   'page.ai.chat.confirmDeptCreateSummary': '将创建部门“{deptName}”',
-  'page.ai.chat.confirmDeptUpdateSummary': '将更新部门“{deptId}”',
-  'page.ai.chat.confirmDeptMoveSummary': '将移动部门“{deptId}”'
+  'page.ai.chat.confirmDeptUpdateSummary': '将更新部门“{deptName}”',
+  'page.ai.chat.confirmDeptMoveSummary': '将移动部门“{deptName}”'
 };
 
 const t = (key: string, params?: Record<string, string | number>) => {
@@ -301,28 +304,38 @@ describe('confirmation presentation i18n', () => {
 
   it('localizes Phase 3 role and department write confirmations', () => {
     const roleFields: Api.Ai.ConfirmationPresentationField[] = [
-      { label: 'role_id', value: 'Auditor (R_AUDITOR / 200)' },
+      { label: 'role_id', value: 'Auditor', rawValue: '200' },
+      { label: 'status', value: '2' },
       { label: 'menu_ids', value: '100, 101' },
       { label: 'affected_users', value: 3 },
       { label: 'affectedCount', value: 3, tone: 'warning' }
     ];
     const deptFields: Api.Ai.ConfirmationPresentationField[] = [
-      { label: 'dept_id', value: 'Platform (300)' },
-      { label: 'new_parent_id', value: 'Engineering (100)' },
+      { label: 'dept_id', value: 'Platform', rawValue: '300' },
+      { label: 'status', value: '2' },
+      { label: 'new_parent_id', value: 'Engineering', rawValue: '100' },
       { label: 'affected_users', value: 4 },
       { label: 'affectedCount', value: 4, tone: 'warning' }
     ];
 
     expect(localizeConfirmationTool('role.update_menus', t)).toBe('替换角色菜单 (role.update_menus)');
     expect(localizeConfirmationSummary('role.update_menus', 'raw', t, roleFields)).toBe(
-      '将替换角色“Auditor (R_AUDITOR / 200)”的完整菜单集合'
+      '将替换角色“Auditor”的完整菜单集合'
     );
-    expect(localizeConfirmationField('role.update_menus', roleFields[1], t)).toMatchObject({
+    expect(localizeConfirmationField('role.update', roleFields[1], t)).toMatchObject({
+      displayLabel: '角色状态',
+      displayValue: '禁用'
+    });
+    expect(localizeConfirmationField('role.update_menus', roleFields[2], t)).toMatchObject({
       displayLabel: '完整菜单集合'
     });
     expect(localizeConfirmationTool('dept.move', t)).toBe('移动部门 (dept.move)');
-    expect(localizeConfirmationSummary('dept.move', 'raw', t, deptFields)).toBe('将移动部门“Platform (300)”');
-    expect(localizeConfirmationField('dept.move', deptFields[1], t)).toMatchObject({
+    expect(localizeConfirmationSummary('dept.move', 'raw', t, deptFields)).toBe('将移动部门“Platform”');
+    expect(localizeConfirmationField('dept.update', deptFields[1], t)).toMatchObject({
+      displayLabel: '部门状态',
+      displayValue: '禁用'
+    });
+    expect(localizeConfirmationField('dept.move', deptFields[2], t)).toMatchObject({
       displayLabel: '新上级部门'
     });
     expect(
@@ -332,7 +345,20 @@ describe('confirmation presentation i18n', () => {
         t,
         deptFields
       )
-    ).toEqual({ summary: '将移动部门“Platform (300)”', affectedCount: 4, affectedExamples: [] });
+    ).toEqual({ summary: '将移动部门“Platform”', affectedCount: 4, affectedExamples: [] });
+  });
+
+  it('moves machine identifiers and enum codes into technical details', () => {
+    const fields: Api.Ai.ConfirmationPresentationField[] = [
+      { label: 'dept_id', value: '华东-客服组', rawValue: '800000004' },
+      { label: 'status', value: '2' },
+      { label: 'dept_name', value: '华东客服组' }
+    ];
+
+    expect(buildConfirmationTechnicalFields('dept.update', fields, t)).toEqual([
+      { label: '目标部门', value: '800000004' },
+      { label: '部门状态', value: '2' }
+    ]);
   });
 
   it('keeps unknown dry-run presentations unchanged', () => {

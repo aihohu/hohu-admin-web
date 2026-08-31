@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { NButton, NDrawer, NDrawerContent, NStatistic, NTag } from 'naive-ui';
+import { NButton, NCollapse, NCollapseItem, NDrawer, NDrawerContent, NStatistic, NTag } from 'naive-ui';
 import { useAiStore } from '@/store/modules/ai';
 import {
+  buildConfirmationTechnicalFields,
   localizeConfirmationDryRun,
   localizeConfirmationField,
   localizeConfirmationSummary,
@@ -93,6 +94,9 @@ const displaySummary = computed(() => {
 });
 const presentationFields = computed(() =>
   rawPresentationFields.value.map(field => localizeConfirmationField(confirmation.value?.tool || '', field, translate))
+);
+const technicalFields = computed(() =>
+  buildConfirmationTechnicalFields(confirmation.value?.tool || '', rawPresentationFields.value, translate)
 );
 const presentationWarnings = computed(() => {
   const presentation = confirmation.value?.presentation;
@@ -201,6 +205,20 @@ const showDrawer = computed({
           <div v-for="warning in presentationWarnings" :key="warning">{{ warning }}</div>
         </div>
 
+        <div v-if="technicalFields.length > 0" class="confirm-section confirm-technical">
+          <NCollapse>
+            <NCollapseItem name="technical-details" :title="t('page.ai.chat.confirmTechnicalDetails')">
+              <p class="confirm-technical-hint">{{ t('page.ai.chat.confirmTechnicalDetailsHint') }}</p>
+              <div class="confirm-technical-fields">
+                <div v-for="field in technicalFields" :key="field.label" class="confirm-technical-field">
+                  <span>{{ field.label }}</span>
+                  <code>{{ field.value }}</code>
+                </div>
+              </div>
+            </NCollapseItem>
+          </NCollapse>
+        </div>
+
         <!-- 倒计时 -->
         <div class="confirm-section confirm-countdown">
           <IconIcRoundAccessTime class="text-16px" />
@@ -232,6 +250,30 @@ const showDrawer = computed({
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.confirm-technical-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--n-text-color-3, #999);
+}
+
+.confirm-technical-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.confirm-technical-field {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.confirm-technical-field code {
+  overflow-wrap: anywhere;
+  color: var(--n-text-color-2, #666);
 }
 
 .confirm-reconnect-badge {

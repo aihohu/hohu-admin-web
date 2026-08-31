@@ -7,6 +7,11 @@ export type LocalizedConfirmationField = ConfirmationField & {
   displayValue: string | number;
 };
 
+export type ConfirmationTechnicalField = {
+  label: string;
+  value: string | number;
+};
+
 const USER_IMPORT_TOOL = 'user.import_execute';
 const USER_EXPORT_TOOL = 'user.export';
 const USER_CREATE_TOOL = 'user.create';
@@ -101,6 +106,24 @@ const USER_UPDATE_FIELD_VALUE_KEYS: Record<string, Record<string, App.I18n.I18nK
     '1': 'page.system.common.status.enable',
     '2': 'page.system.common.status.disable'
   }
+};
+
+const ENABLE_STATUS_VALUE_KEYS: Record<string, App.I18n.I18nKey> = {
+  '1': 'page.system.common.status.enable',
+  '2': 'page.system.common.status.disable'
+};
+
+const ROLE_DATA_SCOPE_VALUE_KEYS: Record<string, App.I18n.I18nKey> = {
+  '1': 'page.system.role.dataScope.all',
+  ALL: 'page.system.role.dataScope.all',
+  '2': 'page.system.role.dataScope.custom',
+  CUSTOM: 'page.system.role.dataScope.custom',
+  '3': 'page.system.role.dataScope.dept',
+  DEPT: 'page.system.role.dataScope.dept',
+  '4': 'page.system.role.dataScope.deptAndSub',
+  DEPT_AND_SUB: 'page.system.role.dataScope.deptAndSub',
+  '5': 'page.system.role.dataScope.self',
+  SELF: 'page.system.role.dataScope.self'
 };
 
 const USER_UPDATE_DEPT_FIELD_LABEL_KEYS: Record<string, App.I18n.I18nKey> = {
@@ -218,22 +241,22 @@ export function localizeConfirmationSummary(
     return t('page.ai.chat.confirmRoleCreateSummary', { roleName: findFieldValue(fields, 'role_name') });
   }
   if (tool === ROLE_UPDATE_TOOL) {
-    return t('page.ai.chat.confirmRoleUpdateSummary', { roleId: findFieldValue(fields, 'role_id') });
+    return t('page.ai.chat.confirmRoleUpdateSummary', { roleName: findFieldValue(fields, 'role_id') });
   }
   if (tool === ROLE_UPDATE_MENUS_TOOL) {
-    return t('page.ai.chat.confirmRoleMenusSummary', { roleId: findFieldValue(fields, 'role_id') });
+    return t('page.ai.chat.confirmRoleMenusSummary', { roleName: findFieldValue(fields, 'role_id') });
   }
   if (tool === ROLE_UPDATE_AGENTS_TOOL) {
-    return t('page.ai.chat.confirmRoleAgentsSummary', { roleId: findFieldValue(fields, 'role_id') });
+    return t('page.ai.chat.confirmRoleAgentsSummary', { roleName: findFieldValue(fields, 'role_id') });
   }
   if (tool === DEPT_CREATE_TOOL) {
     return t('page.ai.chat.confirmDeptCreateSummary', { deptName: findFieldValue(fields, 'dept_name') });
   }
   if (tool === DEPT_UPDATE_TOOL) {
-    return t('page.ai.chat.confirmDeptUpdateSummary', { deptId: findFieldValue(fields, 'dept_id') });
+    return t('page.ai.chat.confirmDeptUpdateSummary', { deptName: findFieldValue(fields, 'dept_id') });
   }
   if (tool === DEPT_MOVE_TOOL) {
-    return t('page.ai.chat.confirmDeptMoveSummary', { deptId: findFieldValue(fields, 'dept_id') });
+    return t('page.ai.chat.confirmDeptMoveSummary', { deptName: findFieldValue(fields, 'dept_id') });
   }
   return summary;
 }
@@ -310,10 +333,18 @@ export function localizeConfirmationField(
         : tool.startsWith('role.')
           ? ROLE_FIELD_LABEL_KEYS[field.label]
           : DEPT_FIELD_LABEL_KEYS[field.label];
+    const valueKey =
+      typeof field.value === 'string'
+        ? field.label === 'status'
+          ? ENABLE_STATUS_VALUE_KEYS[field.value]
+          : field.label === 'data_scope'
+            ? ROLE_DATA_SCOPE_VALUE_KEYS[field.value]
+            : undefined
+        : undefined;
     return {
       ...field,
       displayLabel: labelKey ? t(labelKey) : field.label,
-      displayValue: field.value
+      displayValue: valueKey ? t(valueKey) : field.value
     };
   }
 
@@ -330,4 +361,19 @@ export function localizeConfirmationField(
     displayLabel: labelKey ? t(labelKey) : field.label,
     displayValue: valueKey ? t(valueKey) : field.value
   };
+}
+
+export function buildConfirmationTechnicalFields(
+  tool: string,
+  fields: ConfirmationField[],
+  t: Translate
+): ConfirmationTechnicalField[] {
+  return fields.flatMap(field => {
+    const localized = localizeConfirmationField(tool, field, t);
+    const rawValue = field.rawValue ?? field.value;
+    const hasBoundRawValue = field.rawValue !== undefined;
+    const wasLocalized = String(localized.displayValue) !== String(field.value);
+    if (!hasBoundRawValue && !wasLocalized) return [];
+    return [{ label: localized.displayLabel, value: rawValue }];
+  });
 }

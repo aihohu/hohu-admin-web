@@ -233,6 +233,7 @@ declare namespace Api {
     type ConfirmationPresentationField = {
       label: string;
       value: string | number;
+      rawValue?: string | number;
       tone?: 'default' | 'info' | 'success' | 'warning' | 'danger';
     };
 

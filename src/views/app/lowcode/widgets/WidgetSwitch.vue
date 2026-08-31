@@ -7,10 +7,19 @@ interface Props {
   uiSchema?: Record<string, any>;
   disabled?: boolean;
 }
-withDefaults(defineProps<Props>(), { value: false });
+withDefaults(defineProps<Props>(), {
+  value: false,
+  fieldDef: () => ({}),
+  uiSchema: () => ({})
+});
 const emit = defineEmits<{ 'update:value': [value: boolean] }>();
 </script>
 
 <template>
-  <NSwitch :value="value" :disabled="disabled" @update:value="(v: boolean) => emit('update:value', v)" />
+  <NSwitch
+    :value="value"
+    :disabled="disabled"
+    :aria-label="uiSchema?.label || fieldDef?.title"
+    @update:value="(v: boolean) => emit('update:value', v)"
+  />
 </template>

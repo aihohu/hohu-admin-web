@@ -8,7 +8,11 @@ interface Props {
   uiSchema?: Record<string, any>;
   disabled?: boolean;
 }
-const props = withDefaults(defineProps<Props>(), { value: null });
+const props = withDefaults(defineProps<Props>(), {
+  value: null,
+  fieldDef: () => ({}),
+  uiSchema: () => ({})
+});
 const emit = defineEmits<{ 'update:value': [value: any[]] }>();
 
 const items = computed<any[]>(() => (Array.isArray(props.value) ? props.value : []));

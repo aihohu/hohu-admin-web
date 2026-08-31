@@ -8,7 +8,11 @@ interface Props {
   uiSchema?: Record<string, any>;
   disabled?: boolean;
 }
-const props = withDefaults(defineProps<Props>(), { value: null });
+const props = withDefaults(defineProps<Props>(), {
+  value: null,
+  fieldDef: () => ({}),
+  uiSchema: () => ({})
+});
 const emit = defineEmits<{ 'update:value': [value: string | null] }>();
 
 const options = computed(() => {
@@ -26,7 +30,7 @@ const options = computed(() => {
     :value="value"
     :options="options"
     :disabled="disabled"
-    :placeholder="fieldDef?.title || '请选择'"
+    :placeholder="uiSchema?.placeholder || fieldDef?.title || '请选择'"
     @update:value="(v: string | null) => emit('update:value', v)"
   />
 </template>

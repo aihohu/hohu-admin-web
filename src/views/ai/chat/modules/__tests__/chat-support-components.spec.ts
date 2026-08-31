@@ -46,6 +46,8 @@ const drawerStubs = {
   NDrawer: { template: '<aside><slot/></aside>' },
   NDrawerContent: { template: '<section><slot/><slot name="footer"/></section>' },
   NButton: buttonStub,
+  NCollapse: { template: '<details><slot/></details>' },
+  NCollapseItem: { props: ['title'], template: '<section><h4>{{ title }}</h4><slot/></section>' },
   NTag: { template: '<span><slot/></span>' },
   NStatistic: { props: ['label', 'value'], template: '<span>{{ label }}:{{ value }}</span>' },
   IconIcRoundRefresh: true,
@@ -170,6 +172,45 @@ describe('chat confirmation, clarification, and sidebar support', () => {
     await passwordWrapper.vm.$nextTick();
     expect(document.body.textContent).toContain('page.ai.chat.resetPasswordOldPasswordWarning');
     passwordWrapper.unmount();
+  });
+
+  it('keeps friendly confirmation values primary and raw machine values in technical details', async () => {
+    store.pendingConfirmation = {
+      type: 'confirmation_required',
+      confirmationId: 'dept-friendly-confirmation',
+      actionId: 'dept-friendly-action',
+      tool: 'dept.update',
+      toolCallId: 'dept-friendly-call',
+      interactionFlow: 'direct',
+      traceId: 'dept-friendly-trace',
+      summary: 'Update department',
+      presentation: {
+        title: 'dept.update',
+        fields: [
+          { label: 'dept_id', value: '华东-客服组', rawValue: '800000004' },
+          { label: 'status', value: '2' }
+        ],
+        warnings: []
+      },
+      dryRun: { affectedCount: 0, summary: 'Update department', affectedExamples: [] },
+      expiresAt: '2026-08-24T08:01:00Z'
+    };
+    const wrapper = mount(ChatConfirmationDrawer, {
+      props: { show: true },
+      attachTo: document.body,
+      global: { stubs: drawerStubs }
+    });
+    await wrapper.vm.$nextTick();
+
+    const friendlyFields = document.querySelector('.confirm-fields')?.textContent || '';
+    expect(friendlyFields).toContain('华东-客服组');
+    expect(friendlyFields).toContain('page.system.common.status.disable');
+    (document.querySelector('.n-collapse-item__header-main') as HTMLElement | null)?.click();
+    await wrapper.vm.$nextTick();
+    const technicalFields = document.querySelector('.confirm-technical-fields')?.textContent || '';
+    expect(technicalFields).toContain('800000004');
+    expect(technicalFields).toContain('2');
+    wrapper.unmount();
   });
 
   it('renders clarification candidates and delegates choose or dismiss actions', async () => {

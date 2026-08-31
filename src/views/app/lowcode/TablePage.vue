@@ -13,7 +13,6 @@ const props = defineProps<{
   page: Record<string, any>;
   dataSchema: Record<string, any> | null;
   uiSchema: Record<string, any>;
-  breakpoint: string;
 }>();
 
 const router = useRouter();
