@@ -1634,6 +1634,9 @@ declare namespace App {
         AI_TEST_NO_MODEL: string;
         AI_TEST_NO_API_KEY: string;
         AI_TEST_FAILED: string;
+        AI_ENABLE_STATUS_INVALID: string;
+        AI_DEPT_INPUT_INVALID: string;
+        AI_ROLE_INPUT_INVALID: string;
         INVALID_PASSWORD_FORMAT: string;
         INCORRECT_OLD_PASSWORD: string;
         MISSING_PERMISSION: string;

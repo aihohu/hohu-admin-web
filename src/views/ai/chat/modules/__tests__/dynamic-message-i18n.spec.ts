@@ -18,6 +18,11 @@ describe('dynamic AI message i18n', () => {
     expect(zhCn.errorCode.AI_TOOL_PERM_DENIED).toBe('工具权限已被撤销，请重新发起操作');
   });
 
+  it('defines the canonical enable-status validation code in global locales', () => {
+    expect(enUs.errorCode.AI_ENABLE_STATUS_INVALID).toBe('Status must be 1 (enabled) or 2 (disabled)');
+    expect(zhCn.errorCode.AI_ENABLE_STATUS_INVALID).toBe('状态必须是 1（启用）或 2（禁用）');
+  });
+
   it('localizes stream errors by stable error code without using backend-language copy', () => {
     expect(localizeErrorCode('AI_CHAT_GUARD_LOST', '会话执行锁已失效，请刷新后重试', t, te)).toBe(
       'The conversation lock expired. Refresh and try again.'
