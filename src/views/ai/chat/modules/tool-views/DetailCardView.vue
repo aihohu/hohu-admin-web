@@ -15,6 +15,7 @@ const title = computed(() => {
   return viewData.value.title;
 });
 const fieldLabel = (label: string) => (te(label) ? t(label) : label);
+const fieldValue = (value: unknown) => (typeof value === 'string' && te(value) ? t(value) : value);
 </script>
 
 <template>
@@ -23,7 +24,7 @@ const fieldLabel = (label: string) => (te(label) ? t(label) : label);
     <div class="field-grid">
       <template v-for="(f, idx) in viewData.fields" :key="idx">
         <div class="label">{{ fieldLabel(f.label) }}</div>
-        <code class="value">{{ f.value }}</code>
+        <code class="value">{{ fieldValue(f.value) }}</code>
       </template>
     </div>
   </div>

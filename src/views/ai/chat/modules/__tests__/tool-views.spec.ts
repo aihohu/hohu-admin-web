@@ -7,7 +7,7 @@ const resizeObservers: Array<(entries: Array<{ contentRect: { width: number } }>
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
-    t: (key: string, params?: Record<string, unknown>) => `${key}${params ? JSON.stringify(params) : ''}`,
+    t: (key: string, params?: Record<string, unknown>) => `translated:${key}${params ? JSON.stringify(params) : ''}`,
     te: (key: string) => key.startsWith('i18n.')
   })
 }));
@@ -61,13 +61,21 @@ describe('structured tool result views', () => {
       props: {
         data: ui(
           'detail_card',
-          { title: 'Fallback title', fields: [{ label: 'i18n.field', value: 'safe' }] },
+          {
+            title: 'Fallback title',
+            fields: [
+              { label: 'i18n.field', value: 'safe' },
+              { label: 'i18n.status', value: 'i18n.disabled' }
+            ]
+          },
           { labelKey: 'i18n.detail', labelParams: { count: 1 } }
         )
       }
     });
     expect(detail.text()).toContain('i18n.detail');
     expect(detail.text()).toContain('i18n.field');
+    expect(detail.findAll('code')[0].text()).toBe('safe');
+    expect(detail.findAll('code')[1].text()).toBe('translated:i18n.disabled');
 
     const rows = mount(RowsAffectedView, {
       props: {
