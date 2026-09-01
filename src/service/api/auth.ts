@@ -1,19 +1,18 @@
 import { request } from '../request';
+import { buildLoginPayload } from '@/utils/tenant-auth';
 
 /**
  * Login
  *
  * @param userName User name
  * @param password Password
+ * @param tenantCode Optional pre-auth tenant locator for hosted deployments
  */
-export function fetchLogin(userName: string, password: string) {
+export function fetchLogin(userName: string, password: string, tenantCode?: string) {
   return request<Api.Auth.LoginToken>({
     url: '/auth/login',
     method: 'post',
-    data: {
-      userName,
-      password
-    }
+    data: buildLoginPayload(userName, password, tenantCode)
   });
 }
 

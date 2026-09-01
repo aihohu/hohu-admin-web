@@ -603,6 +603,8 @@ declare namespace App {
         login: {
           common: {
             loginOrRegister: string;
+            tenantCodePlaceholder: string;
+            tenantCodeRequired: string;
             userNamePlaceholder: string;
             phonePlaceholder: string;
             codePlaceholder: string;

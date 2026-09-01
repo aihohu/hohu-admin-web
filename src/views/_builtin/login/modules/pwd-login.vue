@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/modules/auth';
 import { useRouterPush } from '@/hooks/common/router';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
+import { shouldShowTenantCodeInput } from '@/utils/tenant-auth';
 
 defineOptions({
   name: 'PwdLogin'
@@ -15,20 +16,25 @@ const { toggleLoginModule } = useRouterPush();
 const { formRef, validate } = useNaiveForm();
 
 interface FormModel {
+  tenantCode: string;
   userName: string;
   password: string;
 }
 
 const model: FormModel = reactive({
+  tenantCode: '',
   userName: '',
   password: ''
 });
+
+const showTenantCode = shouldShowTenantCodeInput(import.meta.env.VITE_TENANT_MODE, import.meta.env.VITE_TENANT_LOCATOR);
 
 const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
   // inside computed to make locale reactive, if not apply i18n, you can define it without computed
   const { formRules } = useFormRules();
 
   return {
+    tenantCode: showTenantCode ? [{ required: true, message: $t('page.login.common.tenantCodeRequired') }] : [],
     userName: formRules.userName,
     password: [{ required: true, message: $t('form.pwd.required') }]
   };
@@ -36,12 +42,15 @@ const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
 
 async function handleSubmit() {
   await validate();
-  await authStore.login(model.userName, model.password);
+  await authStore.login(model.userName, model.password, true, showTenantCode ? model.tenantCode : undefined);
 }
 </script>
 
 <template>
   <NForm ref="formRef" :model="model" :rules="rules" size="large" :show-label="false" @keyup.enter="handleSubmit">
+    <NFormItem v-if="showTenantCode" path="tenantCode">
+      <NInput v-model:value="model.tenantCode" :placeholder="$t('page.login.common.tenantCodePlaceholder')" />
+    </NFormItem>
     <NFormItem path="userName">
       <NInput v-model:value="model.userName" :placeholder="$t('page.login.common.userNamePlaceholder')" />
     </NFormItem>

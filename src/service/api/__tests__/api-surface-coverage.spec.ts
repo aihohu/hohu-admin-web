@@ -19,6 +19,7 @@ type ApiFunction = (...args: any[]) => unknown;
 function argumentsFor(name: string): any[] {
   const file = new File(['phase4'], 'phase4.csv', { type: 'text/csv' });
   const special: Record<string, any[]> = {
+    fetchLogin: ['alice', 'secret', 'default'],
     fetchUploadFile: [file, 'phase4', '1'],
     fetchBatchUploadFiles: [[file], 'phase4', '1'],
     fetchImportConfig: [file],

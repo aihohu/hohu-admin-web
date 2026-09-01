@@ -60,6 +60,10 @@ declare namespace Env {
     readonly VITE_SERVICE_EXPIRED_TOKEN_CODES: string;
     /** when the route mode is static, the defined super role */
     readonly VITE_STATIC_SUPER_ROLE: string;
+    /** Tenant login mode; omitted values keep the single-tenant UI unchanged. */
+    readonly VITE_TENANT_MODE?: import('@/utils/tenant-auth').TenantMode;
+    /** Hosted tenant locator presentation: explicit code field or trusted Host. */
+    readonly VITE_TENANT_LOCATOR?: import('@/utils/tenant-auth').TenantLocator;
     /**
      * other backend service base url
      *
