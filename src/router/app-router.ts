@@ -1,9 +1,13 @@
 import type { RouteRecordRaw } from 'vue-router';
 import BaseLayout from '@/layouts/base-layout/index.vue';
+import { isMarketplaceCapabilityAvailable } from '@/utils/hosted-capabilities';
+import type { TenantMode } from '@/utils/tenant-auth';
 
 export const APP_ROUTE_PREFIX = '/app';
 
-export function createAppRoutes(): RouteRecordRaw[] {
+export function createAppRoutes(mode: TenantMode | undefined = import.meta.env.VITE_TENANT_MODE): RouteRecordRaw[] {
+  if (!isMarketplaceCapabilityAvailable(mode)) return [];
+
   return [
     {
       // Wrap app pages in BaseLayout so the sidebar/header persist across

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { SetupStoreId } from '@/enum';
 import { fetchAppContributes, type AppContributeMenu, type AppContributePage } from '@/service/api/lowcode';
+import { isMarketplaceCapabilityAvailable } from '@/utils/hosted-capabilities';
 
 /**
  * Marketplace app contributes store.
@@ -18,6 +19,11 @@ export const useContributesStore = defineStore(SetupStoreId.Contributes, () => {
   const loaded = ref(false);
 
   async function fetchContributes() {
+    if (!isMarketplaceCapabilityAvailable()) {
+      clear();
+      return;
+    }
+
     const { data, error } = await fetchAppContributes();
     if (!error && data) {
       menus.value = data.menus;

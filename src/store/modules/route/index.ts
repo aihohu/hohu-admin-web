@@ -9,6 +9,11 @@ import { SetupStoreId } from '@/enum';
 import { createStaticRoutes, getAuthVueRoutes } from '@/router/routes';
 import { ROOT_ROUTE } from '@/router/routes/builtin';
 import { getRouteName, getRoutePath } from '@/router/elegant/transform';
+import {
+  filterHostedCapabilityRoutes,
+  isMarketplaceCapabilityAvailable,
+  resolveHostedCapabilityHome
+} from '@/utils/hosted-capabilities';
 import { useAuthStore } from '../auth';
 import { useContributesStore } from '../contributes';
 import { useTabStore } from '../tab';
@@ -58,7 +63,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   function addConstantRoutes(routes: ElegantConstRoute[]) {
     const constantRoutesMap = new Map<string, ElegantConstRoute>([]);
 
-    routes.forEach(route => {
+    filterHostedCapabilityRoutes(routes).forEach(route => {
       constantRoutesMap.set(route.name, route);
     });
 
@@ -71,7 +76,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   function addAuthRoutes(routes: ElegantConstRoute[]) {
     const authRoutesMap = new Map<string, ElegantConstRoute>([]);
 
-    routes.forEach(route => {
+    filterHostedCapabilityRoutes(routes).forEach(route => {
       authRoutesMap.set(route.name, route);
     });
 
@@ -204,6 +209,11 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
    */
   async function mergeContributeMenus() {
     const contributesStore = useContributesStore();
+    if (!isMarketplaceCapabilityAvailable()) {
+      contributesStore.clear();
+      return;
+    }
+
     await contributesStore.fetchContributes();
     const contributeMenus = buildContributeMenus(contributesStore.menus, contributesStore.pages);
     if (contributeMenus.length) {
@@ -250,9 +260,15 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
 
       handleConstantAndAuthRoutes();
 
-      setRouteHome(home);
-
-      handleUpdateRootRouteRedirect(home);
+      const resolvedHome = resolveHostedCapabilityHome(
+        [...constantRoutes.value, ...authRoutes.value],
+        home,
+        routeHome.value
+      );
+      if (resolvedHome) {
+        setRouteHome(resolvedHome as LastLevelRouteKey);
+        handleUpdateRootRouteRedirect(resolvedHome as LastLevelRouteKey);
+      }
 
       setIsInitAuthRoute(true);
     } else {
