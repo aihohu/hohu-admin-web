@@ -124,10 +124,13 @@ async function handleDelete(id: string) {
   }
 }
 
-function handleCopyUrl(url: string) {
-  navigator.clipboard.writeText(url).then(() => {
+async function handleCopyUrl(url: string) {
+  try {
+    await navigator.clipboard.writeText(url);
     window.$message?.success(t('page.system.file.linkCopied'));
-  });
+  } catch {
+    window.$message?.error(t('page.system.file.linkCopyFailed'));
+  }
 }
 
 function handleSearch() {
@@ -191,6 +194,7 @@ function handleReset() {
           v-model:columns="columnChecks"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
+          :show-add="false"
           delete-auth="system:file:delete"
           @delete="handleBatchDelete"
           @refresh="getData"

@@ -865,6 +865,7 @@ const local: App.I18n.Schema = {
         copyLink: '复制链接',
         confirmDelete: '确认删除该文件？',
         linkCopied: '链接已复制',
+        linkCopyFailed: '复制失败，请检查浏览器剪贴板权限',
         uploadFile: '上传文件',
         fileList: '文件列表',
         fileNamePlaceholder: '请输入文件名',

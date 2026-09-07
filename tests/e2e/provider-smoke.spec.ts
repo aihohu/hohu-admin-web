@@ -221,7 +221,7 @@ function findTreeRecord(records: ListRecord[], predicate: (record: ListRecord) =
   return undefined;
 }
 
-test('real provider routes read and controlled writes through all three management Agents', async ({
+test('real provider understands natural user requests across all three management Agents', async ({
   page
 }, testInfo) => {
   test.setTimeout(600_000);
@@ -274,23 +274,23 @@ test('real provider routes read and controlled writes through all three manageme
       {
         agent: 'user_mgmt',
         readTool: 'user.lookup',
-        readPrompt: `Find the exact user ${env.AI_E2E_ADMIN_USERNAME}. Use user.lookup.`,
+        readPrompt: `帮我查一下用户名为 ${env.AI_E2E_ADMIN_USERNAME} 的员工，他现在是否启用？`,
         writeTool: 'user.create',
-        writePrompt: `Create active user ${userName} with nickname ${nickname} in primary department ${primaryDepartment.deptName} with ID ${env.AI_E2E_PRIMARY_DEPT_ID}. Use user.create and request confirmation.`
+        writePrompt: `请新增一个员工账号 ${userName}，昵称叫 ${nickname}，归属 ${primaryDepartment.deptName} 部门，创建后启用。提交前让我确认一下。`
       },
       {
         agent: 'dept_mgmt',
         readTool: 'dept.lookup',
-        readPrompt: `Find the exact department named ${parentDepartment.deptName}. Use dept.lookup.`,
+        readPrompt: `帮我查一下 ${parentDepartment.deptName} 这个部门。`,
         writeTool: 'dept.create',
-        writePrompt: `Create active department ${deptName} under parent department ${parentDepartment.deptName} with ID ${env.AI_E2E_PARENT_DEPT_ID}. Use dept.create and request confirmation.`
+        writePrompt: `请在 ${parentDepartment.deptName} 下面新建一个名为 ${deptName} 的部门，新部门立即启用，提交前让我确认。`
       },
       {
         agent: 'role_mgmt',
         readTool: 'role.lookup',
-        readPrompt: 'Find the exact role code R_USER. Use role.lookup.',
+        readPrompt: '帮我查一下角色标识为 R_USER 的角色。',
         writeTool: 'role.create',
-        writePrompt: `Call role.create now with role_name="${marker}", role_code="${roleCode}", data_scope="SELF", status="1", and dept_ids=[]. Request confirmation. Do not claim success unless the role.create tool result reports execution.`
+        writePrompt: `请新增一个名为 ${marker} 的角色，角色标识是 ${roleCode}，数据范围只看本人，不关联任何部门。提交前让我确认，确认成功后再告诉我结果。`
       }
     ]) {
       const agent = agents.find(candidate => candidate.code === item.agent);
@@ -339,7 +339,7 @@ test('real provider routes read and controlled writes through all three manageme
     const updatedRoleName = `${marker}_UPDATED`;
     const combinedTrace = await invokeLookupThenWrite(
       page,
-      `First use role.lookup to resolve exact role code ${roleCode}. Then use role.update with that role ID to change only role_name to ${updatedRoleName}, and request confirmation. Both tools must run in this one response.`,
+      `请把角色标识为 ${roleCode} 的角色名称改成 ${updatedRoleName}，其他设置保持不变，提交前让我确认。`,
       'role.lookup',
       'role.update'
     );
@@ -377,7 +377,7 @@ test('real provider routes read and controlled writes through all three manageme
     const exportTrace = await rejectExportBeforeSideEffects(
       page,
       token,
-      `Export only the exact user_name ${userName} to xlsx for reason ${marker}_EXPORT. Use user.export and request confirmation.`
+      `请把用户名为 ${userName} 的员工资料导出成 Excel，用途说明写 ${marker}_EXPORT，提交前让我确认。`
     );
     expect(await actualTraceAgent(page, token, exportTrace, 'user.export')).toBe('user_mgmt');
     evidence.push({

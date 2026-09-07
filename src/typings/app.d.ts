@@ -940,6 +940,7 @@ declare namespace App {
             copyLink: string;
             confirmDelete: string;
             linkCopied: string;
+            linkCopyFailed: string;
             uploadFile: string;
             fileList: string;
             fileNamePlaceholder: string;

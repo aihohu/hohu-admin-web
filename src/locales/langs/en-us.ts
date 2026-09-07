@@ -872,6 +872,7 @@ const local: App.I18n.Schema = {
         copyLink: 'Copy Link',
         confirmDelete: 'Are you sure you want to delete this file?',
         linkCopied: 'Link copied',
+        linkCopyFailed: 'Copy failed. Check the browser clipboard permission.',
         uploadFile: 'Upload File',
         fileList: 'File List',
         fileNamePlaceholder: 'Enter file name',
