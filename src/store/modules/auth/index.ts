@@ -10,7 +10,7 @@ import { $t } from '@/locales';
 import { useAiStore } from '../ai';
 import { useRouteStore } from '../route';
 import { useTabStore } from '../tab';
-import { clearAuthStorage, getToken } from './shared';
+import { clearAuthStorage, createSingleFlightAction, getToken } from './shared';
 
 export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   const route = useRoute();
@@ -41,8 +41,8 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   /** Is login */
   const isLogin = computed(() => Boolean(token.value));
 
-  /** Reset auth store */
-  async function resetStore() {
+  /** Reset auth store. Concurrent 401 responses share one route-reset operation. */
+  const resetStore = createSingleFlightAction(async () => {
     recordUserId();
 
     clearAuthStorage();
@@ -55,8 +55,8 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
     }
 
     tabStore.cacheTabs();
-    routeStore.resetStore();
-  }
+    await routeStore.resetStore();
+  });
 
   /** Record the user ID of the previous login session Used to compare with the current user ID on next login */
   function recordUserId() {

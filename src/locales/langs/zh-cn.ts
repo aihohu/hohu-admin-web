@@ -1423,6 +1423,7 @@ const local: App.I18n.Schema = {
     UNAUTHORIZED: '登录已过期，请重新登录',
     INVALID_CREDENTIALS: '用户名或密码错误',
     TOKEN_EXPIRED: '登录已过期，请重新登录',
+    TENANT_HOSTED_ACCESS_DISABLED: '托管租户访问已关闭，请重新登录',
     ACCOUNT_DISABLED: '账号已被禁用',
     UNSUPPORTED_LOGIN_TYPE: '不支持的登录方式',
     AI_PROVIDER_NOT_FOUND: 'AI 提供商不存在',

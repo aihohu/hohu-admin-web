@@ -23,6 +23,13 @@ describe('dynamic AI message i18n', () => {
     expect(zhCn.errorCode.AI_ENABLE_STATUS_INVALID).toBe('状态必须是 1（启用）或 2（禁用）');
   });
 
+  it('defines the hosted rollback session error in global locales', () => {
+    expect(enUs.errorCode.TENANT_HOSTED_ACCESS_DISABLED).toBe(
+      'Hosted tenant access has been disabled. Please sign in again.'
+    );
+    expect(zhCn.errorCode.TENANT_HOSTED_ACCESS_DISABLED).toBe('托管租户访问已关闭，请重新登录');
+  });
+
   it('localizes stream errors by stable error code without using backend-language copy', () => {
     expect(localizeErrorCode('AI_CHAT_GUARD_LOST', '会话执行锁已失效，请刷新后重试', t, te)).toBe(
       'The conversation lock expired. Refresh and try again.'

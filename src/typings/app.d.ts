@@ -1618,6 +1618,7 @@ declare namespace App {
         UNAUTHORIZED: string;
         INVALID_CREDENTIALS: string;
         TOKEN_EXPIRED: string;
+        TENANT_HOSTED_ACCESS_DISABLED: string;
         ACCOUNT_DISABLED: string;
         UNSUPPORTED_LOGIN_TYPE: string;
         AI_PROVIDER_NOT_FOUND: string;

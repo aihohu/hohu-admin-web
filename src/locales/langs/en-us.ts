@@ -1433,6 +1433,7 @@ const local: App.I18n.Schema = {
     UNAUTHORIZED: 'Session expired, please login again',
     INVALID_CREDENTIALS: 'Invalid username or password',
     TOKEN_EXPIRED: 'Session expired, please login again',
+    TENANT_HOSTED_ACCESS_DISABLED: 'Hosted tenant access has been disabled. Please sign in again.',
     ACCOUNT_DISABLED: 'Account has been disabled',
     UNSUPPORTED_LOGIN_TYPE: 'Unsupported login method',
     AI_PROVIDER_NOT_FOUND: 'AI provider not found',
