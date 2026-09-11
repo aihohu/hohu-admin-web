@@ -38,7 +38,7 @@ describe('structured tool result views', () => {
     resizeObservers.length = 0;
   });
 
-  it('renders localized columns and safely leaves missing cells blank', () => {
+  it('renders localized columns and localized enum cells', () => {
     const wrapper = mount(DataListView, {
       props: {
         data: ui('data_list', {
@@ -46,14 +46,14 @@ describe('structured tool result views', () => {
             { key: 'name', label: 'i18n.name' },
             { key: 'status', label: 'Raw status' }
           ],
-          rows: [{ name: 'Alice' }]
+          rows: [{ name: 'Alice', status: 'i18n.enabled' }]
         })
       }
     });
     expect(wrapper.text()).toContain('i18n.name');
     expect(wrapper.text()).toContain('Raw status');
     expect(wrapper.text()).toContain('Alice');
-    expect(wrapper.findAll('td')[1].text()).toBe('');
+    expect(wrapper.findAll('td')[1].text()).toBe('translated:i18n.enabled');
   });
 
   it('renders detail and row-count labels with and without server label keys', async () => {

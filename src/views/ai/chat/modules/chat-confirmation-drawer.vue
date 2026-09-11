@@ -95,9 +95,13 @@ const displaySummary = computed(() => {
 const presentationFields = computed(() =>
   rawPresentationFields.value.map(field => localizeConfirmationField(confirmation.value?.tool || '', field, translate))
 );
-const technicalFields = computed(() =>
-  buildConfirmationTechnicalFields(confirmation.value?.tool || '', rawPresentationFields.value, translate)
-);
+const technicalFields = computed(() => {
+  const tool = confirmation.value?.tool || '';
+  return [
+    ...(tool ? [{ label: t('page.ai.chat.toolCode'), value: tool }] : []),
+    ...buildConfirmationTechnicalFields(tool, rawPresentationFields.value, translate)
+  ];
+});
 const presentationWarnings = computed(() => {
   const presentation = confirmation.value?.presentation;
   const warnings = presentation?.warningKeys?.length

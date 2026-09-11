@@ -6,7 +6,7 @@ const requestMock = vi.fn();
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, unknown>) => `${key}${params ? JSON.stringify(params) : ''}`,
-    te: () => false
+    te: () => true
   })
 }));
 
@@ -74,11 +74,16 @@ describe('chat tool result card', () => {
     const wrapper = render({ started: started() });
     expect(wrapper.get('.tool-card').attributes('data-status')).toBe('running');
     expect(wrapper.get('.tool-card').attributes('data-trace-id')).toBe('tr-phase4');
+    expect(wrapper.get('.tool-card-head').text()).toContain('page.ai.chat.toolDescriptions.userLookup');
+    expect(wrapper.get('.tool-card-head').text()).toContain('page.ai.chat.toolRiskLow');
+    expect(wrapper.get('.tool-card-head').text()).not.toContain('user.lookup');
+    expect(wrapper.get('.tool-card-head').text()).not.toContain(' low');
 
     await wrapper.setProps({ result: result() });
     expect(wrapper.get('.tool-card').attributes('data-status')).toBe('success');
     expect(wrapper.text()).toContain('page.ai.chat.toolExecutedRows');
     await wrapper.get('.tool-card-head').trigger('click');
+    expect(wrapper.text()).toContain('user.lookup');
     expect(wrapper.text()).toContain('safe summary');
     expect(wrapper.text()).toContain('alice');
     expect(wrapper.text()).toContain('matches');
@@ -90,6 +95,16 @@ describe('chat tool result card', () => {
     expect(wrapper.get('.tool-card').attributes('data-status')).toBe('failed');
     expect(wrapper.text()).toContain('AI_TOOL_PERMISSION_DENIED');
     expect(wrapper.text()).not.toContain('raw backend detail');
+  });
+
+  it('uses a generic business title for an unknown tool until technical details are opened', async () => {
+    const wrapper = render({ started: started({ tool: 'custom.internal_action' }) });
+
+    expect(wrapper.get('.tool-card-head').text()).toContain('page.ai.chat.toolOperation');
+    expect(wrapper.get('.tool-card-head').text()).not.toContain('custom.internal_action');
+
+    await wrapper.get('.tool-card-head').trigger('click');
+    expect(wrapper.text()).toContain('custom.internal_action');
   });
 
   it('emits both HITL decisions and derives a server-time countdown', async () => {

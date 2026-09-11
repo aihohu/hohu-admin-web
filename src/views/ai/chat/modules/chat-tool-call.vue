@@ -27,6 +27,15 @@ const emit = defineEmits<{
 }>();
 
 const toolDesc = computed(() => localizeToolDescription(props.started.tool, translate, hasTranslation));
+const toolTitle = computed(() => toolDesc.value || t('page.ai.chat.toolOperation'));
+const riskText = computed(() => {
+  const keys: Record<string, App.I18n.I18nKey> = {
+    low: 'page.ai.chat.toolRiskLow',
+    high: 'page.ai.chat.toolRiskHigh',
+    destructive: 'page.ai.chat.toolRiskDestructive'
+  };
+  return props.started.risk ? t(keys[props.started.risk] || 'page.ai.chat.toolRiskHigh') : '';
+});
 
 // ===== Card state =====
 type CardStatus = 'running' | 'success' | 'failed' | 'pending';
@@ -216,10 +225,9 @@ function onReject() {
   >
     <div class="tool-card-head" @click="expanded = !expanded">
       <div class="tool-icon" :class="`tool-icon--${cardStatus}`">{{ iconChar }}</div>
-      <span class="tool-name">{{ started.tool }}</span>
-      <span v-if="toolDesc" class="tool-desc">{{ toolDesc }}</span>
+      <span class="tool-name">{{ toolTitle }}</span>
       <span v-if="started.risk" class="tool-meta">
-        <span class="risk-badge" :class="`risk-badge--${started.risk}`">{{ started.risk }}</span>
+        <span class="risk-badge" :class="`risk-badge--${started.risk}`">{{ riskText }}</span>
       </span>
       <span class="tool-status" :class="`tool-status--${cardStatus}`">
         <span class="dot"></span>
@@ -230,10 +238,12 @@ function onReject() {
 
     <div v-show="expanded" class="tool-card-body">
       <div class="tool-section">
-        <div class="tool-section-title">
-          {{ t('page.ai.chat.toolArgs') }}
-          <span class="hint">· args_summary（{{ t('page.ai.chat.toolArgsMetadataHint') }}）</span>
+        <div class="tool-section-title">{{ t('page.ai.chat.confirmTechnicalDetails') }}</div>
+        <div class="technical-tool-code">
+          <span>{{ t('page.ai.chat.toolCode') }}</span>
+          <code>{{ started.tool }}</code>
         </div>
+        <div class="tool-section-title tool-args-title">{{ t('page.ai.chat.toolArgs') }}</div>
         <div class="summary-line">{{ started.summary }}</div>
         <table v-if="argsEntries.length > 0" class="kv-table">
           <tr v-for="[key, value] in argsEntries" :key="key">
@@ -368,7 +378,6 @@ function onReject() {
 
 .tool-name {
   font-weight: 500;
-  font-family: 'Menlo', 'Consolas', monospace;
   font-size: 13px;
   color: var(--n-text-color, #1f1f1f);
 }
@@ -496,6 +505,22 @@ function onReject() {
   color: var(--n-text-color-3, #9ca3af);
   font-family: 'Menlo', 'Consolas', monospace;
   margin-bottom: 6px;
+}
+
+.technical-tool-code {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+  color: var(--n-text-color-2, #6b7280);
+}
+
+.technical-tool-code code {
+  font-family: 'Menlo', 'Consolas', monospace;
+}
+
+.tool-args-title {
+  margin-top: 4px;
 }
 
 .kv-table {

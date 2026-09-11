@@ -208,6 +208,7 @@ describe('chat confirmation, clarification, and sidebar support', () => {
     (document.querySelector('.n-collapse-item__header-main') as HTMLElement | null)?.click();
     await wrapper.vm.$nextTick();
     const technicalFields = document.querySelector('.confirm-technical-fields')?.textContent || '';
+    expect(technicalFields).toContain('dept.update');
     expect(technicalFields).toContain('800000004');
     expect(technicalFields).toContain('2');
     wrapper.unmount();

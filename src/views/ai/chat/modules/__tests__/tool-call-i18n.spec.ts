@@ -4,11 +4,19 @@ import { localizeToolDescription, localizeToolError } from '../tool-call-i18n';
 const messages: Record<string, string> = {
   'page.ai.chat.deptLookup': 'Find department by name or path',
   'page.system.user.addUser': 'Add User',
+  'page.system.user.editUser': 'Edit User',
   'page.system.user.resetPwd.title': 'Reset Password',
+  'common.importModal.title': 'Import Users',
+  'common.exportModal.title': 'Export Users',
   'page.ai.chat.toolDescriptions.userList': 'List users',
   'page.ai.chat.toolDescriptions.userUpdateDept': 'Replace user departments',
   'page.ai.chat.toolDescriptions.userRoleLookup': 'Find assignable roles',
   'page.ai.chat.toolDescriptions.userUpdateRoles': 'Replace user roles',
+  'page.ai.chat.toolDescriptions.roleMenuLookup': 'Find grantable menus',
+  'page.ai.chat.toolDescriptions.roleAgentLookup': 'Find grantable Agents',
+  'page.ai.chat.toolDescriptions.roleUpdateMenus': 'Replace role menus',
+  'page.ai.chat.toolDescriptions.roleUpdateAgents': 'Replace role Agents',
+  'page.ai.chat.toolDescriptions.deptLookup': 'Find departments',
   'page.ai.chat.toolDescriptions.fileParse': 'Parse file',
   'page.ai.chat.toolErrors.AI_TOOL_TIMEOUT': 'Operation timed out',
   'errorCode.AI_USER_DEFAULT_ROLE_NOT_FOUND': 'The default user role is missing or disabled',
@@ -31,9 +39,18 @@ describe('tool call i18n', () => {
     expect(localizeToolDescription('user.dept_lookup', t, te)).toBe('Find department by name or path');
     expect(localizeToolDescription('user.reset_password', t, te)).toBe('Reset Password');
     expect(localizeToolDescription('user.list', t, te)).toBe('List users');
+    expect(localizeToolDescription('user.update', t, te)).toBe('Edit User');
+    expect(localizeToolDescription('user.import_preview', t, te)).toBe('Import Users');
+    expect(localizeToolDescription('user.import_execute', t, te)).toBe('Import Users');
+    expect(localizeToolDescription('user.export', t, te)).toBe('Export Users');
     expect(localizeToolDescription('user.update_dept', t, te)).toBe('Replace user departments');
     expect(localizeToolDescription('user.role_lookup', t, te)).toBe('Find assignable roles');
     expect(localizeToolDescription('user.update_roles', t, te)).toBe('Replace user roles');
+    expect(localizeToolDescription('role.menu_lookup', t, te)).toBe('Find grantable menus');
+    expect(localizeToolDescription('role.agent_lookup', t, te)).toBe('Find grantable Agents');
+    expect(localizeToolDescription('role.update_menus', t, te)).toBe('Replace role menus');
+    expect(localizeToolDescription('role.update_agents', t, te)).toBe('Replace role Agents');
+    expect(localizeToolDescription('dept.lookup', t, te)).toBe('Find departments');
     expect(localizeToolDescription('file.parse', t, te)).toBe('Parse file');
   });
 

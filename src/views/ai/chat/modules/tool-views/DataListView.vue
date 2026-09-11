@@ -9,6 +9,7 @@ const props = defineProps<{
 const viewData = computed(() => props.data.viewData as Api.Ai.DataListViewData);
 const { t, te } = useI18n();
 const columnLabel = (label: string) => (te(label) ? t(label) : label);
+const cellValue = (value: unknown) => (typeof value === 'string' && te(value) ? t(value) : value);
 </script>
 
 <template>
@@ -22,7 +23,7 @@ const columnLabel = (label: string) => (te(label) ? t(label) : label);
       <tbody>
         <tr v-for="(row, idx) in viewData.rows" :key="idx">
           <td v-for="col in viewData.columns" :key="col.key">
-            <code>{{ row[col.key] ?? '' }}</code>
+            <span>{{ cellValue(row[col.key] ?? '') }}</span>
           </td>
         </tr>
       </tbody>

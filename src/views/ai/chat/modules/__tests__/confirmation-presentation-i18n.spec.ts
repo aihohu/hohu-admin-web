@@ -53,6 +53,10 @@ const zh: Record<string, string> = {
   'page.system.common.status.enable': '启用',
   'page.system.common.status.disable': '禁用',
   'page.system.user.primaryDept': '主部门',
+  'page.system.user.userRole': '用户角色',
+  'page.ai.chat.defaultRole': '默认角色',
+  'page.ai.chat.noRole': '无角色',
+  'page.ai.chat.toolOperation': '工具操作',
   'page.ai.chat.confirmAffected': '预计影响',
   'page.ai.chat.userId': '用户 ID',
   'page.ai.chat.targetUser': '目标用户',
@@ -90,7 +94,7 @@ const t = (key: string, params?: Record<string, string | number>) => {
 
 describe('confirmation presentation i18n', () => {
   it('localizes the user import tool, summary, field labels and enum values', () => {
-    expect(localizeConfirmationTool('user.import_execute', t)).toBe('批量导入用户 (user.import_execute)');
+    expect(localizeConfirmationTool('user.import_execute', t)).toBe('批量导入用户');
     expect(localizeConfirmationSummary('user.import_execute', '确认导入用户', t)).toBe('确认导入');
     expect(localizeConfirmationField('user.import_execute', { label: 'total', value: 3 }, t)).toEqual({
       label: 'total',
@@ -108,7 +112,7 @@ describe('confirmation presentation i18n', () => {
   });
 
   it('keeps unknown tools, labels and values readable', () => {
-    expect(localizeConfirmationTool('other.execute', t)).toBe('other.execute');
+    expect(localizeConfirmationTool('other.execute', t)).toBe('工具操作');
     expect(localizeConfirmationSummary('other.execute', 'Raw summary', t)).toBe('Raw summary');
     expect(
       localizeConfirmationField('user.import_execute', { label: 'futurePolicy', value: 'FUTURE' }, t)
@@ -121,7 +125,7 @@ describe('confirmation presentation i18n', () => {
       { label: 'affectedCount', value: 12, tone: 'warning' }
     ];
 
-    expect(localizeConfirmationTool('user.export', t)).toBe('导出用户列表 (user.export)');
+    expect(localizeConfirmationTool('user.export', t)).toBe('导出用户列表');
     expect(localizeConfirmationSummary('user.export', 'raw backend summary', t, fields)).toBe(
       '将导出约 12 行用户数据到 xlsx 文件（30 天后过期清理）'
     );
@@ -139,6 +143,7 @@ describe('confirmation presentation i18n', () => {
     const createFields: Api.Ai.ConfirmationPresentationField[] = [
       { label: 'user_name', value: 'lisi' },
       { label: 'primary_dept_id', value: 'AI 产品部（81001）' },
+      { label: 'role_assignment', value: 'NONE', rawValue: 'NONE' },
       { label: 'affectedCount', value: 1, tone: 'warning' }
     ];
     const resetFields: Api.Ai.ConfirmationPresentationField[] = [
@@ -146,7 +151,7 @@ describe('confirmation presentation i18n', () => {
       { label: 'affectedCount', value: 1, tone: 'warning' }
     ];
 
-    expect(localizeConfirmationTool('user.create', t)).toBe('新增用户 (user.create)');
+    expect(localizeConfirmationTool('user.create', t)).toBe('新增用户');
     expect(localizeConfirmationSummary('user.create', 'raw backend summary', t, createFields)).toBe(
       '将创建用户 lisi 并应用系统默认密码与角色策略'
     );
@@ -158,8 +163,12 @@ describe('confirmation presentation i18n', () => {
       displayLabel: '主部门',
       displayValue: 'AI 产品部（81001）'
     });
+    expect(localizeConfirmationField('user.create', createFields[2], t)).toMatchObject({
+      displayLabel: '用户角色',
+      displayValue: '无角色'
+    });
 
-    expect(localizeConfirmationTool('user.reset_password', t)).toBe('重置密码 (user.reset_password)');
+    expect(localizeConfirmationTool('user.reset_password', t)).toBe('重置密码');
     expect(localizeConfirmationSummary('user.reset_password', 'raw backend summary', t, resetFields)).toBe(
       '将把用户 82002 的密码重置为系统默认策略'
     );
@@ -194,7 +203,7 @@ describe('confirmation presentation i18n', () => {
       { label: 'affectedCount', value: 1, tone: 'warning' }
     ];
 
-    expect(localizeConfirmationTool('user.update', t)).toBe('编辑用户 (user.update)');
+    expect(localizeConfirmationTool('user.update', t)).toBe('编辑用户');
     expect(localizeConfirmationSummary('user.update', 'raw backend summary', t, nicknameFields)).toBe(
       '将把用户“十四篇（7493097707360227328）”的昵称更新为“十四篇”'
     );
@@ -235,7 +244,7 @@ describe('confirmation presentation i18n', () => {
       { label: 'affectedCount', value: 1, tone: 'warning' }
     ];
 
-    expect(localizeConfirmationTool('user.update_dept', t)).toBe('调整用户部门 (user.update_dept)');
+    expect(localizeConfirmationTool('user.update_dept', t)).toBe('调整用户部门');
     expect(localizeConfirmationSummary('user.update_dept', 'raw backend summary', t, fields)).toBe(
       '将把用户“十四篇（7493097707360227328）”的完整部门集合替换为下方新集合'
     );
@@ -272,7 +281,7 @@ describe('confirmation presentation i18n', () => {
       { label: 'affectedCount', value: 1, tone: 'warning' }
     ];
 
-    expect(localizeConfirmationTool('user.update_roles', t)).toBe('调整用户角色 (user.update_roles)');
+    expect(localizeConfirmationTool('user.update_roles', t)).toBe('调整用户角色');
     expect(localizeConfirmationSummary('user.update_roles', 'raw backend summary', t, fields)).toBe(
       '将把用户“十四篇（7493097707360227328）”的完整角色集合替换为下方新集合'
     );
@@ -318,7 +327,7 @@ describe('confirmation presentation i18n', () => {
       { label: 'affectedCount', value: 4, tone: 'warning' }
     ];
 
-    expect(localizeConfirmationTool('role.update_menus', t)).toBe('替换角色菜单 (role.update_menus)');
+    expect(localizeConfirmationTool('role.update_menus', t)).toBe('替换角色菜单');
     expect(localizeConfirmationSummary('role.update_menus', 'raw', t, roleFields)).toBe(
       '将替换角色“Auditor”的完整菜单集合'
     );
@@ -329,7 +338,7 @@ describe('confirmation presentation i18n', () => {
     expect(localizeConfirmationField('role.update_menus', roleFields[2], t)).toMatchObject({
       displayLabel: '完整菜单集合'
     });
-    expect(localizeConfirmationTool('dept.move', t)).toBe('移动部门 (dept.move)');
+    expect(localizeConfirmationTool('dept.move', t)).toBe('移动部门');
     expect(localizeConfirmationSummary('dept.move', 'raw', t, deptFields)).toBe('将移动部门“Platform”');
     expect(localizeConfirmationField('dept.update', deptFields[1], t)).toMatchObject({
       displayLabel: '部门状态',

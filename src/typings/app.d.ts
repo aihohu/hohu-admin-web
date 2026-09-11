@@ -1178,6 +1178,10 @@ declare namespace App {
             newParentDepartment: string;
             affectedUsers: string;
             departmentPath: string;
+            authorizationPath: string;
+            selected: string;
+            defaultRole: string;
+            noRole: string;
             previousDepartments: string;
             newDepartments: string;
             previousRoles: string;
@@ -1246,6 +1250,11 @@ declare namespace App {
             toolExecuted: string;
             toolExecutedRows: string;
             toolFailedWithReason: string;
+            toolOperation: string;
+            toolRiskLow: string;
+            toolRiskHigh: string;
+            toolRiskDestructive: string;
+            toolCode: string;
             toolArgsMetadataHint: string;
             toolDataView: string;
             toolResultSummary: string;
@@ -1298,6 +1307,8 @@ declare namespace App {
               roleLookup: string;
               roleCreate: string;
               roleUpdate: string;
+              roleMenuLookup: string;
+              roleAgentLookup: string;
               roleUpdateMenus: string;
               roleUpdateAgents: string;
               deptCount: string;
@@ -1655,6 +1666,10 @@ declare namespace App {
         AI_ROLE_NOT_FOUND: string;
         AI_ROLE_QUERY_REQUIRED: string;
         AI_ROLE_LOOKUP_LIMIT_INVALID: string;
+        AI_ROLE_MENU_QUERY_REQUIRED: string;
+        AI_ROLE_MENU_LOOKUP_LIMIT_INVALID: string;
+        AI_ROLE_AGENT_QUERY_REQUIRED: string;
+        AI_ROLE_AGENT_LOOKUP_LIMIT_INVALID: string;
         AI_ROLE_AUTHORITY_EXCEEDED: string;
         AI_ROLE_AGENT_SET_DUPLICATE: string;
         AI_ROLE_AGENT_AUTHORITY_EXCEEDED: string;
@@ -1710,6 +1725,7 @@ declare namespace App {
         AI_USER_DEFAULT_PASSWORD_NOT_SET: string;
         AI_USER_DEFAULT_PASSWORD_INVALID: string;
         AI_USER_DEFAULT_ROLE_NOT_FOUND: string;
+        AI_USER_ROLE_ASSIGNMENT_INVALID: string;
         AI_USER_DEPT_NAME_REQUIRED: string;
         AI_USER_DEPT_QUERY_REQUIRED: string;
         AI_USER_DEPT_LOOKUP_LIMIT_INVALID: string;
@@ -1786,6 +1802,8 @@ declare namespace App {
             count: { result: string };
             list: { result: string };
             lookup: { result: string };
+            menu_lookup: { result: string };
+            agent_lookup: { result: string };
             create: { result: string };
             update: { result: string };
             update_menus: { result: string };

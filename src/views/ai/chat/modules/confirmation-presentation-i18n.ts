@@ -78,7 +78,13 @@ const USER_EXPORT_FIELD_LABEL_KEYS: Record<string, App.I18n.I18nKey> = {
 const USER_CREATE_FIELD_LABEL_KEYS: Record<string, App.I18n.I18nKey> = {
   user_name: 'page.system.user.userName',
   primary_dept_id: 'page.system.user.primaryDept',
+  role_assignment: 'page.system.user.userRole',
   affectedCount: 'page.ai.chat.confirmAffected'
+};
+
+const USER_CREATE_FIELD_VALUE_KEYS: Record<string, App.I18n.I18nKey> = {
+  DEFAULT: 'page.ai.chat.defaultRole',
+  NONE: 'page.ai.chat.noRole'
 };
 
 const USER_RESET_PASSWORD_FIELD_LABEL_KEYS: Record<string, App.I18n.I18nKey> = {
@@ -185,16 +191,16 @@ function findFieldValue(fields: ConfirmationField[], label: string): string | nu
 }
 
 export function localizeConfirmationTool(tool: string, t: Translate): string {
-  if (tool === USER_IMPORT_TOOL) return `${t('common.importModal.title')} (${tool})`;
-  if (tool === USER_EXPORT_TOOL) return `${t('common.exportModal.title')} (${tool})`;
-  if (tool === USER_CREATE_TOOL) return `${t('page.system.user.addUser')} (${tool})`;
-  if (tool === USER_RESET_PASSWORD_TOOL) return `${t('page.system.user.resetPwd.title')} (${tool})`;
-  if (tool === USER_UPDATE_TOOL) return `${t('page.system.user.editUser')} (${tool})`;
-  if (tool === USER_UPDATE_DEPT_TOOL) return `${t('page.ai.chat.updateUserDepartments')} (${tool})`;
-  if (tool === USER_UPDATE_ROLES_TOOL) return `${t('page.ai.chat.updateUserRoles')} (${tool})`;
+  if (tool === USER_IMPORT_TOOL) return t('common.importModal.title');
+  if (tool === USER_EXPORT_TOOL) return t('common.exportModal.title');
+  if (tool === USER_CREATE_TOOL) return t('page.system.user.addUser');
+  if (tool === USER_RESET_PASSWORD_TOOL) return t('page.system.user.resetPwd.title');
+  if (tool === USER_UPDATE_TOOL) return t('page.system.user.editUser');
+  if (tool === USER_UPDATE_DEPT_TOOL) return t('page.ai.chat.updateUserDepartments');
+  if (tool === USER_UPDATE_ROLES_TOOL) return t('page.ai.chat.updateUserRoles');
   const phase3LabelKey = PHASE3_TOOL_LABEL_KEYS[tool];
-  if (phase3LabelKey) return `${t(phase3LabelKey)} (${tool})`;
-  return tool;
+  if (phase3LabelKey) return t(phase3LabelKey);
+  return t('page.ai.chat.toolOperation');
 }
 
 export function localizeConfirmationSummary(
@@ -298,8 +304,12 @@ export function localizeConfirmationField(
           : USER_UPDATE_FIELD_LABEL_KEYS;
     const labelKey = labelKeys[field.label];
     const valueKey =
-      tool === USER_UPDATE_TOOL && typeof field.value === 'string'
-        ? USER_UPDATE_FIELD_VALUE_KEYS[field.label]?.[field.value]
+      typeof field.value === 'string'
+        ? tool === USER_CREATE_TOOL && field.label === 'role_assignment'
+          ? USER_CREATE_FIELD_VALUE_KEYS[field.value]
+          : tool === USER_UPDATE_TOOL
+            ? USER_UPDATE_FIELD_VALUE_KEYS[field.label]?.[field.value]
+            : undefined
         : undefined;
     return {
       ...field,
