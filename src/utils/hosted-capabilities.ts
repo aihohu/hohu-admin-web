@@ -6,9 +6,11 @@ type CapabilityRoute = {
   children?: CapabilityRoute[];
 };
 
-/** Marketplace and Lowcode stay unavailable in the first hosted release. */
-export function isMarketplaceCapabilityAvailable(mode: TenantMode | undefined = import.meta.env.VITE_TENANT_MODE) {
-  return mode === undefined || mode === 'single';
+/** Marketplace and Lowcode remain unavailable until the capability is explicitly enabled. */
+export function isMarketplaceCapabilityAvailable(
+  _mode: TenantMode | undefined = import.meta.env.VITE_TENANT_MODE
+): boolean {
+  return false;
 }
 
 function isMarketplaceOrLowcodeRoute(route: CapabilityRoute) {
@@ -25,7 +27,7 @@ function isMarketplaceOrLowcodeRoute(route: CapabilityRoute) {
   );
 }
 
-/** Remove contained routes before Vue Router and sidebar menus are built. */
+/** Remove deferred routes before Vue Router and sidebar menus are built. */
 export function filterHostedCapabilityRoutes<T extends CapabilityRoute>(
   routes: readonly T[],
   mode: TenantMode | undefined = import.meta.env.VITE_TENANT_MODE

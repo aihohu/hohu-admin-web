@@ -6,17 +6,18 @@ import {
   resolveHostedCapabilityHome
 } from '../hosted-capabilities';
 
-describe('hosted Marketplace and Lowcode containment', () => {
+describe('Marketplace and Lowcode route containment', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it('keeps the existing single-mode routes available', () => {
-    expect(isMarketplaceCapabilityAvailable(undefined)).toBe(true);
-    expect(isMarketplaceCapabilityAvailable('single')).toBe(true);
+  it('keeps deferred routes unavailable in every tenant mode', () => {
+    expect(isMarketplaceCapabilityAvailable(undefined)).toBe(false);
+    expect(isMarketplaceCapabilityAvailable('single')).toBe(false);
+    expect(isMarketplaceCapabilityAvailable('hosted')).toBe(false);
   });
 
-  it('removes Marketplace and Lowcode routes recursively in hosted mode', () => {
+  it('removes Marketplace and Lowcode routes recursively in single mode', () => {
     const routes = [
       { name: 'dashboard', path: '/dashboard' },
       { name: 'marketplace', path: '/marketplace' },
@@ -30,7 +31,7 @@ describe('hosted Marketplace and Lowcode containment', () => {
       }
     ];
 
-    expect(filterHostedCapabilityRoutes(routes, 'hosted')).toEqual([
+    expect(filterHostedCapabilityRoutes(routes, 'single')).toEqual([
       { name: 'dashboard', path: '/dashboard' },
       {
         name: 'system',
@@ -38,7 +39,6 @@ describe('hosted Marketplace and Lowcode containment', () => {
         children: [{ name: 'system-user', path: '/system/user' }]
       }
     ]);
-    expect(isMarketplaceCapabilityAvailable('hosted')).toBe(false);
   });
 
   it('fails closed for an unsupported runtime tenant mode', () => {
@@ -66,6 +66,6 @@ describe('hosted Marketplace and Lowcode containment', () => {
 
     expect(resolveHostedCapabilityHome(routes, 'marketplace', 'dashboard', 'hosted')).toBe('dashboard');
     expect(resolveHostedCapabilityHome(routes, 'marketplace', 'missing', 'hosted')).toBe('dashboard');
-    expect(resolveHostedCapabilityHome(routes, 'marketplace', 'dashboard', 'single')).toBe('marketplace');
+    expect(resolveHostedCapabilityHome(routes, 'marketplace', 'dashboard', 'single')).toBe('dashboard');
   });
 });
