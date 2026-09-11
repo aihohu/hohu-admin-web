@@ -27,10 +27,7 @@ function cleanParams(obj: Record<string, any>): Record<string, any> {
 export const request = createFlatRequest(
   {
     baseURL,
-    timeout: 60000,
-    headers: {
-      apifoxToken: 'XL299LiMEDZ0H5h3A29PxwQXdMJqWyY2'
-    }
+    timeout: 60000
   },
   {
     defaultState: {
