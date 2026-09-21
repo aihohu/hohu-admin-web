@@ -105,14 +105,31 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'dashboard',
+    path: '/dashboard',
+    component: 'layout.base$view.dashboard',
+    meta: {
+      title: 'dashboard',
+      i18nKey: 'route.dashboard'
+    }
+  },
+  {
+    name: 'empty',
+    path: '/empty',
+    component: 'layout.base$view.empty',
+    meta: {
+      title: 'empty',
+      i18nKey: 'route.empty',
+      constant: true
+    }
+  },
+  {
     name: 'home',
     path: '/home',
     component: 'layout.base$view.home',
     meta: {
       title: 'home',
-      i18nKey: 'route.home',
-      icon: 'mdi:monitor-dashboard',
-      order: 1
+      i18nKey: 'route.home'
     }
   },
   {
@@ -183,6 +200,17 @@ export const generatedRoutes: GeneratedRoute[] = [
     meta: {
       title: 'marketplace-upload',
       i18nKey: 'route.marketplace-upload'
+    }
+  },
+  {
+    name: 'platform',
+    path: '/platform',
+    component: 'layout.base$view.platform',
+    meta: {
+      title: 'platform',
+      i18nKey: 'route.platform',
+      constant: true,
+      hideInMenu: true
     }
   },
   {

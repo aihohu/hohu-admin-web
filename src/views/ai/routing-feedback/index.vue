@@ -16,10 +16,13 @@ const correctedAgent = ref<string>('');
 
 const summary = shallowRef<Api.AiRoutingFeedback.Summary | null>(null);
 const summaryLoading = shallowRef(false);
+let summaryRequest = 0;
 
 async function loadSummary() {
+  const request = ++summaryRequest;
   summaryLoading.value = true;
   const { error, data } = await fetchRoutingFeedbackSummary(days.value);
+  if (request !== summaryRequest) return;
   if (!error) {
     summary.value = data;
   }
@@ -31,8 +34,10 @@ const listLoading = shallowRef(false);
 const current = ref(1);
 const size = ref(20);
 const total = ref(0);
+let listRequest = 0;
 
 async function loadList() {
+  const request = ++listRequest;
   listLoading.value = true;
   const { error, data } = await fetchRoutingFeedbackList({
     days: days.value,
@@ -42,6 +47,7 @@ async function loadList() {
     originalAgent: originalAgent.value || undefined,
     correctedAgent: correctedAgent.value || undefined
   });
+  if (request !== listRequest) return;
   if (!error) {
     listData.value = data.records;
     total.value = data.total;

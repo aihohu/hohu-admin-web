@@ -57,6 +57,42 @@ async function mountWithDetail() {
 }
 
 describe('agent-operate-drawer', () => {
+  it('blocks empty or whitespace-only names before sending a request', async () => {
+    const { fetchUpdateAgentAdmin } = await import('@/service/api');
+    const wrapper = await mountWithDetail();
+    const vm = wrapper.vm as unknown as { model: { name: string }; handleSubmit: () => Promise<void> };
+    vm.model.name = '';
+    await vm.handleSubmit();
+    vm.model.name = '   ';
+    await vm.handleSubmit();
+    expect(fetchUpdateAgentAdmin).not.toHaveBeenCalled();
+  });
+
+  it('shows the global default when no model preference is stored', async () => {
+    const wrapper = await mountWithDetail();
+    const vm = wrapper.vm as unknown as { model: { modelPreference: string } };
+    expect(vm.model.modelPreference).toBe('');
+  });
+
+  it('counts description Unicode characters consistently with the backend', async () => {
+    const wrapper = await mountWithDetail();
+    const vm = wrapper.vm as unknown as { model: { description: string }; descInvalid: boolean };
+    vm.model.description = '😀'.repeat(49);
+    expect(vm.descInvalid).toBe(true);
+    vm.model.description = '😀'.repeat(50);
+    expect(vm.descInvalid).toBe(false);
+  });
+  it('does not submit a platform edit without audit acknowledgement or with read-only access', async () => {
+    const { fetchUpdateAgentAdmin } = await import('@/service/api');
+    const wrapper = await mountWithDetail();
+    await wrapper.setProps({ requireAudit: true });
+    const vm = wrapper.vm as unknown as { handleSubmit: () => Promise<void> };
+    await vm.handleSubmit();
+    expect(fetchUpdateAgentAdmin).not.toHaveBeenCalled();
+    await wrapper.setProps({ requireAudit: false, readOnly: true });
+    await vm.handleSubmit();
+    expect(fetchUpdateAgentAdmin).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });

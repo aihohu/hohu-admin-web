@@ -22,6 +22,7 @@ declare namespace Api {
       userAvatar: string;
       roles: string[];
       buttons: string[];
+      isSystemAdmin?: boolean;
     }
   }
 }

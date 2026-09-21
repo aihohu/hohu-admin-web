@@ -11,17 +11,6 @@ interface AgentListItem {
   code: string;
 }
 
-interface AgentDetail extends AgentListItem {
-  name: string;
-  description: string;
-  enabled: boolean;
-  displayOrder: number;
-  systemPrompt: string;
-  modelPreference: string | null;
-  dailyQuotaPerUser: number | null;
-  riskAppetite: 'conservative' | 'balanced' | 'aggressive';
-}
-
 interface RoleRecord {
   roleId: string;
   roleCode: string;
@@ -39,31 +28,6 @@ interface RoleAgentBinding {
   roleId: string;
   allAgents: AgentRow[];
   boundAgentIds: string[];
-}
-
-type AgentUpdate = Pick<
-  AgentDetail,
-  | 'name'
-  | 'description'
-  | 'enabled'
-  | 'displayOrder'
-  | 'systemPrompt'
-  | 'modelPreference'
-  | 'dailyQuotaPerUser'
-  | 'riskAppetite'
->;
-
-function agentUpdate(detail: AgentDetail): AgentUpdate {
-  return {
-    name: detail.name,
-    description: detail.description,
-    enabled: detail.enabled,
-    displayOrder: detail.displayOrder,
-    systemPrompt: detail.systemPrompt,
-    modelPreference: detail.modelPreference,
-    dailyQuotaPerUser: detail.dailyQuotaPerUser,
-    riskAppetite: detail.riskAppetite
-  };
 }
 
 function sorted(values: string[]) {
@@ -98,19 +62,6 @@ async function api<T>(page: Page, token: string, method: 'GET' | 'PUT', path: st
   return body.data;
 }
 
-async function getAgentByCode(page: Page, token: string, code: string) {
-  const agents = await api<AgentListItem[]>(page, token, 'GET', '/ai/admin/agents');
-  const target = agents.find(agent => agent.code === code);
-  if (!target) throw new Error(`E2E requires AI Agent ${code}`);
-  return api<AgentDetail>(page, token, 'GET', `/ai/admin/agents/${target.agentId}`);
-}
-
-async function restoreAgent(page: Page, token: string, snapshot: AgentDetail) {
-  await api<AgentDetail>(page, token, 'PUT', `/ai/admin/agents/${snapshot.agentId}`, agentUpdate(snapshot));
-  const restored = await api<AgentDetail>(page, token, 'GET', `/ai/admin/agents/${snapshot.agentId}`);
-  expect(agentUpdate(restored)).toEqual(agentUpdate(snapshot));
-}
-
 async function getRoleByCode(page: Page, token: string, roleCode: string) {
   const roles = await api<RoleList>(
     page,
@@ -135,45 +86,16 @@ async function restoreRoleBinding(page: Page, token: string, snapshot: RoleAgent
   expect(sorted(restored.boundAgentIds)).toEqual(sorted(snapshot.boundAgentIds));
 }
 
-test('管理员编辑 Agent description 后恢复原配置', async ({ page }) => {
+test('租户管理员不显示也不能直达平台级 AI 管理页', async ({ page }) => {
+  await page.goto('/home');
+  await expect(page.locator('.n-menu').getByText('模型管理', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.n-menu').getByText('AI Agent 管理', { exact: true })).toHaveCount(0);
+
+  await page.goto('/ai/provider');
+  await expect(page.getByRole('heading', { name: '页面不存在' })).toBeVisible();
+
   await page.goto('/ai/agent');
-  const token = await adminToken(page);
-  const snapshot = await getAgentByCode(page, token, 'user_mgmt');
-  const changedDescription = `E2E description restore check ${'A'.repeat(60)}`;
-
-  try {
-    await page.getByTestId('ai-agent-edit-user_mgmt').click();
-    const drawer = page.getByTestId('ai-agent-drawer');
-    await expect(drawer).toBeVisible();
-    await drawer.getByTestId('ai-agent-description').locator('textarea').fill(changedDescription);
-    await drawer.getByTestId('ai-agent-submit').click();
-
-    await expect(page.locator('.n-message--success-type').filter({ hasText: '修改成功' })).toBeVisible();
-    const updated = await getAgentByCode(page, token, 'user_mgmt');
-    expect(updated.description).toBe(changedDescription);
-  } finally {
-    await restoreAgent(page, token, snapshot);
-  }
-});
-
-test('管理员切换 Agent enabled 后恢复原配置', async ({ page }) => {
-  await page.goto('/ai/agent');
-  const token = await adminToken(page);
-  const snapshot = await getAgentByCode(page, token, 'config_mgmt');
-
-  try {
-    await page.getByTestId('ai-agent-edit-config_mgmt').click();
-    const drawer = page.getByTestId('ai-agent-drawer');
-    await expect(drawer).toBeVisible();
-    await drawer.getByTestId('ai-agent-enabled').click();
-    await drawer.getByTestId('ai-agent-submit').click();
-
-    await expect(page.locator('.n-message--success-type').filter({ hasText: '修改成功' })).toBeVisible();
-    const updated = await getAgentByCode(page, token, 'config_mgmt');
-    expect(updated.enabled).toBe(!snapshot.enabled);
-  } finally {
-    await restoreAgent(page, token, snapshot);
-  }
+  await expect(page.getByRole('heading', { name: '页面不存在' })).toBeVisible();
 });
 
 test('管理员修改 Role → Agent 绑定后恢复原绑定', async ({ page }) => {

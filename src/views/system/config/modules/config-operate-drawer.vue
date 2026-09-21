@@ -4,6 +4,7 @@ import { jsonClone } from '@sa/utils';
 import { enableStatusOptions } from '@/constants/business';
 import { fetchSaveConfig, fetchUpdateConfig } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { getServerErrorMessage, useServerFieldErrors } from '@/hooks/common/server-field-errors';
 import { $t } from '@/locales';
 
 defineOptions({
@@ -30,6 +31,7 @@ const visible = defineModel<boolean>('visible', {
 });
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
+const { applyServerFieldErrors, clearServerFieldErrors, fieldProps } = useServerFieldErrors();
 const { defaultRequiredRule } = useFormRules();
 
 const title = computed(() => {
@@ -52,6 +54,9 @@ type Model = Pick<
 >;
 
 const model = ref(createDefaultModel());
+
+const MASKED_CONFIG_VALUE = '******';
+const isMaskedValue = computed(() => model.value.configValue === MASKED_CONFIG_VALUE);
 
 const loading = ref(false);
 
@@ -108,11 +113,15 @@ async function handleSubmit() {
       window.$message?.success(successMsg);
       closeDrawer();
       emit('submitted');
+    } else if (!applyServerFieldErrors(error)) {
+      window.$message?.error(getServerErrorMessage(error) || $t('common.modifyFailed'));
     }
   } finally {
     loading.value = false;
   }
 }
+
+watch(model, () => clearServerFieldErrors(), { deep: true });
 
 watch(visible, () => {
   if (visible.value) {
@@ -126,10 +135,10 @@ watch(visible, () => {
   <NDrawer v-model:show="visible" display-directive="show" :width="460">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
       <NForm ref="formRef" :model="model" :rules="rules">
-        <NFormItem :label="$t('page.system.config.configName')" path="configName">
+        <NFormItem v-bind="fieldProps('configName')" :label="$t('page.system.config.configName')" path="configName">
           <NInput v-model:value="model.configName" :placeholder="$t('page.system.config.form.configName')" />
         </NFormItem>
-        <NFormItem :label="$t('page.system.config.configKey')" path="configKey">
+        <NFormItem v-bind="fieldProps('configKey')" :label="$t('page.system.config.configKey')" path="configKey">
           <NInput v-model:value="model.configKey" :placeholder="$t('page.system.config.form.configKey')" />
         </NFormItem>
         <NFormItem :label="$t('page.system.config.configType')" path="configType">
@@ -138,24 +147,29 @@ watch(visible, () => {
         <NFormItem :label="$t('page.system.config.configGroup')" path="configGroup">
           <NInput v-model:value="model.configGroup" :placeholder="$t('page.system.config.form.configGroup')" />
         </NFormItem>
-        <NFormItem :label="$t('page.system.config.configValue')" path="configValue">
-          <NInput
-            v-if="model.configType === 'text'"
-            v-model:value="model.configValue"
-            :placeholder="$t('page.system.config.form.configValue')"
-          />
-          <NInput
-            v-else-if="model.configType === 'file'"
-            v-model:value="model.configValue"
-            :placeholder="$t('page.system.config.form.configValue')"
-          />
-          <NInput
-            v-else
-            v-model:value="model.configValue"
-            type="textarea"
-            :rows="10"
-            :placeholder="$t('page.system.config.form.configValue')"
-          />
+        <NFormItem v-bind="fieldProps('configValue')" :label="$t('page.system.config.configValue')" path="configValue">
+          <div class="w-full">
+            <NInput
+              v-if="model.configType === 'text'"
+              v-model:value="model.configValue"
+              :placeholder="$t('page.system.config.form.configValue')"
+            />
+            <NInput
+              v-else-if="model.configType === 'file'"
+              v-model:value="model.configValue"
+              :placeholder="$t('page.system.config.form.configValue')"
+            />
+            <NInput
+              v-else
+              v-model:value="model.configValue"
+              type="textarea"
+              :rows="10"
+              :placeholder="$t('page.system.config.form.configValue')"
+            />
+            <div v-if="isMaskedValue" class="text-12px opacity-60">
+              {{ $t('page.system.config.form.maskHint') }}
+            </div>
+          </div>
         </NFormItem>
         <NFormItem :label="$t('page.system.config.configStatus')" path="status">
           <NRadioGroup v-model:value="model.status">

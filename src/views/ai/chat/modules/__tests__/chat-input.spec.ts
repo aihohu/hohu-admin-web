@@ -4,6 +4,7 @@ import { reactive } from 'vue';
 
 const uploadMock = vi.fn();
 const store = reactive({
+  contextRevision: 0,
   attachedImages: [] as Array<{ fileUrl: string; mediaType: string; fileName: string }>,
   attachedFiles: [] as Array<{ fileId: string; fileName: string; mimeType: string; fileSize: number }>,
   availableModels: [
@@ -16,6 +17,9 @@ const store = reactive({
     { code: 'shared', name: 'File Agent', description: 'Parse files', modelPreference: null, displayOrder: 2 }
   ],
   selectedAgentCode: 'auto',
+  selectAgent: vi.fn((code: string) => {
+    store.selectedAgentCode = code;
+  }),
   addImage: vi.fn((fileUrl: string, mediaType: string, fileName: string) =>
     store.attachedImages.push({ fileUrl, mediaType, fileName })
   ),
@@ -29,6 +33,7 @@ const store = reactive({
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock('@/store/modules/ai', () => ({ useAiStore: () => store }));
 vi.mock('../chat-upload', () => ({ uploadChatFile: (...args: unknown[]) => uploadMock(...args) }));
+vi.mock('../chat-image.vue', () => ({ default: { props: ['src', 'alt'], template: '<img :src="src" :alt="alt" />' } }));
 
 import ChatInput from '../chat-input.vue';
 
@@ -56,6 +61,37 @@ function render(props: Record<string, unknown> = {}) {
 }
 
 describe('chat input behavior', () => {
+  it.each(['change', 'paste', 'drop'])('shows a pending attachment and reports %s upload failures', async entry => {
+    let reject!: (reason: Error) => void;
+    uploadMock.mockReturnValue(
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      })
+    );
+    const wrapper = render({ modelValue: 'describe it' });
+    const file = new File(['image'], 'pending.png', { type: 'image/png' });
+    if (entry === 'change') {
+      const input = wrapper.get('input[type="file"]');
+      Object.defineProperty(input.element, 'files', { value: [file] });
+      await input.trigger('change');
+    } else if (entry === 'paste') {
+      await wrapper
+        .get('textarea')
+        .trigger('paste', { clipboardData: { items: [{ type: file.type, kind: 'file', getAsFile: () => file }] } });
+    } else {
+      await wrapper.get('.input-wrapper').trigger('drop', { dataTransfer: { files: [file] } });
+    }
+    expect(wrapper.text()).toContain('pending.png');
+    expect(wrapper.text()).toContain('page.ai.chat.fileUploading');
+    expect(wrapper.get('.input-action-btn').attributes()).toHaveProperty('disabled');
+    reject(new Error('network interrupted'));
+    await flushPromises();
+    expect(window.$message?.error).toHaveBeenCalledWith('page.ai.chat.fileUploadFailed');
+    expect(wrapper.text()).not.toContain('page.ai.chat.fileUploading');
+    expect(store.addImage).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   beforeEach(() => {
     store.attachedImages = [];
     store.attachedFiles = [];
@@ -69,8 +105,55 @@ describe('chat input behavior', () => {
     store.removeImage.mockClear();
     store.addFile.mockClear();
     store.removeFile.mockClear();
+    store.selectAgent.mockClear();
     uploadMock.mockReset();
     (window as any).$message = { error: vi.fn(), warning: vi.fn() };
+  });
+
+  it.each(['image/gif', 'image/webp', 'image/svg+xml'])('rejects unsupported %s in every input path', async type => {
+    const wrapper = render();
+    const input = wrapper.get('input[type="file"]');
+    const file = new File(['unsupported'], 'unsupported.image', { type });
+    expect(input.attributes('accept')).not.toContain(type);
+    Object.defineProperty(input.element, 'files', { value: [file] });
+    await input.trigger('change');
+    await wrapper.get('textarea').trigger('paste', {
+      clipboardData: { items: [{ type, kind: 'file', getAsFile: () => file }] }
+    });
+    await wrapper.get('.input-wrapper').trigger('drop', { dataTransfer: { files: [file] } });
+    await flushPromises();
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(window.$message?.warning).toHaveBeenCalledTimes(3);
+    expect(window.$message?.warning).toHaveBeenCalledWith('page.ai.chat.imageTypeUnsupported');
+  });
+
+  it('rejects ordinary text files instead of presenting them as CSV uploads', async () => {
+    const wrapper = render();
+    const input = wrapper.get('input[type="file"]');
+    Object.defineProperty(input.element, 'files', { value: [new File(['note'], 'note.txt', { type: 'text/plain' })] });
+    await input.trigger('change');
+    await flushPromises();
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(window.$message?.warning).toHaveBeenCalledWith('page.ai.chat.fileTypeUnsupported');
+  });
+
+  it('discards uploads that finish after the private context is cleared', async () => {
+    let finish!: (value: unknown) => void;
+    uploadMock.mockReturnValue(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const wrapper = render();
+    const input = wrapper.get('input[type="file"]');
+    Object.defineProperty(input.element, 'files', {
+      value: [new File(['image'], 'private.png', { type: 'image/png' })]
+    });
+    await input.trigger('change');
+    store.contextRevision += 1;
+    finish({ data: { fileUrl: '/private.png' }, error: null });
+    await flushPromises();
+    expect(store.addImage).not.toHaveBeenCalled();
   });
 
   it('sends on Enter or button click and stops an active stream', async () => {

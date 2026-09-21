@@ -15,6 +15,7 @@ import {
   resolveHostedCapabilityHome
 } from '@/utils/hosted-capabilities';
 import { useAuthStore } from '../auth';
+import { filterSystemAdminRoutes } from '@/utils/system-admin-routes';
 import { useContributesStore } from '../contributes';
 import { useTabStore } from '../tab';
 import {
@@ -63,9 +64,11 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   function addConstantRoutes(routes: ElegantConstRoute[]) {
     const constantRoutesMap = new Map<string, ElegantConstRoute>([]);
 
-    filterHostedCapabilityRoutes(routes).forEach(route => {
-      constantRoutesMap.set(route.name, route);
-    });
+    filterSystemAdminRoutes(filterHostedCapabilityRoutes(routes), Boolean(authStore.userInfo.isSystemAdmin)).forEach(
+      route => {
+        constantRoutesMap.set(route.name, route);
+      }
+    );
 
     constantRoutes.value = Array.from(constantRoutesMap.values());
   }
@@ -76,9 +79,11 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   function addAuthRoutes(routes: ElegantConstRoute[]) {
     const authRoutesMap = new Map<string, ElegantConstRoute>([]);
 
-    filterHostedCapabilityRoutes(routes).forEach(route => {
-      authRoutesMap.set(route.name, route);
-    });
+    filterSystemAdminRoutes(filterHostedCapabilityRoutes(routes), Boolean(authStore.userInfo.isSystemAdmin)).forEach(
+      route => {
+        authRoutesMap.set(route.name, route);
+      }
+    );
 
     authRoutes.value = Array.from(authRoutesMap.values());
   }
@@ -260,14 +265,20 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
 
       handleConstantAndAuthRoutes();
 
-      const resolvedHome = resolveHostedCapabilityHome(
-        [...constantRoutes.value, ...authRoutes.value],
-        home,
-        routeHome.value
-      );
-      if (resolvedHome) {
-        setRouteHome(resolvedHome as LastLevelRouteKey);
-        handleUpdateRootRouteRedirect(resolvedHome as LastLevelRouteKey);
+      if (authRoutes.value.length === 0) {
+        // Zero accessible routes is a configuration state (role without any
+        // C/M menu), not an authorization failure: land on the constant empty
+        // page instead of bouncing between 403 and an unreachable home.
+        setRouteHome('empty');
+        handleUpdateRootRouteRedirect('empty');
+      } else {
+        // Only auth routes are home candidates: constant pages (403/404/login…)
+        // must never become the landing target, even as the first-leaf fallback.
+        const resolvedHome = resolveHostedCapabilityHome(authRoutes.value, home, routeHome.value);
+        if (resolvedHome) {
+          setRouteHome(resolvedHome as LastLevelRouteKey);
+          handleUpdateRootRouteRedirect(resolvedHome as LastLevelRouteKey);
+        }
       }
 
       setIsInitAuthRoute(true);

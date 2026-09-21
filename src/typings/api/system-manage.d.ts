@@ -335,6 +335,8 @@ declare namespace Api {
 
     /** user export filters and mandatory audit reason */
     type UserExportRequest = {
+      /** Exact account list to combine into one export, intersected with other filters. */
+      userNames?: string[];
       userName?: string | null;
       nickname?: string | null;
       userEmail?: string | null;

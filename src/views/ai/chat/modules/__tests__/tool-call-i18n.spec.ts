@@ -7,6 +7,7 @@ const messages: Record<string, string> = {
   'page.system.user.editUser': 'Edit User',
   'page.system.user.resetPwd.title': 'Reset Password',
   'common.importModal.title': 'Import Users',
+  'ai.tool.user.import_preview.title': 'Preview User Import',
   'common.exportModal.title': 'Export Users',
   'page.ai.chat.toolDescriptions.userList': 'List users',
   'page.ai.chat.toolDescriptions.userUpdateDept': 'Replace user departments',
@@ -40,7 +41,7 @@ describe('tool call i18n', () => {
     expect(localizeToolDescription('user.reset_password', t, te)).toBe('Reset Password');
     expect(localizeToolDescription('user.list', t, te)).toBe('List users');
     expect(localizeToolDescription('user.update', t, te)).toBe('Edit User');
-    expect(localizeToolDescription('user.import_preview', t, te)).toBe('Import Users');
+    expect(localizeToolDescription('user.import_preview', t, te)).toBe('Preview User Import');
     expect(localizeToolDescription('user.import_execute', t, te)).toBe('Import Users');
     expect(localizeToolDescription('user.export', t, te)).toBe('Export Users');
     expect(localizeToolDescription('user.update_dept', t, te)).toBe('Replace user departments');

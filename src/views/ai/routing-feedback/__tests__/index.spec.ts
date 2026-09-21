@@ -74,4 +74,43 @@ describe('routing-feedback dashboard', () => {
     expect(listMock).toHaveBeenCalledTimes(1);
     expect((listMock.mock.calls[0] as unknown[])[0]).toMatchObject({ days: 30 });
   });
+  it('快速切换后迟到的旧响应不覆盖最新筛选与概览', async () => {
+    let resolveOldList!: (value: unknown) => void;
+    let resolveOldSummary!: (value: unknown) => void;
+    listMock.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          resolveOldList = resolve;
+        })
+    );
+    summaryMock.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          resolveOldSummary = resolve;
+        })
+    );
+    const wrapper = mount(RoutingFeedbackDashboard, { global: { stubs } });
+    const vm = wrapper.vm as unknown as {
+      days: 7 | 30;
+      originalAgent: string;
+      correctedAgent: string;
+      listData: Array<{ feedbackId: string }>;
+      summary: { total: number };
+    };
+    listMock.mockResolvedValueOnce({ error: null, data: { records: [{ feedbackId: 'latest' }], total: 1 } });
+    summaryMock.mockResolvedValueOnce({
+      error: null,
+      data: { total: 30, correct: 1, wrong: 29, wrongRate: 0.9, topWrongAgents: [] }
+    });
+    vm.days = 30;
+    await flushPromises();
+    expect(vm.listData).toEqual([{ feedbackId: 'latest' }]);
+    expect(vm.summary.total).toBe(30);
+    resolveOldList({ error: null, data: { records: [{ feedbackId: 'stale' }], total: 99 } });
+    resolveOldSummary({ error: null, data: { total: 7, correct: 1, wrong: 6, wrongRate: 0.8, topWrongAgents: [] } });
+    await flushPromises();
+    expect(vm.listData).toEqual([{ feedbackId: 'latest' }]);
+    expect(vm.summary.total).toBe(30);
+    wrapper.unmount();
+  });
 });

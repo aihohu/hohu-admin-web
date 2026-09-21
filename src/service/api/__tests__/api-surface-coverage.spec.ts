@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@/service/request', () => ({
   request: vi.fn().mockResolvedValue({ data: null, error: null })
 }));
+vi.mock('@/service/request/platform', () => ({
+  platformRequest: vi.fn().mockResolvedValue({ data: null, error: null })
+}));
 
 import * as aiAgentApi from '../ai-agent';
 import * as routingFeedbackApi from '../ai-routing-feedback';
@@ -13,6 +16,7 @@ import * as lowcodeApi from '../lowcode';
 import * as routeApi from '../route';
 import * as systemApi from '../system';
 import { request } from '@/service/request';
+import { platformRequest } from '@/service/request/platform';
 
 type ApiFunction = (...args: any[]) => unknown;
 
@@ -20,6 +24,8 @@ function argumentsFor(name: string): any[] {
   const file = new File(['phase4'], 'phase4.csv', { type: 'text/csv' });
   const special: Record<string, any[]> = {
     fetchLogin: ['alice', 'secret', 'default'],
+    fetchAiResultFile: ['/ai/download/user-export/test-export'],
+    fetchChatImage: ['/uploads/tenant-0/photo.png'],
     fetchUploadFile: [file, 'phase4', '1'],
     fetchBatchUploadFiles: [[file], 'phase4', '1'],
     fetchImportConfig: [file],
@@ -27,6 +33,7 @@ function argumentsFor(name: string): any[] {
     fetchExecuteImportUsers: ['batch-1', 'reason'],
     fetchUpdateJob: [{ jobId: '1' }],
     fetchUpdateRoleAgentBinding: ['1', ['2']],
+    fetchUpdateAgentAdmin: ['1', {}, { reason: 'Review', ticket: 'TEST-1' }],
     fetchTestProviderModel: ['1', '2'],
     fetchUpdateProviderModel: ['1', '2', {}]
   };
@@ -53,7 +60,8 @@ describe('typed API wrapper surface', () => {
     let exercised = 0;
     for (const module of modules) exercised += await exercise(module);
 
-    expect(request).toHaveBeenCalledTimes(exercised);
+    expect(vi.mocked(request).mock.calls.length + vi.mocked(platformRequest).mock.calls.length).toBe(exercised);
+    expect(platformRequest).not.toHaveBeenCalled();
     expect(exercised).toBeGreaterThan(100);
     for (const [options] of vi.mocked(request).mock.calls) {
       expect(options).toEqual(

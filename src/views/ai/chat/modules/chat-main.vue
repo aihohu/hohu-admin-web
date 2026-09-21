@@ -141,7 +141,14 @@ const isLastAssistant = (idx: number) => {
 };
 
 const hasConversation = computed(() => !!aiStore.currentConversationId);
-const canShowRecovery = computed(() => hasConversation.value && aiStore.chatAvailability === 'forbidden');
+watch(
+  () => aiStore.contextRevision,
+  () => {
+    inputText.value = '';
+    drawerVisible.value = false;
+  },
+  { flush: 'sync' }
+);
 
 async function handleSend() {
   if (aiStore.chatAvailability !== 'ready') return;
@@ -161,13 +168,16 @@ async function handleSend() {
     title = t('page.ai.chat.imageConversation');
   }
   if (!hasConversation.value) {
+    const contextRevision = aiStore.contextRevision;
     const { data, error } = await fetchSaveConversation({
       title,
       modelName: aiStore.selectedModelId || undefined
     });
-    if (error || !data) return;
+    if (error || !data || contextRevision !== aiStore.contextRevision) return;
     await aiStore.loadConversations();
+    if (contextRevision !== aiStore.contextRevision) return;
     await aiStore.selectConversation(data.conversationId);
+    if (contextRevision !== aiStore.contextRevision) return;
   }
 
   inputText.value = '';
@@ -241,7 +251,7 @@ const sceneCards = computed(() => {
 function handleSceneClick(scene: { agentCode: string; prompt: string }) {
   // 预选 agent（若该 agent 在 availableAgents 中）
   if (aiStore.availableAgents.some(a => a.code === scene.agentCode)) {
-    aiStore.selectedAgentCode = scene.agentCode;
+    aiStore.selectAgent(scene.agentCode);
   }
   inputText.value = scene.prompt;
 }
@@ -250,7 +260,7 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
 <template>
   <div class="chat-main h-full flex flex-col">
     <div
-      v-if="aiStore.chatAvailability !== 'ready' && !canShowRecovery"
+      v-if="aiStore.chatAvailability !== 'ready'"
       class="availability-state"
       :data-state="aiStore.chatAvailability"
       data-testid="ai-chat-availability"
@@ -258,6 +268,25 @@ function handleSceneClick(scene: { agentCode: string; prompt: string }) {
       <NSpin v-if="aiStore.chatAvailability === 'loading'" size="small" />
       <IconIcRoundSmartToy v-else class="text-32px" />
       <div class="availability-title">{{ availabilityText }}</div>
+    </div>
+
+    <div
+      v-else-if="aiStore.conversationNotice"
+      class="availability-state"
+      role="alert"
+      data-testid="ai-conversation-notice"
+    >
+      <IconIcRoundSmartToy class="text-32px" />
+      <div class="availability-title">
+        {{
+          t(
+            aiStore.conversationNotice === 'unavailable'
+              ? 'page.ai.chat.conversationUnavailable'
+              : 'page.ai.chat.conversationLoadFailed'
+          )
+        }}
+      </div>
+      <NButton type="primary" @click="aiStore.clearCurrentConversation()">{{ t('page.ai.chat.newChat') }}</NButton>
     </div>
 
     <!-- Empty state: welcome + input -->

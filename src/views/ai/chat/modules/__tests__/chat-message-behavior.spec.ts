@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+vi.mock('../chat-image.vue', () => ({ default: { props: ['src', 'alt'], template: '<img :src="src" :alt="alt" />' } }));
 
 const aiHarness = vi.hoisted(() => ({
   agents: [
@@ -150,7 +151,7 @@ describe('chat message behavior', () => {
     expect(wrapper.text()).toContain('2.0 MB');
     expect(wrapper.text()).toContain('page.ai.chat.fileFallback');
     await wrapper.find('.msg-image').trigger('click');
-    expect(window.open).toHaveBeenCalledWith('/image', '_blank');
+    expect(window.open).not.toHaveBeenCalled();
 
     await wrapper.setProps({ message: message({ role: 'user', content: 'plain', parts: [] }) });
     expect(wrapper.text()).toContain('plain');

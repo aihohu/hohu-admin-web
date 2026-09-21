@@ -110,6 +110,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const agentLoadState = ref<ResourceLoadState>('idle');
   const conversationProjectionState = ref<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const runtimeAvailabilityErrorCode = ref<string | null>(null);
+  const conversationNotice = ref<'unavailable' | 'load_failed' | null>(null);
+  /** Changes whenever mounted components must discard private UI state too. */
+  const contextRevision = ref(0);
 
   const chatAvailability = computed<ChatAvailability>(() => {
     if (runtimeAvailabilityErrorCode.value === 'AI_MODULE_DISABLED') return 'module_disabled';
@@ -242,14 +245,28 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     return projectMessageToolCards(message, pendingActionsById.value);
   }
 
-  function streamToolCards() {
+  function allStreamToolCards() {
     return projectStreamToolCards(streamEvents.value, pendingActionsById.value);
+  }
+
+  function streamToolCards() {
+    const persistedIds = new Set(
+      currentMessages.value.flatMap(message => messageToolCards(message).map(card => card.started.toolCallId))
+    );
+    return allStreamToolCards().filter(card => !persistedIds.has(card.started.toolCallId));
   }
 
   function pendingToolCardsAfterMessage(message: Api.Ai.MessageProjection) {
     if (isMessageTombstone(message) || message.role !== 'user') return [];
     const actions = Object.values(pendingActionsById.value).filter(action => {
       if (action.sourceUserMessageId !== message.messageId) return false;
+      if (
+        isStreaming.value &&
+        projectStreamToolCards(streamEvents.value, pendingActionsById.value).some(
+          card => card.started.toolCallId === action.toolCallId
+        )
+      )
+        return false;
       return !currentMessages.value.some(
         candidate =>
           !isMessageTombstone(candidate) &&
@@ -340,18 +357,20 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   async function refreshCurrentConversationDetail(): Promise<boolean> {
     const conversationId = currentConversationId.value;
+    const requestRunSeq = activeRunSeq;
     if (!conversationId) return false;
     try {
       const detail = await fetchGetConversationDetail(conversationId);
-      if (currentConversationId.value !== conversationId) return false;
+      if (currentConversationId.value !== conversationId || activeRunSeq !== requestRunSeq) return false;
       if (detail.error || !detail.data) {
-        applyRuntimeAvailabilityError(getBackendErrorCode(detail.error));
+        applyConversationError(detail.error);
         return false;
       }
       applyConversationProjection(detail.data.messages, detail.data.pendingActions || []);
       return true;
     } catch (error) {
-      applyRuntimeAvailabilityError(getBackendErrorCode(error));
+      if (currentConversationId.value === conversationId && activeRunSeq === requestRunSeq)
+        applyConversationError(error);
       return false;
     }
   }
@@ -372,23 +391,25 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   async function syncStreamProjection(
     traceId = activeStreamTraceId.value,
-    expectedToolCallIds = streamToolCards().map(card => card.started.toolCallId),
+    expectedToolCallIds = allStreamToolCards().map(card => card.started.toolCallId),
     done = lastDoneAck.value,
     acceptPendingHandoff = true
   ): Promise<boolean> {
     const conversationId = currentConversationId.value;
+    const requestRunSeq = activeRunSeq;
     if (!conversationId || !traceId) return false;
     let detail;
     try {
       detail = await fetchGetConversationDetail(conversationId);
     } catch (error) {
-      applyRuntimeAvailabilityError(getBackendErrorCode(error));
+      if (currentConversationId.value !== conversationId || activeRunSeq !== requestRunSeq) return false;
+      applyConversationError(error);
       if (currentConversationId.value === conversationId) streamHandoffPhase.value = 'stale';
       return false;
     }
-    if (currentConversationId.value !== conversationId) return false;
+    if (currentConversationId.value !== conversationId || activeRunSeq !== requestRunSeq) return false;
     if (detail.error || !detail.data) {
-      if (applyRuntimeAvailabilityError(getBackendErrorCode(detail.error))) return false;
+      if (applyConversationError(detail.error)) return false;
       streamHandoffPhase.value = 'stale';
       return false;
     }
@@ -448,7 +469,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     traceId: string,
     conversationId: string,
     content: string,
-    cards = streamToolCards()
+    cards = allStreamToolCards()
   ) {
     const toolCalls = serializeToolCards(cards);
     if (!content && toolCalls.length === 0) return;
@@ -489,6 +510,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** load conversation list (first page, reset) */
   async function loadConversations(title?: string | null) {
+    if (chatAvailability.value === 'forbidden' || chatAvailability.value === 'module_disabled') return;
     const session = sessionSeq;
     const requestSeq = ++conversationLoadSeq;
     searchTitle.value = title ?? null;
@@ -523,6 +545,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** load more conversations (append next page) */
   async function loadMoreConversations() {
+    if (chatAvailability.value === 'forbidden' || chatAvailability.value === 'module_disabled') return;
     if (loading.value || !hasMoreConversations.value) return;
     const session = sessionSeq;
     const requestSeq = ++conversationLoadSeq;
@@ -554,7 +577,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   /** select conversation and load messages */
   async function selectConversation(conversationId: string) {
+    if (chatAvailability.value === 'forbidden' || chatAvailability.value === 'module_disabled') return;
     invalidateActiveProducers();
+    conversationNotice.value = null;
     const seq = ++selectSeq;
     currentConversationId.value = conversationId;
     conversationProjectionState.value = 'loading';
@@ -580,22 +605,27 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         conversationProjectionState.value = 'ready';
         streamHandoffPhase.value = 'persisted';
       } else {
-        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
-        conversationProjectionState.value = 'error';
-        window.$message?.error($t('page.ai.chat.loadConversationFailed'));
+        if (applyConversationError(error)) return;
+        clearCurrentConversation();
+        conversationNotice.value = 'load_failed';
       }
     } catch (error) {
       if (seq === selectSeq) {
-        if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
-        conversationProjectionState.value = 'error';
-        window.$message?.error($t('page.ai.chat.loadConversationFailed'));
+        if (applyConversationError(error)) return;
+        clearCurrentConversation();
+        conversationNotice.value = 'load_failed';
       }
     }
   }
 
   /** clear current conversation */
   function clearCurrentConversation() {
+    selectSeq += 1;
+    contextRevision.value += 1;
     invalidateActiveProducers();
+    conversationNotice.value = null;
+    attachedImages.value = [];
+    attachedFiles.value = [];
     currentConversationId.value = null;
     conversationProjectionState.value = 'idle';
     currentMessages.value = [];
@@ -614,23 +644,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     runtimeAvailabilityErrorCode.value = errorCode;
 
     if (errorCode === 'AI_CHAT_PERMISSION_DENIED') {
-      invalidateActiveProducers();
-      currentMessages.value = currentMessages.value.filter(message => !message.messageId.startsWith('temp-'));
-      pendingActionsById.value = {};
-      redactedPendingActions.value = [];
-      pendingConfirmation.value = null;
-      pendingConfirmationId.value = null;
-      pendingToolCallId.value = null;
-      resumeAttemptsByConfirmation.clear();
-      resumeAttempts.value = 0;
-      modelLoadSeq += 1;
-      agentLoadSeq += 1;
-      availableModels.value = [];
-      selectedModelId.value = '';
-      availableAgents.value = [];
-      selectedAgentCode.value = '';
-      attachedImages.value = [];
-      attachedFiles.value = [];
+      resetStore();
+      runtimeAvailabilityErrorCode.value = errorCode;
+      hasMoreConversations.value = false;
       modelLoadState.value = 'forbidden';
       agentLoadState.value = 'forbidden';
       return true;
@@ -671,6 +687,26 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     modelLoadState.value = deniedState;
     agentLoadState.value = deniedState;
     return true;
+  }
+
+  function markConversationUnavailable() {
+    const unavailableId = currentConversationId.value;
+    conversationLoadSeq += 1;
+    loading.value = false;
+    clearCurrentConversation();
+    conversations.value = conversations.value.filter(item => item.conversationId !== unavailableId);
+    conversationNotice.value = 'unavailable';
+  }
+
+  function applyConversationError(error: unknown): boolean {
+    const code = getBackendErrorCode(error);
+    if (applyRuntimeAvailabilityError(code)) return true;
+    const status = (error as { response?: { status?: number } } | null)?.response?.status;
+    if (code === 'AI_CONVERSATION_NOT_FOUND' || status === 403 || status === 404) {
+      markConversationUnavailable();
+      return true;
+    }
+    return false;
   }
 
   /** Clear all account-scoped state and invalidate responses started by the previous login session. */
@@ -782,6 +818,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     if (!event || typeof event.type !== 'string') return false;
 
     // Vercel UI Protocol v4: text-delta / reasoning-delta
+    if (event.type === 'start-step') {
+      streamingText.value = '';
+      reasoningText.value = '';
+      return false;
+    }
     if (event.type === 'text-delta' && typeof event.delta === 'string') {
       if (!suppressProviderOutput) streamingText.value += event.delta;
       return false;
@@ -824,7 +865,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   /** core SSE streaming — does NOT touch messages array */
-  async function doStream(injectLastMessageText?: string) {
+  async function doStream(injectLastMessageText?: string, optimisticUserId: string | null = null) {
     if (chatAvailability.value !== 'ready') return;
     const traceId = createChatTraceId();
     const runSeq = ++activeRunSeq;
@@ -847,6 +888,18 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     resumeAttempts.value = 0;
     abortController = new AbortController();
     let streamCompleted = false;
+    let gotResponse = false;
+    // Pre-stream failure: nothing reached the server's persistence layer, so the
+    // run has nothing to reconcile. Drop the optimistic user copy (when this
+    // run created one) and reset the handoff phase so the user can send again —
+    // otherwise 'stale' would block every retry until a full reload.
+    const rollbackPreStreamRun = () => {
+      if (!isActiveRun()) return;
+      if (optimisticUserId) {
+        currentMessages.value = currentMessages.value.filter(message => message.messageId !== optimisticUserId);
+      }
+      streamHandoffPhase.value = 'idle';
+    };
 
     try {
       const baseUrl = getBaseUrl();
@@ -889,22 +942,43 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           displayContent: injectLastMessageText ? safeMessages[safeMessages.length - 1]?.content : undefined,
           conversationId: currentConversationId.value,
           modelId: selectedModelId.value || undefined,
+          // Automatic routing uses server-owned history on every turn, so
+          // greetings, topic changes and short follow-ups can all be routed.
           agentCode: selectedAgentCode.value || undefined
         }),
         signal: abortController.signal
       });
+      gotResponse = true;
 
+      if (!isActiveRun()) return;
       if (!response.ok) {
         const errorCode = await getResponseErrorCode(response);
+        if (!isActiveRun()) return;
         const availabilityRevoked = applyRuntimeAvailabilityError(errorCode);
-        window.$message?.error($t('page.ai.chat.requestFailed', { status: response.status }));
-        if (!availabilityRevoked) streamHandoffPhase.value = 'stale';
+        if (
+          !availabilityRevoked &&
+          (errorCode === 'AI_CONVERSATION_NOT_FOUND' || response.status === 404 || response.status === 403)
+        ) {
+          markConversationUnavailable();
+          return;
+        }
+        window.$message?.error(
+          errorCode
+            ? localizeErrorCode(
+                errorCode,
+                $t('page.ai.chat.requestFailed', { status: response.status }),
+                key => $t(key),
+                key => $t(key) !== key
+              )
+            : $t('page.ai.chat.requestFailed', { status: response.status })
+        );
+        if (!availabilityRevoked) rollbackPreStreamRun();
         return;
       }
 
       const reader = response.body?.getReader();
       if (!reader) {
-        streamHandoffPhase.value = 'stale';
+        rollbackPreStreamRun();
         return;
       }
 
@@ -947,7 +1021,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       }
       if (error.name === 'AbortError') {
         // User-stopped partial output stays as a local message owner.
-        const cards = streamToolCards();
+        const cards = allStreamToolCards();
         freezeTempAssistantProjection(traceId, runConversationId, streamingText.value, cards);
         streamEvents.value = [];
         streamHandoffPhase.value = 'persisted';
@@ -957,7 +1031,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           // Recover a pending confirmation after an unexpected network disconnect.
           streamHandoffPhase.value = 'awaiting_sync';
           await attemptResume(runPending.confirmationId);
-          const cards = streamToolCards();
+          const cards = allStreamToolCards();
           freezeTempAssistantProjection(traceId, runConversationId, streamingText.value, cards);
           const stillPending = Object.values(pendingActionsById.value).some(item => item.traceId === traceId);
           if (
@@ -972,7 +1046,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           }
         } else {
           window.$message?.error($t('page.ai.chat.sendFailed', { message: error.message }));
-          streamHandoffPhase.value = 'stale';
+          if (gotResponse) {
+            // The request may have reached the server before the connection
+            // dropped — keep the stale phase so the next send reconciles first.
+            streamHandoffPhase.value = 'stale';
+          } else {
+            rollbackPreStreamRun();
+          }
         }
       }
     } finally {
@@ -983,8 +1063,13 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
         // Freeze one temp message owner before detail reconciliation. streamEvents
         // remains an invisible recovery buffer until the durable message takes over.
-        if (streamCompleted && currentConversationId.value) {
-          const cards = streamToolCards();
+        if (streamCompleted && pendingClarification.value) {
+          // No source is saved for a routing clarification. Keep the submitted
+          // question until a candidate is chosen, instead of replacing it with
+          // the old persisted conversation (which can end in an assistant).
+          streamHandoffPhase.value = 'persisted';
+        } else if (streamCompleted && currentConversationId.value) {
+          const cards = allStreamToolCards();
           freezeTempAssistantProjection(traceId, runConversationId, streamingText.value, cards);
           streamHandoffPhase.value = 'awaiting_sync';
           const expectedToolCallIds = cards.map(card => card.started.toolCallId);
@@ -1072,6 +1157,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       }
       if (!response.ok) {
         const errorCode = await getResponseErrorCode(response);
+        if (!isActiveResume()) return;
         if (applyRuntimeAvailabilityError(errorCode)) return;
         window.$message?.error($t('page.ai.chat.resumeFailed', { message: response.status }));
         return;
@@ -1119,25 +1205,50 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
   }
 
+  function pauseUncertainConfirmation() {
+    const traceId = activeStreamTraceId.value;
+    if (traceId && currentConversationId.value) {
+      const replacedSourceIds = new Set(
+        Object.values(pendingActionsById.value)
+          .filter(pending => pending.sourceToolCallId && pending.sourceToolCallId !== pending.toolCallId)
+          .map(pending => pending.sourceToolCallId)
+      );
+      // The durable execute action replaces an unfinished source placeholder.
+      // Completed preview results still belong in the conversation.
+      const cards = allStreamToolCards().filter(card => card.result || !replacedSourceIds.has(card.started.toolCallId));
+      freezeTempAssistantProjection(traceId, currentConversationId.value, streamingText.value, cards);
+    }
+    // A proxy can leave the old SSE reader open after its upstream disappears.
+    // Keep the durable confirmation identity; never retry a write automatically.
+    invalidateActiveProducers('persisted');
+    for (const pending of Object.values(pendingActionsById.value)) scheduleResumeExpiryReconciliation(pending);
+  }
+
   /** 用户在 HITL 抽屉点确认 / 取消，调 /ai/confirm 后启动 30s 轮询兜底 */
   async function resolveConfirmation(action: 'approve' | 'reject', actionId?: string) {
     const confirmation = actionId ? pendingActionsById.value[actionId] : pendingConfirmation.value;
     if (!confirmation) return;
+    const runSeq = activeRunSeq;
+    const isCurrent = () => runSeq === activeRunSeq;
 
     try {
       const { data, error } = await fetchAiConfirm({
         confirmationId: confirmation.confirmationId,
         action
       });
+      if (!isCurrent()) return;
       if (error || !data) {
         if (applyRuntimeAvailabilityError(getBackendErrorCode(error))) return;
+        if (!getBackendErrorCode(error)) pauseUncertainConfirmation();
         window.$message?.error($t('page.ai.chat.confirmationFailed'));
         await refreshCurrentConversationDetail();
         return;
       }
       const terminalStatuses = ['succeeded', 'failed', 'rejected', 'expired'];
       if (terminalStatuses.includes(data.status)) {
-        if (!(await syncConfirmationTerminal(confirmation))) {
+        const synced = await syncConfirmationTerminal(confirmation);
+        if (!isCurrent()) return;
+        if (!synced) {
           window.$message?.warning($t('page.ai.chat.operationCardSyncPending'));
         }
         if (data.status === 'succeeded') window.$message?.success($t('page.ai.chat.operationSucceeded'));
@@ -1149,8 +1260,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       if (!data.actionId) removePendingByToolCallId(data.toolCallId);
       startPollingResult(data.toolCallId, confirmation);
     } catch (e: any) {
+      if (!isCurrent()) return;
       if (applyRuntimeAvailabilityError(getBackendErrorCode(e))) return;
+      if (!getBackendErrorCode(e)) pauseUncertainConfirmation();
       window.$message?.error($t('page.ai.chat.confirmationFailedWithMessage', { message: e.message }));
+      await refreshCurrentConversationDetail();
     }
   }
 
@@ -1293,6 +1407,26 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       return;
     }
 
+    const hasImages =
+      attachedImages.value.length > 0 ||
+      currentMessages.value.some(
+        message =>
+          !isMessageTombstone(message) &&
+          message.parts?.some(part => part.type === 'file' && part.mediaType?.startsWith('image/'))
+      );
+    if (hasImages) {
+      const selected = availableModels.value.find(model => model.modelId === selectedModelId.value);
+      if (!selected?.capabilities.includes('vision')) {
+        const visionModel = availableModels.value.find(model => model.capabilities.includes('vision'));
+        if (!visionModel) {
+          window.$message?.warning($t('page.ai.chat.visionModelUnavailable'));
+          return;
+        }
+        selectedModelId.value = visionModel.modelId;
+        window.$message?.info($t('page.ai.chat.visionModelSelected', { model: visionModel.label }));
+      }
+    }
+
     // Append spreadsheet and CSV file IDs to the outgoing prompt.
     // LLM 看到 file_id 后自动调 file.parse tool，UX 同 OpenAI/Claude 附件 chip
     // 注意：注入文本仅用于发送 LLM，UI 显示保持原始 content（见 doStream injectLastMessageText）
@@ -1326,8 +1460,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
 
     // add user message locally
+    const optimisticUserId = `temp-${Date.now()}`;
     currentMessages.value.push({
-      messageId: `temp-${Date.now()}`,
+      messageId: optimisticUserId,
       conversationId: currentConversationId.value || '',
       parentMessageId: null,
       role: 'user',
@@ -1341,7 +1476,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
     attachedImages.value = [];
     attachedFiles.value = [];
-    await doStream(injectText);
+    await doStream(injectText, optimisticUserId);
   }
 
   /** stop current streaming */
@@ -1392,10 +1527,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   /** Load chat-safe model options from the chat permission boundary. */
-  async function loadModels() {
+  async function loadModels(background = false) {
     const session = sessionSeq;
     const requestSeq = ++modelLoadSeq;
-    modelLoadState.value = 'loading';
+    if (!background || modelLoadState.value !== 'ready') modelLoadState.value = 'loading';
     try {
       const { data, error } = await fetchGetChatModels();
       if (session !== sessionSeq || requestSeq !== modelLoadSeq) return;
@@ -1421,10 +1556,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   /** load Agents available to the current user and default to automatic routing */
-  async function loadAgents() {
+  async function loadAgents(background = false) {
     const session = sessionSeq;
     const requestSeq = ++agentLoadSeq;
-    agentLoadState.value = 'loading';
+    if (!background || agentLoadState.value !== 'ready') agentLoadState.value = 'loading';
     try {
       const { data, error } = await fetchAiAgents();
       if (session !== sessionSeq || requestSeq !== agentLoadSeq) return;
@@ -1432,7 +1567,9 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         availableAgents.value = data;
         agentLoadState.value = data.length > 0 ? 'ready' : 'empty';
         // The backend owns automatic routing and validates every explicit Agent selection.
-        if (!data.some(agent => agent.code === selectedAgentCode.value)) selectedAgentCode.value = 'auto';
+        if (!data.some(agent => agent.code === selectedAgentCode.value)) {
+          selectedAgentCode.value = 'auto';
+        }
       } else {
         availableAgents.value = [];
         selectedAgentCode.value = '';
@@ -1454,7 +1591,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
    * Reusing the locally appended message avoids asking the user to enter the same prompt again.
    */
   async function pickClarificationAgent(code: string) {
-    selectedAgentCode.value = code;
+    selectAgent(code);
     pendingClarification.value = null;
     if (currentMessages.value.length > 0) {
       await doStream();
@@ -1464,6 +1601,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   /** 用户关闭 clarification 卡片（不选，保留原 agentCode） */
   function dismissClarification() {
     pendingClarification.value = null;
+  }
+
+  /** Explicit choices stay manual; automatic mode evaluates every turn with its context. */
+  function selectAgent(code: string) {
+    selectedAgentCode.value = code;
   }
 
   /** submit feedback about the Agent selected for a message */
@@ -1484,12 +1626,29 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
   }
 
+  /** Refresh permissions when returning to a browser tab without interrupting a valid stream. */
+  async function revalidateAccess() {
+    if (chatAvailability.value === 'forbidden' || chatAvailability.value === 'module_disabled') {
+      await init();
+      return;
+    }
+    const session = sessionSeq;
+    // Native file pickers also return focus. Keep their input mounted while
+    // checking; a real denial still clears the entire private context.
+    await Promise.all([loadModels(true), loadAgents(true)]);
+    if (session !== sessionSeq || chatAvailability.value !== 'ready' || isStreaming.value) return;
+    await refreshCurrentConversationDetail();
+  }
+
   /** initialize */
   async function init() {
+    const session = sessionSeq;
     runtimeAvailabilityErrorCode.value = null;
+    await Promise.all([loadModels(), loadAgents()]);
+    if (session !== sessionSeq || modelLoadState.value !== 'ready' || agentLoadState.value !== 'ready') return;
     const conversationId = currentConversationId.value;
     const projection = conversationId ? selectConversation(conversationId) : Promise.resolve();
-    await Promise.all([projection, loadConversations(), loadModels(), loadAgents()]);
+    await Promise.all([projection, loadConversations()]);
   }
 
   return {
@@ -1504,7 +1663,10 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     selectedModelId,
     availableAgents,
     selectedAgentCode,
+    selectAgent,
     chatAvailability,
+    conversationNotice,
+    contextRevision,
     runtimeAvailabilityErrorCode,
     hasMoreConversations,
     attachedImages,
@@ -1550,6 +1712,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     clearFiles,
     approveTool,
     rejectTool,
+    revalidateAccess,
     init
   };
 });

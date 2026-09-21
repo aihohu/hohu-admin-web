@@ -2,7 +2,7 @@
 import type { Component } from 'vue';
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { request } from '@/service/request';
+import { fetchAiResultFile } from '@/service/api';
 import { localizeToolDescription, localizeToolError } from './tool-call-i18n';
 import { PlainJsonView, resolveToolView } from './tool-views';
 
@@ -38,18 +38,23 @@ const riskText = computed(() => {
 });
 
 // ===== Card state =====
-type CardStatus = 'running' | 'success' | 'failed' | 'pending';
+type CardStatus = 'running' | 'success' | 'failed' | 'pending' | 'cancelled';
+
+// A user rejection is a decision, not a failure — render it neutrally.
+const isUserRejected = computed(() => props.result?.errorCode === 'USER_REJECTED');
 
 const cardStatus = computed<CardStatus>(() => {
   if (props.isPending) return 'pending';
   if (!props.result) return 'running';
-  return props.result.ok ? 'success' : 'failed';
+  if (props.result.ok) return 'success';
+  return isUserRejected.value ? 'cancelled' : 'failed';
 });
 
 const iconChar = computed(() => {
   if (cardStatus.value === 'running') return '⟳';
   if (cardStatus.value === 'success') return '✓';
   if (cardStatus.value === 'pending') return '⚠';
+  if (cardStatus.value === 'cancelled') return '—';
   return '×';
 });
 
@@ -69,6 +74,7 @@ const statusText = computed(() => {
     }
     return t('page.ai.chat.toolExecuted', { duration: dur });
   }
+  if (isUserRejected.value) return t('page.ai.chat.toolErrors.USER_REJECTED');
   return t('page.ai.chat.toolFailedWithReason', { reason: errorCodeFriendly.value });
 });
 
@@ -80,7 +86,8 @@ const argsEntries = computed<[string, unknown][]>(() => {
 });
 
 function formatValue(v: unknown): string {
-  if (v == null) return '';
+  // null was rendered as an empty cell, hiding the fact the arg was passed.
+  if (v == null) return '—';
   if (typeof v === 'string') return v;
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);
   try {
@@ -125,17 +132,26 @@ const downloadAction = computed<{ url: string; filename: string } | null>(() => 
 });
 
 const downloading = ref(false);
+const downloadFailed = ref(false);
+let disposed = false;
+onUnmounted(() => {
+  disposed = true;
+});
 async function handleDownload() {
   const action = downloadAction.value;
   if (!action || downloading.value) return;
   downloading.value = true;
+  downloadFailed.value = false;
   try {
-    const { data, error } = await request<Blob>({
-      url: action.url,
-      method: 'get',
-      responseType: 'blob' as any
-    });
-    if (error || !data) {
+    const { data, error, response } = await fetchAiResultFile(action.url);
+    if (disposed || downloadAction.value?.url !== action.url) return;
+    if (
+      error ||
+      (response && (response.status < 200 || response.status >= 300)) ||
+      !(data instanceof Blob) ||
+      data.type.toLowerCase().includes('json')
+    ) {
+      downloadFailed.value = true;
       window.$message?.error(t('page.ai.chat.downloadFailed'));
       return;
     }
@@ -146,7 +162,12 @@ async function handleDownload() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(blobUrl);
+    // Embedded browsers may consume the URL asynchronously after the click.
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch {
+    if (disposed) return;
+    downloadFailed.value = true;
+    window.$message?.error(t('page.ai.chat.downloadFailed'));
   } finally {
     downloading.value = false;
   }
@@ -273,6 +294,12 @@ function onReject() {
         <div class="tool-section-title">{{ t('page.ai.chat.toolError') }}</div>
         <div class="tool-error-code">{{ result.errorCode }}</div>
         <div class="tool-error-msg">{{ errorCodeFriendly }}</div>
+        <div
+          v-if="['AI_IMPORT_FIELD_ERRORS', 'AI_PREVIEW_REJECTED'].includes(result.errorCode || '')"
+          class="tool-error-msg"
+        >
+          {{ result.errorMsg }}
+        </div>
       </div>
     </div>
 
@@ -287,6 +314,9 @@ function onReject() {
         {{ downloading ? `⏳ ${t('page.ai.chat.downloading')}` : `⬇ ${t('page.ai.chat.downloadFile')}` }}
       </button>
       <span class="chip-hint">{{ downloadAction.filename }}</span>
+    </div>
+    <div v-if="downloadFailed" class="chip-row tool-error-msg" role="alert">
+      {{ t('page.ai.chat.downloadFailed') }}
     </div>
 
     <div v-if="isPending" class="hitl-bar">
@@ -375,6 +405,10 @@ function onReject() {
   background: rgba(245, 158, 11, 0.1);
   color: #f59e0b;
 }
+.tool-icon--cancelled {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
 
 .tool-name {
   font-weight: 500;
@@ -441,6 +475,9 @@ function onReject() {
 .tool-status--pending .dot {
   background: #f59e0b;
   animation: pulse 1.4s infinite;
+}
+.tool-status--cancelled .dot {
+  background: #6b7280;
 }
 
 .tool-status-text {

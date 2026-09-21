@@ -6,6 +6,7 @@ import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
 import { AI_MESSAGE_REVISION_ACTIONS_ENABLED } from '@/constants/ai';
 import { useAiStore } from '@/store/modules/ai';
+import ChatImage from './chat-image.vue';
 
 const { t } = useI18n();
 const props = defineProps<{
@@ -88,10 +89,6 @@ function handleMarkdownClick(e: Event) {
     navigator.clipboard.writeText(code.textContent || '');
     window.$message?.success(t('page.ai.chat.copied'));
   }
-}
-
-function previewImage(url: string) {
-  window.open(url, '_blank');
 }
 
 function formatFileSize(bytes: number): string {
@@ -220,11 +217,11 @@ async function submitFeedback() {
           <div v-if="hasTextOrImage" class="msg-bubble msg-bubble--user">
             <template v-if="message.parts && message.parts.length > 0">
               <template v-for="(part, pi) in message.parts" :key="pi">
-                <img
+                <ChatImage
                   v-if="part.type === 'file' && part.mediaType?.startsWith('image/')"
                   :src="part.url"
                   class="msg-image"
-                  @click="previewImage(part.url)"
+                  :alt="part.filename"
                 />
                 <div v-else-if="part.type === 'text'" class="whitespace-pre-wrap">{{ part.text }}</div>
               </template>
@@ -390,6 +387,12 @@ async function submitFeedback() {
 
 .msg-image:last-child {
   margin-bottom: 0;
+}
+
+.msg-image :deep(img) {
+  max-width: 260px;
+  max-height: 200px;
+  border-radius: 8px;
 }
 
 .msg-file-card {

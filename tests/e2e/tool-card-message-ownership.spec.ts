@@ -82,14 +82,14 @@ test('reload keeps every tool card inside its owning assistant message', async (
   const second = page.locator('[data-message-id="8812"]');
   const toolOnly = page.locator('[data-message-id="8813"]');
   await expect(first.locator('.tool-card')).toHaveCount(1);
-  await expect(first.locator('.tool-name')).toHaveText('test.tc-first');
-  await expect(second.locator('.tool-name')).toHaveText(['test.tc-second', 'test.tc-third']);
+  await expect(first.locator('.tool-name')).toHaveText('系统操作');
+  await expect(second.locator('.tool-name')).toHaveText(['系统操作', '系统操作']);
   await expect(toolOnly.locator('.tool-card')).toHaveCount(1);
   await expect(toolOnly.locator('.msg-bubble')).toHaveCount(0);
   await expect(page.locator('.tool-call-list')).toHaveCount(0);
 
   await page.reload();
   await page.getByText(conversation.title, { exact: true }).click();
-  await expect(page.locator('[data-message-id="8811"] .tool-name')).toHaveText('test.tc-first');
-  await expect(page.locator('[data-message-id="8812"] .tool-name')).toHaveText(['test.tc-second', 'test.tc-third']);
+  await expect(page.locator('[data-message-id="8811"] .tool-name')).toHaveText('系统操作');
+  await expect(page.locator('[data-message-id="8812"] .tool-name')).toHaveText(['系统操作', '系统操作']);
 });

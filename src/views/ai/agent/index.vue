@@ -1,175 +1,118 @@
-<script setup lang="tsx">
-import { computed, onMounted, reactive, shallowRef } from 'vue';
-import { NButton, NSwitch, NTag, NTooltip } from 'naive-ui';
-import { fetchAgentAdminList } from '@/service/api';
-import { useNaiveTable } from '@/hooks/common/table';
-import { useAuth } from '@/hooks/business/auth';
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { fetchAgentAdminList, fetchGetUserInfo } from '@/service/api';
 import { useAuthStore } from '@/store/modules/auth';
 import { $t } from '@/locales';
-import { canEditAiAgent } from './agent-permission';
 import AgentOperateDrawer from './modules/agent-operate-drawer.vue';
-import AgentSearch from './modules/agent-search.vue';
 
-defineOptions({
-  name: 'AiAgent'
-});
-
-const { hasAuth } = useAuth();
-const authStore = useAuthStore();
-const canEdit = computed(() => canEditAiAgent(authStore.userInfo.roles, hasAuth('ai:agent:edit')));
-
-// §决策 #23：list 端点无分页，返回全量。useNaiveTable 走非分页模式（pagination: false），
-// 服务器全量取回后前端按 keyword / enabledFilter 二次筛选。
-const searchParams: Api.AiAgent.AdminListSearchParams = reactive({
-  keyword: null,
-  enabledFilter: 'all'
-});
-
-const { columns, columnChecks, data, getData, loading, scrollX } = useNaiveTable({
-  api: fetchAgentAdminList,
-  // 非分页模式：transform 直接返回数组（GetApiData<ApiData, false> = ApiData[]）
-  transform: response => response.data ?? [],
-  immediate: false,
-  columns: () => [
-    {
-      key: 'index',
-      title: $t('common.index'),
-      align: 'center',
-      width: 64,
-      render: (_, index) => index + 1
-    },
-    {
-      key: 'code',
-      title: $t('page.ai.agent.code'),
-      align: 'center',
-      width: 140
-    },
-    {
-      key: 'name',
-      title: $t('page.ai.agent.name'),
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'description',
-      title: $t('page.ai.agent.description'),
-      minWidth: 240,
-      render: row => (
-        <NTooltip style="max-width: 480px">
-          {{
-            trigger: () => <span class="truncate inline-block max-w-300px align-bottom">{row.description}</span>,
-            default: () => row.description
-          }}
-        </NTooltip>
-      )
-    },
-    {
-      key: 'enabled',
-      title: $t('page.ai.agent.enabled'),
-      align: 'center',
-      width: 80,
-      render: row => (
-        <NSwitch
-          value={row.enabled}
-          size="small"
-          onUpdateValue={() => {
-            // read-only display; toggle goes through drawer edit (ensures audit + validation)
-          }}
-        />
-      )
-    },
-    {
-      key: 'isBuiltin',
-      title: $t('page.ai.agent.isBuiltin'),
-      align: 'center',
-      width: 80,
-      render: row => (
-        <NTag type={row.isBuiltin ? 'info' : 'default'} size="small">
-          {row.isBuiltin ? $t('page.ai.agent.yes') : $t('page.ai.agent.no')}
-        </NTag>
-      )
-    },
-    {
-      key: 'displayOrder',
-      title: $t('page.ai.agent.displayOrder'),
-      align: 'center',
-      width: 80
-    },
-    {
-      key: 'operate',
-      title: $t('common.operate'),
-      align: 'center',
-      width: 100,
-      fixed: 'right',
-      render: row =>
-        canEdit.value ? (
-          <NButton
-            size="small"
-            type="primary"
-            text
-            data-testid={`ai-agent-edit-${row.code}`}
-            onClick={() => openEdit(row)}
-          >
-            {$t('common.edit')}
-          </NButton>
-        ) : null
+const auth = useAuthStore();
+const busy = ref(false);
+const failed = ref(false);
+const authorized = ref(false);
+const keyword = ref('');
+const agents = ref<Api.AiAgent.AdminListItem[]>([]);
+const drawerVisible = ref(false);
+const selected = ref<Api.AiAgent.AdminListItem | null>(null);
+const filtered = computed(() =>
+  agents.value.filter(a => `${a.name} ${a.code} ${a.description}`.toLowerCase().includes(keyword.value.toLowerCase()))
+);
+let sequence = 0;
+function clearData() {
+  sequence++;
+  authorized.value = false;
+  agents.value = [];
+  selected.value = null;
+  drawerVisible.value = false;
+}
+watch(() => [auth.token, auth.userInfo.userId, auth.userInfo.isSystemAdmin], clearData, { flush: 'sync' });
+async function refresh() {
+  if (busy.value) return;
+  if (!auth.token || !auth.userInfo.isSystemAdmin) {
+    clearData();
+    return;
+  }
+  const current = ++sequence;
+  busy.value = true;
+  failed.value = false;
+  try {
+    const identity = await fetchGetUserInfo();
+    if (current !== sequence) return;
+    if (identity.error || !identity.data?.isSystemAdmin) {
+      clearData();
+      failed.value = Boolean(identity.error);
+      if (identity.data) auth.userInfo.isSystemAdmin = false;
+      return;
     }
-  ]
-});
-
-// 前端二次筛选 — searchParams 改变即触发 computed 重算
-const filtered = computed(() => {
-  return data.value.filter(a => {
-    const kw = searchParams.keyword?.trim().toLowerCase();
-    if (kw) {
-      if (!a.code.toLowerCase().includes(kw) && !a.name.toLowerCase().includes(kw)) {
-        return false;
-      }
+    const result = await fetchAgentAdminList();
+    if (current !== sequence) return;
+    if (result.error || !result.data) {
+      clearData();
+      failed.value = true;
+      return;
     }
-    if (searchParams.enabledFilter === 'enabled' && !a.enabled) return false;
-    if (searchParams.enabledFilter === 'disabled' && a.enabled) return false;
-    return true;
-  });
-});
-
-// drawer state (read-only listing — no add, no useTableOperate pagination plumbing)
-const drawerVisible = shallowRef(false);
-const editingData = shallowRef<Api.AiAgent.AdminListItem | null>(null);
-
-function openEdit(row: Api.AiAgent.AdminListItem) {
-  editingData.value = row;
+    agents.value = result.data;
+    authorized.value = true;
+  } finally {
+    busy.value = false;
+  }
+}
+function openAgent(agent: Api.AiAgent.AdminListItem) {
+  selected.value = agent;
   drawerVisible.value = true;
 }
-
-// searchParams 是客户端筛选，无需重取；保留 API 与 system 页一致
-function handleSearch() {}
-
-onMounted(getData);
+function onFocus() {
+  void refresh();
+}
+onMounted(() => {
+  void refresh();
+  window.addEventListener('focus', onFocus);
+});
+onUnmounted(() => {
+  clearData();
+  window.removeEventListener('focus', onFocus);
+});
 </script>
 
 <template>
-  <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <AgentSearch :model="searchParams" @search="handleSearch" />
-    <NCard :title="$t('page.ai.agent.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
-      <template #header-extra>
-        <TableHeaderOperation
-          v-model:columns="columnChecks"
-          :loading="loading"
-          :show-add="false"
-          :show-delete="false"
-          @refresh="getData"
-        />
+  <div class="h-full overflow-auto space-y-4">
+    <NCard :title="$t('page.ai.agent.title')">
+      <NAlert v-if="!auth.userInfo.isSystemAdmin" type="error">{{ $t('platform.noPermission') }}</NAlert>
+      <template v-else>
+        <NAlert type="warning" class="mb-4">{{ $t('platform.scope') }}</NAlert>
+        <div class="mb-4 flex flex-wrap gap-3">
+          <NButton :loading="busy" @click="refresh">{{ $t('common.refresh') }}</NButton>
+          <NInput
+            v-model:value="keyword"
+            class="max-w-400px"
+            :placeholder="$t('common.keywordSearch')"
+            :input-props="{ 'aria-label': $t('common.keywordSearch') }"
+            clearable
+          />
+        </div>
+        <NSpin :show="busy">
+          <div v-if="authorized" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <NCard v-for="agent in filtered" :key="agent.agentId" :title="agent.name">
+              <template #header-extra>
+                <NTag :type="agent.enabled ? 'success' : 'default'">
+                  {{ $t(agent.enabled ? 'page.ai.agent.enabled' : 'page.ai.agent.disabled') }}
+                </NTag>
+              </template>
+              <div class="mb-2 text-sm opacity-60">{{ agent.code }}</div>
+              <p class="mb-4">{{ agent.description }}</p>
+              <NButton @click="openAgent(agent)">{{ $t('common.edit') }}</NButton>
+            </NCard>
+          </div>
+          <NEmpty v-if="authorized && !busy && !failed && !filtered.length" :description="$t('common.noData')" />
+        </NSpin>
       </template>
-      <NDataTable
-        :columns="columns"
-        :data="filtered"
-        size="small"
-        :loading="loading"
-        :row-key="row => row.agentId"
-        :scroll-x="scrollX"
-        :pagination="false"
-      />
-      <AgentOperateDrawer v-if="canEdit" v-model:visible="drawerVisible" :edit-row="editingData" @submitted="getData" />
+      <NAlert v-if="failed" type="error">{{ $t('platform.requestFailed') }}</NAlert>
     </NCard>
+    <AgentOperateDrawer
+      v-if="authorized"
+      v-model:visible="drawerVisible"
+      :edit-row="selected"
+      require-audit
+      @submitted="refresh"
+    />
   </div>
 </template>

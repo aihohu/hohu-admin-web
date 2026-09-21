@@ -302,7 +302,7 @@ test('preview_only 只展示预览且不产生确认 action', async ({ page }) =
   await page.locator('.input-textarea').press('Enter');
 
   await expect(page.locator('.n-drawer')).toBeHidden();
-  await expect(page.getByText('user.import_preview', { exact: true })).toBeVisible();
+  await expect(page.getByText('批量导入用户', { exact: true })).toBeVisible();
 });
 
 test('用户导出确认抽屉显示国际化工具、动态摘要和参数标签', async ({ page }) => {
@@ -311,7 +311,8 @@ test('用户导出确认抽屉显示国际化工具、动态摘要和参数标�
 
   const drawer = page.locator('.n-drawer');
   await expect(drawer).toBeVisible();
-  await expect(drawer).toContainText('导出用户列表 (user.export)');
+  await expect(drawer).toContainText('导出用户列表');
+  await expect(drawer).not.toContainText('user.export');
   await expect(drawer).toContainText('将导出约 12 行用户数据到 xlsx 文件（30 天后过期清理）');
   await expect(drawer).toContainText('业务理由');
   await expect(drawer).toContainText('用户要求导出全部用户列表');

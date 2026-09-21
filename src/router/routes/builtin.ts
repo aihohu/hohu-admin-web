@@ -1,6 +1,7 @@
-import type { CustomRoute } from '@elegant-router/types';
+import type { CustomRoute, ElegantConstRoute } from '@elegant-router/types';
 import { layouts, views } from '../elegant/imports';
-import { getRoutePath, transformElegantRoutesToVueRoutes } from '../elegant/transform';
+import { getRoutePath } from '../elegant/transform';
+import { transformAppRoutes } from './transform';
 
 export const ROOT_ROUTE: CustomRoute = {
   name: 'root',
@@ -23,9 +24,18 @@ const NOT_FOUND_ROUTE: CustomRoute = {
 };
 
 /** builtin routes, it must be constant and setup in vue-router */
-const builtinRoutes: CustomRoute[] = [ROOT_ROUTE, NOT_FOUND_ROUTE];
+const builtinRoutes: ElegantConstRoute[] = [
+  ROOT_ROUTE,
+  NOT_FOUND_ROUTE,
+  {
+    name: 'platform',
+    path: '/platform',
+    component: 'layout.blank$view.platform',
+    meta: { title: 'platform', constant: true, hideInMenu: true, i18nKey: 'platform.title' }
+  }
+];
 
 /** create builtin vue routes */
 export function createBuiltinVueRoutes() {
-  return transformElegantRoutesToVueRoutes(builtinRoutes, layouts, views);
+  return transformAppRoutes(builtinRoutes, layouts, views);
 }

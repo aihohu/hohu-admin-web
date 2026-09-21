@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
+import { NDataTable, NDatePicker, NInput, NSelect } from 'naive-ui';
 
 const listMock = vi.fn().mockResolvedValue({
   error: null,
@@ -123,6 +124,44 @@ describe('AI Trace audit page', () => {
     expect(rendered).toContain('page.ai.trace.startedAt');
     expect(rendered).not.toContain('TRACE_SENTINEL_RAW_ARGS');
     expect(rendered).not.toContain('TRACE_SENTINEL_MESSAGE_CONTENT');
+    wrapper.unmount();
+  });
+
+  it('clears every filter and returns to page one while preserving page size on reset', async () => {
+    window.history.replaceState({}, '', '/ai/trace?traceId=tr_deep_link');
+    const wrapper = mount(AiTracePage, { global: { stubs } });
+    await flushPromises();
+    const inputs = wrapper.findAllComponents(NInput).slice(0, 4);
+    ['tr_missing', '7', 'user_mgmt', 'user.lookup'].forEach((value, index) => {
+      inputs[index].vm.$emit('update:value', value);
+    });
+    wrapper.findComponent(NSelect).vm.$emit('update:value', 'expired');
+    wrapper.findComponent(NDatePicker).vm.$emit('update:value', [1000, 2000]);
+    wrapper.findComponent(NDataTable).vm.$emit('update:page-size', 50);
+    wrapper.findComponent(NDataTable).vm.$emit('update:page', 2);
+    await flushPromises();
+    await wrapper.findAll('button')[1].trigger('click');
+    await flushPromises();
+
+    expect(listMock.mock.lastCall?.[0]).toEqual({
+      current: 1,
+      size: 50,
+      traceId: undefined,
+      actorId: undefined,
+      agentCode: undefined,
+      toolName: undefined,
+      status: undefined,
+      queuedFrom: undefined,
+      queuedTo: undefined
+    });
+    expect(
+      wrapper
+        .findAll('input')
+        .slice(0, 4)
+        .map(input => input.element.value)
+    ).toEqual(['', '', '', '']);
+    expect(wrapper.findComponent(NSelect).props('value')).toBeNull();
+    expect(wrapper.findComponent(NDatePicker).props('value')).toBeNull();
     wrapper.unmount();
   });
 });

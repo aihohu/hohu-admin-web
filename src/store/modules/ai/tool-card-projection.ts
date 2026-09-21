@@ -74,7 +74,7 @@ export function projectMessageToolCards(
           toolCallId: toolCall.tool_call_id,
           summary: toolCall.summary ?? '',
           args: toolCall.args ?? {},
-          risk: toolCall.risk ?? 'low',
+          risk: toolCall.risk ?? (pending ? 'high' : undefined),
           traceId: toolCall.trace_id ?? message.traceId ?? '',
           chipTarget: toolCall.chip_target ?? null
         },
@@ -111,7 +111,11 @@ export function projectStreamToolCards(
 
   const ensureCard = (started: Api.Ai.ToolCallStartedEvent) => {
     const existing = positions.get(started.toolCallId);
-    if (existing !== undefined) return cards[existing];
+    if (existing !== undefined) {
+      const card = cards[existing];
+      if (card.started.risk === undefined && started.risk !== undefined) card.started = started;
+      return card;
+    }
     const pending = pendingForTool(pendingActions, started.toolCallId);
     const card: ToolCallCardProjection = {
       started,
@@ -127,7 +131,7 @@ export function projectStreamToolCards(
 
   for (const event of events) {
     if (event.type === 'tool_call_started') {
-      ensureCard(event);
+      ensureCard(event).started = event;
       continue;
     }
     if (event.type === 'tool_call_result') {
@@ -137,7 +141,7 @@ export function projectStreamToolCards(
         toolCallId: event.toolCallId,
         summary: event.tool,
         args: {},
-        risk: 'low',
+        risk: undefined,
         traceId: '',
         chipTarget: null
       });

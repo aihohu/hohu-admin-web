@@ -12,6 +12,7 @@ import {
 } from '@/service/api';
 import { useAuth } from '@/hooks/business/auth';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { getServerErrorMessage, useServerFieldErrors } from '@/hooks/common/server-field-errors';
 import { $t } from '@/locales';
 
 defineOptions({
@@ -39,6 +40,7 @@ const visible = defineModel<boolean>('visible', {
 });
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
+const { applyServerFieldErrors, clearServerFieldErrors, fieldProps } = useServerFieldErrors();
 const { defaultRequiredRule, formRules } = useFormRules();
 
 const title = computed(() => {
@@ -301,11 +303,15 @@ async function handleSubmit() {
       window.$message?.success(successMsg);
       closeDrawer();
       emit('submitted');
+    } else if (!applyServerFieldErrors(error)) {
+      window.$message?.error(getServerErrorMessage(error) || $t('common.modifyFailed'));
     }
   } finally {
     loading.value = false;
   }
 }
+
+watch(model, () => clearServerFieldErrors(), { deep: true });
 
 watch(visible, async isVisible => {
   if (!isVisible) {
@@ -333,13 +339,18 @@ watch(visible, async isVisible => {
   <NDrawer v-model:show="visible" display-directive="show" :width="360">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
       <NForm ref="formRef" :model="model" :rules="rules">
-        <NFormItem :label="$t('page.system.user.userName')" path="userName">
+        <NFormItem v-bind="fieldProps('userName')" :label="$t('page.system.user.userName')" path="userName">
           <NInput v-model:value="model.userName" :placeholder="$t('page.system.user.form.userName')" />
         </NFormItem>
-        <NFormItem :label="$t('page.system.user.nickname')" path="nickname">
+        <NFormItem v-bind="fieldProps('nickname')" :label="$t('page.system.user.nickname')" path="nickname">
           <NInput v-model:value="model.nickname" :placeholder="$t('page.system.user.form.nickname')" />
         </NFormItem>
-        <NFormItem v-if="props.operateType === 'add'" :label="$t('page.system.user.password')" path="password">
+        <NFormItem
+          v-if="props.operateType === 'add'"
+          v-bind="fieldProps('password')"
+          :label="$t('page.system.user.password')"
+          path="password"
+        >
           <NInput
             v-model:value="model.password"
             type="password"
@@ -353,10 +364,10 @@ watch(visible, async isVisible => {
             <NRadio v-for="item in userGenderOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
           </NRadioGroup>
         </NFormItem>
-        <NFormItem :label="$t('page.system.user.userPhone')" path="userPhone">
+        <NFormItem v-bind="fieldProps('userPhone')" :label="$t('page.system.user.userPhone')" path="userPhone">
           <NInput v-model:value="model.userPhone" :placeholder="$t('page.system.user.form.userPhone')" />
         </NFormItem>
-        <NFormItem :label="$t('page.system.user.userEmail')" path="email">
+        <NFormItem v-bind="fieldProps('userEmail')" :label="$t('page.system.user.userEmail')" path="email">
           <NInput v-model:value="model.userEmail" :placeholder="$t('page.system.user.form.userEmail')" />
         </NFormItem>
         <NFormItem :label="$t('page.system.user.userStatus')" path="status">

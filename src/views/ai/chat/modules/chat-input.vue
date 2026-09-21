@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, h, ref } from 'vue';
+import { computed, h, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NDropdown } from 'naive-ui';
 import type { DropdownOption } from 'naive-ui';
 import { useAiStore } from '@/store/modules/ai';
 import { uploadChatFile } from './chat-upload';
+import ChatImage from './chat-image.vue';
 
 const { t } = useI18n();
 const model = defineModel<string>('modelValue', { required: true });
@@ -20,45 +21,71 @@ const emit = defineEmits<{
 }>();
 
 const aiStore = useAiStore();
+let disposed = false;
+onBeforeUnmount(() => {
+  disposed = true;
+});
+const isCurrentContext = (revision: number) => !disposed && revision === aiStore.contextRevision;
 const textareaRef = ref<HTMLTextAreaElement>();
 const fileInputRef = ref<HTMLInputElement>();
+const pendingUploads = ref<string[]>([]);
 
 const canSend = computed(
   () =>
     !props.disabled &&
     !props.isStreaming &&
+    pendingUploads.value.length === 0 &&
     (model.value.trim() || aiStore.attachedImages.length > 0 || aiStore.attachedFiles.length > 0)
 );
 
 // Spreadsheet and CSV attachments accepted by the server-side parser.
 const ACCEPTED_FILE_EXTS = ['.csv', '.xlsx'];
-const ACCEPTED_FILE_MIMES = [
-  'text/csv',
-  'text/plain',
-  'application/csv',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-];
+const ACCEPTED_IMAGE_MIMES = ['image/jpeg', 'image/png'];
 const canAttachDataFile = computed(() => aiStore.availableAgents.some(agent => agent.code === 'shared'));
 const acceptedUploadTypes = computed(() =>
-  canAttachDataFile.value
-    ? 'image/jpeg,image/png,image/gif,image/webp,.csv,.xlsx'
-    : 'image/jpeg,image/png,image/gif,image/webp'
+  canAttachDataFile.value ? 'image/jpeg,image/png,.csv,.xlsx' : 'image/jpeg,image/png'
 );
+
+function isSupportedImage(type: string): boolean {
+  if (ACCEPTED_IMAGE_MIMES.includes(type)) return true;
+  window.$message?.warning(t('page.ai.chat.imageTypeUnsupported'));
+  return false;
+}
 
 function isAcceptedFile(file: File): boolean {
   if (file.type.startsWith('image/')) return false; // 图片走 addImage
   if (!canAttachDataFile.value) return false;
-  if (ACCEPTED_FILE_MIMES.includes(file.type)) return true;
   const name = file.name.toLowerCase();
   return ACCEPTED_FILE_EXTS.some(ext => name.endsWith(ext));
 }
 
-async function uploadAsAttachment(file: File) {
-  const { data, error } = await uploadChatFile(file);
-  if (!error && data) {
-    aiStore.addFile(data.fileId, data.originalName || file.name, data.mimeType || file.type, file.size);
-  } else {
-    window.$message?.error(t('page.ai.chat.fileUploadFailed'));
+async function uploadSelectedFiles(files: File[], pasted = false) {
+  if (props.disabled || props.isStreaming) return;
+  const revision = aiStore.contextRevision;
+  for (const file of files) {
+    if (!isCurrentContext(revision)) return;
+    const image = file.type.startsWith('image/');
+    if (image && !isSupportedImage(file.type)) continue;
+    if (!image && !isAcceptedFile(file)) {
+      window.$message?.warning(t('page.ai.chat.fileTypeUnsupported'));
+      continue;
+    }
+    pendingUploads.value.push(file.name);
+    try {
+      const { data, error } = await uploadChatFile(file);
+      if (!isCurrentContext(revision)) return;
+      if (error || !data) {
+        window.$message?.error(t('page.ai.chat.fileUploadFailed'));
+      } else if (image) {
+        aiStore.addImage(data.fileUrl, file.type, pasted ? 'pasted-image' : file.name);
+      } else {
+        aiStore.addFile(data.fileId, data.originalName || file.name, data.mimeType || file.type, file.size);
+      }
+    } catch {
+      if (isCurrentContext(revision)) window.$message?.error(t('page.ai.chat.fileUploadFailed'));
+    } finally {
+      pendingUploads.value.splice(pendingUploads.value.indexOf(file.name), 1);
+    }
   }
 }
 
@@ -135,7 +162,7 @@ const modelOptions = computed<DropdownOption[]>(() => {
 });
 
 function handleAgentSelect(key: string) {
-  aiStore.selectedAgentCode = key;
+  aiStore.selectAgent(key);
 }
 
 function handleModelSelect(key: string) {
@@ -173,45 +200,24 @@ function triggerFileInput() {
 
 async function handleFileSelect(e: Event) {
   const input = e.target as HTMLInputElement;
-  if (!input.files) return;
-  for (const file of Array.from(input.files)) {
-    if (file.type.startsWith('image/')) {
-      const { data, error } = await uploadChatFile(file);
-      if (!error && data) {
-        aiStore.addImage(data.fileUrl, file.type, file.name);
-      } else {
-        window.$message?.error(t('page.ai.chat.fileUploadFailed'));
-      }
-    } else if (isAcceptedFile(file)) {
-      await uploadAsAttachment(file);
-    } else {
-      window.$message?.warning(t('page.ai.chat.fileTypeUnsupported'));
-    }
-  }
+  const files = Array.from(input.files || []);
   input.value = '';
+  await uploadSelectedFiles(files);
 }
 
 async function handlePaste(e: ClipboardEvent) {
   const items = e.clipboardData?.items;
   if (!items) return;
+  const files: File[] = [];
   for (const item of Array.from(items)) {
-    if (item.type.startsWith('image/')) {
-      e.preventDefault();
+    if (item.kind === 'file' || item.type.startsWith('image/')) {
       const file = item.getAsFile();
-      if (!file) continue;
-      const { data, error } = await uploadChatFile(file);
-      if (!error && data) {
-        aiStore.addImage(data.fileUrl, file.type, 'pasted-image');
-      }
-    } else if (item.kind === 'file') {
-      // Bug fix: 之前漏了文件粘贴，粘贴 Excel/CSV 不处理
-      const file = item.getAsFile();
-      if (!file) continue;
-      if (isAcceptedFile(file)) {
-        e.preventDefault();
-        await uploadAsAttachment(file);
-      }
+      if (file) files.push(file);
     }
+  }
+  if (files.length) {
+    e.preventDefault();
+    await uploadSelectedFiles(files, true);
   }
 }
 
@@ -223,20 +229,7 @@ function handleDragOver(e: DragEvent) {
 async function handleDrop(e: DragEvent) {
   e.preventDefault();
   e.stopPropagation();
-  const files = e.dataTransfer?.files;
-  if (!files) return;
-  for (const file of Array.from(files)) {
-    if (file.type.startsWith('image/')) {
-      const { data, error } = await uploadChatFile(file);
-      if (!error && data) {
-        aiStore.addImage(data.fileUrl, file.type, file.name);
-      }
-    } else if (isAcceptedFile(file)) {
-      await uploadAsAttachment(file);
-    } else {
-      window.$message?.warning(t('page.ai.chat.fileTypeUnsupported'));
-    }
-  }
+  await uploadSelectedFiles(Array.from(e.dataTransfer?.files || []));
 }
 
 function formatFileSize(bytes: number): string {
@@ -249,10 +242,15 @@ function formatFileSize(bytes: number): string {
 <template>
   <div class="input-wrapper" @dragover="handleDragOver" @drop="handleDrop">
     <div class="input-container">
+      <div v-if="pendingUploads.length" class="flex flex-wrap gap-8px pb-8px" role="status" aria-live="polite">
+        <span v-for="(name, index) in pendingUploads" :key="index" class="text-12px">
+          {{ name }} · {{ t('page.ai.chat.fileUploading') }}
+        </span>
+      </div>
       <!-- Attached images preview -->
       <div v-if="aiStore.attachedImages.length > 0 || aiStore.attachedFiles.length > 0" class="attach-preview">
         <div v-for="(img, i) in aiStore.attachedImages" :key="`img-${i}`" class="attach-thumb">
-          <img :src="img.fileUrl" :alt="img.fileName" />
+          <ChatImage :src="img.fileUrl" :alt="img.fileName" />
           <button class="attach-remove" :title="t('page.ai.chat.removeFile')" @click="aiStore.removeImage(i)">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
@@ -655,7 +653,7 @@ function formatFileSize(bytes: number): string {
   border: 1px solid var(--n-border-color, #e0e0e0);
 }
 
-.attach-thumb img {
+.attach-thumb :deep(img) {
   width: 100%;
   height: 100%;
   object-fit: cover;

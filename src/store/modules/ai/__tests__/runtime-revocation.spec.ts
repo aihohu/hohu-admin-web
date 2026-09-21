@@ -15,8 +15,8 @@ vi.mock('@/service/api/ai', () => ({
 }));
 vi.mock('@/utils/storage', () => ({ localStg: { get: vi.fn() } }));
 
-import { fetchGetConversationList } from '@/service/api';
-import { fetchAiAgents, fetchAiConfirm, fetchGetChatModels } from '@/service/api/ai';
+import { fetchGetConversationDetail, fetchGetConversationList } from '@/service/api';
+import { fetchAiAgents, fetchAiConfirm, fetchAiOperationLog, fetchGetChatModels } from '@/service/api/ai';
 import { useAiStore } from '..';
 
 function failed(errorCode: string) {
@@ -41,6 +41,35 @@ function message(content = 'private result'): Api.Ai.Message {
 }
 
 describe('AI runtime authorization revocation', () => {
+  it.each([false, true])('preserves the file picker during focus refresh, revoked=%s', async revoked => {
+    const store = useAiStore();
+    await Promise.all([store.loadModels(), store.loadAgents()]);
+    store.addImage('/private.png', 'image/png', 'draft.png');
+    const revision = store.contextRevision;
+    let finish!: (value: never) => void;
+    vi.mocked(fetchAiAgents).mockReturnValueOnce(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const refresh = store.revalidateAccess();
+    // Loading would unmount ChatInput while its native picker is returning files.
+    expect(store.chatAvailability).toBe('ready');
+    expect(store.contextRevision).toBe(revision);
+    finish(
+      revoked
+        ? failed('AI_CHAT_PERMISSION_DENIED')
+        : ({
+            data: [{ code: 'shared', name: 'Shared', description: '', modelPreference: null, displayOrder: 0 }],
+            error: null
+          } as never)
+    );
+    await refresh;
+    expect(store.chatAvailability).toBe(revoked ? 'forbidden' : 'ready');
+    expect(store.attachedImages).toHaveLength(revoked ? 0 : 1);
+    if (revoked) expect(store.contextRevision).toBeGreaterThan(revision);
+  });
+
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.resetAllMocks();
@@ -56,6 +85,29 @@ describe('AI runtime authorization revocation', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('does not resume polling when an old confirmation returns after logout', async () => {
+    vi.useFakeTimers();
+    let finish!: (value: never) => void;
+    vi.mocked(fetchAiConfirm).mockReturnValue(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const store = useAiStore();
+    store.currentConversationId = 'old';
+    store.pendingConfirmation = {
+      confirmationId: 'old-confirmation',
+      toolCallId: 'old-tool'
+    } as Api.Ai.ConfirmationRequiredEvent;
+    const confirming = store.approveTool();
+    store.resetStore();
+    finish({ data: { status: 'pending', toolCallId: 'old-tool' }, error: null } as never);
+    await confirming;
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(fetchAiOperationLog).not.toHaveBeenCalled();
   });
 
   it('clears a stale conversation list when reloading fails', async () => {
@@ -67,6 +119,17 @@ describe('AI runtime authorization revocation', () => {
 
     expect(store.conversations).toEqual([]);
     expect(store.hasMoreConversations).toBe(false);
+  });
+
+  it('does not reopen recovery endpoints via search or stale sidebar clicks after entry denial', async () => {
+    const store = useAiStore();
+    vi.mocked(fetchGetChatModels).mockResolvedValue(failed('AI_CHAT_PERMISSION_DENIED'));
+    await store.loadModels();
+    await store.loadConversations('private');
+    await store.selectConversation('private');
+    expect(fetchGetConversationList).not.toHaveBeenCalled();
+    expect(fetchGetConversationDetail).not.toHaveBeenCalled();
+    expect(store.currentConversationId).toBeNull();
   });
 
   it('ignores an older authorized model response after a newer denial', async () => {
@@ -88,7 +151,7 @@ describe('AI runtime authorization revocation', () => {
     expect(store.chatAvailability).toBe('forbidden');
   });
 
-  it('aborts active producers while preserving readable recovery projections on entry denial', async () => {
+  it('aborts active producers and clears every cached projection on entry denial', async () => {
     const store = useAiStore();
     await Promise.all([store.loadModels(), store.loadAgents()]);
     store.currentConversationId = 'conversation-1';
@@ -126,10 +189,89 @@ describe('AI runtime authorization revocation', () => {
 
     expect(abortedByDenial).toBe(true);
     expect(store.chatAvailability).toBe('forbidden');
-    expect(store.conversations).toEqual([{ conversationId: 'conversation-1', title: 'private title' }]);
-    expect(store.currentConversationId).toBe('conversation-1');
-    expect(store.currentMessages).toEqual([message()]);
+    expect(store.conversations).toEqual([]);
+    expect(store.currentConversationId).toBeNull();
+    expect(store.currentMessages).toEqual([]);
   });
+
+  it.each([false, true])(
+    'stops a stranded stream but retains confirmation after transport failure, throws=%s',
+    async throws => {
+      const store = useAiStore();
+      await Promise.all([store.loadModels(), store.loadAgents()]);
+      store.currentConversationId = 'conversation-1';
+      let signal!: AbortSignal;
+      let traceId = '';
+      let reading = false;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((_url, init: RequestInit) => {
+          signal = init.signal as AbortSignal;
+          traceId = JSON.parse(init.body as string).traceId;
+          return Promise.resolve({
+            ok: true,
+            body: {
+              getReader: () => ({
+                read: () =>
+                  new Promise((_resolve, reject) => {
+                    reading = true;
+                    signal.addEventListener('abort', () =>
+                      reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+                    );
+                  })
+              })
+            }
+          });
+        })
+      );
+      const sending = store.sendMessage('update my test account');
+      await vi.waitFor(() => expect(reading).toBe(true));
+      store.pendingActionsById = {
+        'action-1': {
+          type: 'confirmation_required',
+          actionId: 'action-1',
+          confirmationId: 'confirmation-1',
+          tool: 'user.update',
+          toolCallId: 'tool-1',
+          sourceToolCallId: 'source-1',
+          traceId,
+          summary: 'test change',
+          expiresAt: new Date(Date.now() + 300000).toISOString()
+        }
+      };
+      store.streamEvents = [
+        {
+          type: 'tool_call_started',
+          tool: 'user.update',
+          toolCallId: 'source-1',
+          summary: 'test change',
+          args: {},
+          risk: 'high',
+          traceId,
+          chipTarget: null
+        },
+        store.pendingActionsById['action-1']
+      ];
+      vi.mocked(fetchGetConversationDetail).mockResolvedValue({ data: null, error: new Error('network') } as never);
+      if (throws) vi.mocked(fetchAiConfirm).mockRejectedValue(new TypeError('Failed to fetch'));
+      else vi.mocked(fetchAiConfirm).mockResolvedValue({ data: null, error: new Error('network') } as never);
+      await store.approveTool('action-1');
+      const abortedAfterFailure = signal.aborted;
+      const streamingAfterFailure = store.isStreaming;
+      const pendingAfterFailure = store.pendingActionsById['action-1']?.confirmationId;
+      const cardsAfterFailure = store.currentMessages.flatMap(item => store.messageToolCards(item));
+      // Release the pre-fix dangling reader so a red assertion never hangs tests.
+      if (!abortedAfterFailure) store.stopStreaming();
+      await sending;
+      store.resetStore();
+      expect(abortedAfterFailure).toBe(true);
+      expect(streamingAfterFailure).toBe(false);
+      expect(pendingAfterFailure).toBe('confirmation-1');
+      expect(cardsAfterFailure.map(card => card.started.toolCallId)).toEqual(['tool-1']);
+      expect(cardsAfterFailure[0].pendingExpiresAt).toBeTruthy();
+      expect(fetchAiConfirm).toHaveBeenCalledTimes(1);
+    }
+  );
 
   it('treats an explicit Agent denial as a fail-closed runtime state', async () => {
     const store = useAiStore();
@@ -174,7 +316,7 @@ describe('AI runtime authorization revocation', () => {
     await store.approveTool('action-1');
 
     expect(store.chatAvailability).toBe('forbidden');
-    expect(store.currentMessages).toEqual([message()]);
+    expect(store.currentMessages).toEqual([]);
     expect(store.pendingActionsById).toEqual({});
     expect(JSON.stringify(store.$state)).not.toContain('private confirmation');
   });

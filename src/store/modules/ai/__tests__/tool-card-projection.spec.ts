@@ -24,6 +24,32 @@ function message(toolCalls: Api.Ai.Message['toolCalls']): Api.Ai.Message {
 }
 
 describe('per-message tool card projection', () => {
+  it('does not label an orphan result or legacy card readonly before metadata arrives', () => {
+    const result: Api.Ai.ToolCallResultEvent = {
+      type: 'tool_call_result',
+      tool: 'user.export',
+      toolCallId: 'late',
+      ok: true,
+      durationMs: 2
+    };
+    expect(projectStreamToolCards([result], {})[0].started.risk).toBeUndefined();
+    expect(
+      projectMessageToolCards(message([{ tool: 'user.export', tool_call_id: 'late', ok: true }]))[0].started.risk
+    ).toBeUndefined();
+    const started: Api.Ai.ToolCallStartedEvent = {
+      type: 'tool_call_started',
+      tool: 'user.export',
+      toolCallId: 'late',
+      summary: 'export',
+      risk: 'high',
+      args: {},
+      traceId: 'tr-1'
+    };
+    const card = projectStreamToolCards([result, started], {})[0];
+    expect(card.started.risk).toBe('high');
+    expect(card.result?.ok).toBe(true);
+  });
+
   it('keeps each message tool array order and does not turn an unfinished call into a failure', () => {
     const cards = projectMessageToolCards(
       message([

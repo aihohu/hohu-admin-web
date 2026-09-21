@@ -4,9 +4,10 @@ import { mount } from '@vue/test-utils';
 import ChatPage from '../index.vue';
 
 const init = vi.fn().mockResolvedValue(undefined);
+const revalidateAccess = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('@/store/modules/ai', () => ({
-  useAiStore: () => ({ init })
+  useAiStore: () => ({ init, revalidateAccess })
 }));
 
 describe('AI chat route reauthorization', () => {
@@ -18,7 +19,7 @@ describe('AI chat route reauthorization', () => {
           default: () => (showChat.value ? h(ChatPage, { key: 'chat' }) : h(defineComponent(() => () => h('div'))))
         })
     });
-    mount(Host, {
+    const wrapper = mount(Host, {
       global: {
         stubs: {
           ChatSidebar: true,
@@ -28,12 +29,18 @@ describe('AI chat route reauthorization', () => {
     });
     await nextTick();
     expect(init).toHaveBeenCalledTimes(1);
+    window.dispatchEvent(new Event('focus'));
+    await nextTick();
+    expect(revalidateAccess).toHaveBeenCalledTimes(1);
 
     showChat.value = false;
     await nextTick();
+    window.dispatchEvent(new Event('focus'));
+    expect(revalidateAccess).toHaveBeenCalledTimes(1);
     showChat.value = true;
     await nextTick();
 
     expect(init).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
   });
 });

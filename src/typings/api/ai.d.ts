@@ -323,7 +323,7 @@ declare namespace Api {
       summary: string;
       args: Record<string, any>;
       /** risk level used by the card accent and badge */
-      risk: 'low' | 'high' | 'destructive';
+      risk?: 'low' | 'high' | 'destructive';
       /** trace used to replay the tool filters on the destination page */
       traceId: string;
       /** backend-provided navigation target; avoids a duplicated frontend mapping */

@@ -4,6 +4,7 @@ import { jsonClone } from '@sa/utils';
 import { enableStatusOptions, roleDataScopeOptions } from '@/constants/business';
 import { fetchGetDeptTreeOption, fetchSaveRole, fetchUpdateRole } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { getServerErrorMessage, useServerFieldErrors } from '@/hooks/common/server-field-errors';
 import { $t } from '@/locales';
 import { translateOptions } from '@/utils/common';
 
@@ -31,6 +32,7 @@ const visible = defineModel<boolean>('visible', {
 });
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
+const { applyServerFieldErrors, clearServerFieldErrors, fieldProps } = useServerFieldErrors();
 const { defaultRequiredRule } = useFormRules();
 
 const title = computed(() => {
@@ -129,11 +131,15 @@ async function handleSubmit() {
       window.$message?.success(successMsg);
       closeDrawer();
       emit('submitted');
+    } else if (!applyServerFieldErrors(error)) {
+      window.$message?.error(getServerErrorMessage(error) || $t('common.modifyFailed'));
     }
   } finally {
     loading.value = false;
   }
 }
+
+watch(model, () => clearServerFieldErrors(), { deep: true });
 
 watch(visible, () => {
   if (visible.value) {
@@ -148,10 +154,10 @@ watch(visible, () => {
   <NDrawer v-model:show="visible" display-directive="show" :width="360">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
       <NForm ref="formRef" :model="model" :rules="rules">
-        <NFormItem :label="$t('page.system.role.roleName')" path="roleName">
+        <NFormItem v-bind="fieldProps('roleName')" :label="$t('page.system.role.roleName')" path="roleName">
           <NInput v-model:value="model.roleName" :placeholder="$t('page.system.role.form.roleName')" />
         </NFormItem>
-        <NFormItem :label="$t('page.system.role.roleCode')" path="roleCode">
+        <NFormItem v-bind="fieldProps('roleCode')" :label="$t('page.system.role.roleCode')" path="roleCode">
           <NInput
             v-model:value="model.roleCode"
             data-testid="role-code-input"
@@ -181,7 +187,7 @@ watch(visible, () => {
             style="width: 100%"
           />
         </NFormItem>
-        <NFormItem :label="$t('page.system.role.roleDesc')" path="roleDesc">
+        <NFormItem v-bind="fieldProps('roleDesc')" :label="$t('page.system.role.roleDesc')" path="roleDesc">
           <NInput v-model:value="model.roleDesc" :placeholder="$t('page.system.role.form.roleDesc')" />
         </NFormItem>
       </NForm>

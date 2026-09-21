@@ -75,7 +75,14 @@ function search() {
 }
 
 function reset() {
-  Object.assign(query, { current: 1, size: query.size });
+  Object.assign(query, {
+    current: 1,
+    traceId: '',
+    actorId: '',
+    agentCode: '',
+    toolName: '',
+    status: ''
+  });
   queuedRange.value = null;
   loadList();
 }
@@ -158,7 +165,13 @@ defineExpose({ openTrace, query });
           <NInput v-model:value="query.toolName" clearable />
         </NFormItem>
         <NFormItem :label="$t('page.ai.trace.status')">
-          <NSelect v-model:value="query.status" :options="statusOptions" clearable class="w-40" />
+          <NSelect
+            :value="query.status || null"
+            :options="statusOptions"
+            clearable
+            class="w-40"
+            @update:value="query.status = $event || ''"
+          />
         </NFormItem>
         <NFormItem :label="$t('page.ai.trace.queuedAt')">
           <NDatePicker v-model:value="queuedRange" type="datetimerange" clearable />

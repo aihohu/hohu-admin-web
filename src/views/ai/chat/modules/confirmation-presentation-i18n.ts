@@ -19,6 +19,7 @@ const USER_RESET_PASSWORD_TOOL = 'user.reset_password';
 const USER_UPDATE_TOOL = 'user.update';
 const USER_UPDATE_DEPT_TOOL = 'user.update_dept';
 const USER_UPDATE_ROLES_TOOL = 'user.update_roles';
+const USER_BATCH_DELETE_TOOL = 'user.batch_delete';
 const ROLE_CREATE_TOOL = 'role.create';
 const ROLE_UPDATE_TOOL = 'role.update';
 const ROLE_UPDATE_MENUS_TOOL = 'role.update_menus';
@@ -71,6 +72,9 @@ const USER_IMPORT_FIELD_VALUE_KEYS: Record<string, Record<string, App.I18n.I18nK
 };
 
 const USER_EXPORT_FIELD_LABEL_KEYS: Record<string, App.I18n.I18nKey> = {
+  user_names: 'page.ai.chat.exportExactAccounts',
+  user_name: 'page.system.user.userName',
+  status: 'page.system.user.userStatus',
   reason: 'common.exportModal.reasonLabel',
   affectedCount: 'common.exportModal.estimatedRowsLabel'
 };
@@ -198,6 +202,7 @@ export function localizeConfirmationTool(tool: string, t: Translate): string {
   if (tool === USER_UPDATE_TOOL) return t('page.system.user.editUser');
   if (tool === USER_UPDATE_DEPT_TOOL) return t('page.ai.chat.updateUserDepartments');
   if (tool === USER_UPDATE_ROLES_TOOL) return t('page.ai.chat.updateUserRoles');
+  if (tool === USER_BATCH_DELETE_TOOL) return t('page.ai.chat.toolDescriptions.userBatchDelete');
   const phase3LabelKey = PHASE3_TOOL_LABEL_KEYS[tool];
   if (phase3LabelKey) return t(phase3LabelKey);
   return t('page.ai.chat.toolOperation');

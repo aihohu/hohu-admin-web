@@ -9,6 +9,7 @@ import {
   fetchGetImportBatchLogs
 } from '@/service/api';
 import { $t } from '@/locales';
+import { formatImportTime } from './import-history-time';
 
 defineOptions({ name: 'UserImportHistory' });
 
@@ -115,6 +116,18 @@ const batchColumns = computed<DataTableColumns<Api.SystemManage.UserImportBatch>
     align: 'center'
   },
   {
+    title: () => $t('common.importHistoryDrawer.overwrittenCountLabel'),
+    key: 'overwrittenCount',
+    width: 90,
+    align: 'center'
+  },
+  {
+    title: () => $t('common.importHistoryDrawer.skippedCountLabel'),
+    key: 'skippedCount',
+    width: 90,
+    align: 'center'
+  },
+  {
     title: () => $t('common.importHistoryDrawer.failedCountLabel'),
     key: 'failedCount',
     width: 90,
@@ -123,12 +136,14 @@ const batchColumns = computed<DataTableColumns<Api.SystemManage.UserImportBatch>
   {
     title: () => $t('common.importHistoryDrawer.createdAtLabel'),
     key: 'createdAt',
-    width: 170
+    width: 170,
+    render: row => formatImportTime(row.createdAt)
   },
   {
     title: () => $t('common.importHistoryDrawer.finishedAtLabel'),
     key: 'finishedAt',
-    width: 170
+    width: 170,
+    render: row => formatImportTime(row.finishedAt)
   },
   {
     title: () => $t('common.operate'),
@@ -172,7 +187,8 @@ const logColumns = computed<DataTableColumns<Api.SystemManage.UserImportBatchLog
   {
     title: () => $t('common.importHistoryDrawer.logsTimeLabel'),
     key: 'createdAt',
-    width: 170
+    width: 170,
+    render: row => formatImportTime(row.createdAt)
   },
   {
     title: () => $t('common.importHistoryDrawer.logsDetailLabel'),
@@ -336,7 +352,7 @@ defineExpose({ open });
               {{ selectedBatch.totalRows }}
             </NDescriptionsItem>
             <NDescriptionsItem :label="$t('common.importHistoryDrawer.expiresAtLabel')">
-              {{ selectedBatch.expiresAt ?? '-' }}
+              {{ formatImportTime(selectedBatch.expiresAt) }}
             </NDescriptionsItem>
             <NDescriptionsItem :label="$t('common.importHistoryDrawer.summaryNewLabel')">
               {{ selectedBatch.summaryNew }}
@@ -363,10 +379,10 @@ defineExpose({ open });
               {{ selectedBatch.failedCount }}
             </NDescriptionsItem>
             <NDescriptionsItem :label="$t('common.importHistoryDrawer.createdAtLabel')">
-              {{ selectedBatch.createdAt }}
+              {{ formatImportTime(selectedBatch.createdAt) }}
             </NDescriptionsItem>
             <NDescriptionsItem :label="$t('common.importHistoryDrawer.finishedAtLabel')">
-              {{ selectedBatch.finishedAt ?? '-' }}
+              {{ formatImportTime(selectedBatch.finishedAt) }}
             </NDescriptionsItem>
           </NDescriptions>
         </NTabPane>

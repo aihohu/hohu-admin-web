@@ -72,6 +72,8 @@ const aiStore = {
   attachedFiles: [],
   availableAgents: [] as Api.Ai.Agent[],
   chatAvailability: 'ready' as ChatAvailability,
+  conversationNotice: null as 'unavailable' | null,
+  clearCurrentConversation: vi.fn(),
   redactedPendingActions: [],
   isStreaming: false,
   streamingText: '',
@@ -131,6 +133,7 @@ describe('chat tool cards embedded by message owner', () => {
     aiStore.availableAgents = [];
     aiStore.redactedPendingActions = [];
     aiStore.chatAvailability = 'ready';
+    aiStore.conversationNotice = null;
   });
 
   it('renders each persisted card under its own assistant wrapper in array order', () => {
@@ -180,14 +183,27 @@ describe('chat tool cards embedded by message owner', () => {
     expect(wrapper.find('[data-message-id="assistant-1"]').exists()).toBe(false);
   });
 
-  it('keeps an existing conversation and recovery controls visible after chat permission revocation', () => {
+  it('does not render old conversation contents after chat permission revocation', () => {
     aiStore.chatAvailability = 'forbidden';
 
     const wrapper = mount(ChatMain, { global: { stubs } });
 
-    expect(wrapper.get('[data-testid="ai-recovery-availability"]').attributes('data-state')).toBe('forbidden');
-    expect(wrapper.get('[data-message-id="assistant-1"]').attributes('data-message-id')).toBe('assistant-1');
+    expect(wrapper.get('[data-testid="ai-chat-availability"]').attributes('data-state')).toBe('forbidden');
+    expect(wrapper.find('[data-message-id="assistant-1"]').exists()).toBe(false);
     expect(wrapper.find('.stub-input').exists()).toBe(false);
+  });
+
+  it('shows a persistent unavailable notice and an explicit new-conversation action', async () => {
+    aiStore.currentConversationId = '';
+    aiStore.conversationNotice = 'unavailable';
+    const wrapper = mount(ChatMain, {
+      global: { stubs: { ...stubs, NButton: { template: '<button><slot /></button>' } } }
+    });
+    expect(wrapper.get('[role="alert"]').text()).toContain('page.ai.chat.conversationUnavailable');
+    expect(wrapper.find('.stub-input').exists()).toBe(false);
+    await wrapper.get('button').trigger('click');
+    expect(aiStore.clearCurrentConversation).toHaveBeenCalled();
+    expect(aiStore.sendMessage).not.toHaveBeenCalled();
   });
 
   it('only renders scenario cards backed by a currently authorized Agent', () => {

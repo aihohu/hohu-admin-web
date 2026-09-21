@@ -13,6 +13,15 @@ const t = (key: App.I18n.I18nKey) => messages[key] ?? key;
 const te = (key: App.I18n.I18nKey) => key in messages;
 
 describe('dynamic AI message i18n', () => {
+  it.each([
+    'AI_QUERY_CACHE_NOT_FOUND',
+    'AI_CHAT_PERMISSION_DENIED',
+    'AI_MODULE_DISABLED',
+    'AI_CONVERSATION_NOT_FOUND'
+  ] as const)('explains %s with recovery guidance in both locales', code => {
+    expect(zhCn.errorCode[code]).toMatch(/请/);
+    expect(enUs.errorCode[code]).toMatch(/Return|Contact|Try again|Start/);
+  });
   it('defines the runtime tool-permission revocation code in global locales', () => {
     expect(enUs.errorCode.AI_TOOL_PERM_DENIED).toBe('Tool permission was revoked. Start the operation again.');
     expect(zhCn.errorCode.AI_TOOL_PERM_DENIED).toBe('工具权限已被撤销，请重新发起操作');

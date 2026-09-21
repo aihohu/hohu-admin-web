@@ -21,7 +21,7 @@ const { domRef, updateOptions } = useEcharts(() => ({
     }
   },
   legend: {
-    data: [$t('page.home.downloadCount'), $t('page.home.registerCount')],
+    data: [$t('page.dashboard.downloadCount'), $t('page.dashboard.registerCount')],
     top: '0'
   },
   grid: {
@@ -41,7 +41,7 @@ const { domRef, updateOptions } = useEcharts(() => ({
   series: [
     {
       color: '#8e9dff',
-      name: $t('page.home.downloadCount'),
+      name: $t('page.dashboard.downloadCount'),
       type: 'line',
       smooth: true,
       stack: 'Total',
@@ -71,7 +71,7 @@ const { domRef, updateOptions } = useEcharts(() => ({
     },
     {
       color: '#26deca',
-      name: $t('page.home.registerCount'),
+      name: $t('page.dashboard.registerCount'),
       type: 'line',
       smooth: true,
       stack: 'Total',

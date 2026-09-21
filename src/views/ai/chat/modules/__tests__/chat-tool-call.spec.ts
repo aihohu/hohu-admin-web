@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
+vi.mock('@/service/request/platform', () => ({ platformRequest: vi.fn() }));
 
 const requestMock = vi.fn();
 
@@ -65,6 +66,7 @@ describe('chat tool result card', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     delete (window as any).$message;
@@ -131,6 +133,7 @@ describe('chat tool result card', () => {
   });
 
   it('downloads only the current authorized UI projection', async () => {
+    vi.useFakeTimers();
     requestMock.mockResolvedValue({ data: new Blob(['phase4']), error: null });
     const wrapper = render({
       started: started({ chipTarget: null }),
@@ -155,11 +158,64 @@ describe('chat tool result card', () => {
       responseType: 'blob'
     });
     expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1000);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:phase4');
 
     requestMock.mockResolvedValue({ data: null, error: new Error('revoked') });
     await wrapper.get('.chip-link--download').trigger('click');
     await flushPromises();
     expect((window as any).$message.error).toHaveBeenCalled();
+  });
+
+  it.each([
+    // Existing download response error cases.
+    { data: { code: 404, errorCode: 'AI_RESULT_DOWNLOAD_NOT_FOUND' }, error: null, response: { status: 404 } },
+    { data: new Blob(['{"code":403}'], { type: 'application/json' }), error: null, response: { status: 200 } }
+  ])('shows a persistent recovery hint for an invalid download response', async response => {
+    requestMock.mockResolvedValue(response);
+    const wrapper = render({
+      started: started(),
+      result: result({
+        ui: {
+          viewType: 'detail_card',
+          viewData: {
+            title: 'Export',
+            fields: [],
+            downloadUrl: '/ai/download/user-export/expired',
+            downloadFilename: 'old.xlsx'
+          }
+        }
+      })
+    });
+    await wrapper.get('.chip-link--download').trigger('click');
+    await flushPromises();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(wrapper.get('[role="alert"]').text()).toContain('page.ai.chat.downloadFailed');
+    expect(wrapper.get('.chip-link--download').attributes('disabled')).toBeUndefined();
+  });
+
+  it('does not download a late response after its private card is removed', async () => {
+    let finish!: (value: unknown) => void;
+    requestMock.mockReturnValue(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const wrapper = render({
+      started: started(),
+      result: result({
+        ui: {
+          viewType: 'detail_card',
+          viewData: { title: 'Export', fields: [], downloadUrl: '/ai/tool-result/download/private' }
+        }
+      })
+    });
+    await wrapper.get('.chip-link--download').trigger('click');
+    wrapper.unmount();
+    finish({ data: new Blob(['private']), error: null });
+    await flushPromises();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
   it('renders a registered detail view and safely formats null or cyclic arguments', async () => {

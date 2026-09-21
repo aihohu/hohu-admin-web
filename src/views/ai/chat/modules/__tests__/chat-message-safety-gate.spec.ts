@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+vi.mock('../chat-image.vue', () => ({ default: { props: ['src', 'alt'], template: '<img :src="src" :alt="alt" />' } }));
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t: (key: string) => key })

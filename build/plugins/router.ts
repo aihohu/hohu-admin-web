@@ -31,7 +31,7 @@ export function setupElegantRouter() {
     onRouteMetaGen(routeName) {
       const key = routeName as RouteKey;
 
-      const constantRoutes: RouteKey[] = ['login', '403', '404', '500'];
+      const constantRoutes: string[] = ['login', '403', '404', '500', 'platform', 'empty'];
 
       const meta: Partial<RouteMeta> = {
         title: key,
@@ -40,6 +40,10 @@ export function setupElegantRouter() {
 
       if (constantRoutes.includes(key)) {
         meta.constant = true;
+      }
+      if (routeName === 'platform') {
+        meta.hideInMenu = true;
+        meta.i18nKey = 'platform.title';
       }
 
       return meta;

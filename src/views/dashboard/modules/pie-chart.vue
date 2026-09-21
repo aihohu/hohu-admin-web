@@ -24,7 +24,7 @@ const { domRef, updateOptions } = useEcharts(() => ({
   series: [
     {
       color: ['#5da8ff', '#8e9dff', '#fedc69', '#26deca'],
-      name: $t('page.home.schedule'),
+      name: $t('page.dashboard.schedule'),
       type: 'pie',
       radius: ['45%', '75%'],
       avoidLabelOverlap: false,
@@ -58,10 +58,10 @@ async function mockData() {
 
   updateOptions(opts => {
     opts.series[0].data = [
-      { name: $t('page.home.study'), value: 20 },
-      { name: $t('page.home.entertainment'), value: 10 },
-      { name: $t('page.home.work'), value: 40 },
-      { name: $t('page.home.rest'), value: 30 }
+      { name: $t('page.dashboard.study'), value: 20 },
+      { name: $t('page.dashboard.entertainment'), value: 10 },
+      { name: $t('page.dashboard.work'), value: 40 },
+      { name: $t('page.dashboard.rest'), value: 30 }
     ];
 
     return opts;
@@ -75,10 +75,10 @@ function updateLocale() {
     opts.series[0].name = originOpts.series[0].name;
 
     opts.series[0].data = [
-      { name: $t('page.home.study'), value: 20 },
-      { name: $t('page.home.entertainment'), value: 10 },
-      { name: $t('page.home.work'), value: 40 },
-      { name: $t('page.home.rest'), value: 30 }
+      { name: $t('page.dashboard.study'), value: 20 },
+      { name: $t('page.dashboard.entertainment'), value: 10 },
+      { name: $t('page.dashboard.work'), value: 40 },
+      { name: $t('page.dashboard.rest'), value: 30 }
     ];
 
     return opts;

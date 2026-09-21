@@ -1,5 +1,20 @@
 import { request } from '../request';
 
+/** Read a chat image with live tenant, owner and AI permission checks. */
+export function fetchChatImage(fileUrl: string) {
+  return request<Blob, 'blob'>({
+    url: '/system/file/chat-image',
+    method: 'get',
+    params: { fileUrl },
+    responseType: 'blob'
+  });
+}
+
+/** Download the currently authorized AI result; callers must reject JSON errors. */
+export function fetchAiResultFile(url: string) {
+  return request<Blob, 'blob'>({ url, method: 'get', responseType: 'blob' });
+}
+
 // ==================== Provider ====================
 
 /** get provider list */

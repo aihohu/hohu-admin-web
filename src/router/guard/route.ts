@@ -12,6 +12,8 @@ import { getRouteName } from '@/router/elegant/transform';
  */
 export function createRouteGuard(router: Router) {
   router.beforeEach(async (to, from) => {
+    // Compatibility link uses the normal login and role-protected Agent page.
+    if (to.name === 'platform') return { path: '/ai/agent', replace: true };
     const location = await initRoute(to);
 
     if (location) {
@@ -19,6 +21,13 @@ export function createRouteGuard(router: Router) {
     }
 
     const authStore = useAuthStore();
+    if (
+      (to.name === 'ai_agent' || to.path === '/ai/agent') &&
+      localStg.get('token') &&
+      !authStore.userInfo.isSystemAdmin
+    ) {
+      return { name: '403' };
+    }
 
     const rootRoute: RouteKey = 'root';
     const loginRoute: RouteKey = 'login';

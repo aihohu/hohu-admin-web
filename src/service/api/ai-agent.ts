@@ -1,9 +1,11 @@
 import { request } from '@/service/request';
+import { platformAuditHeaders } from './platform';
 
 /** get admin agent list */
 export function fetchAgentAdminList() {
   return request<Api.AiAgent.AdminListItem[]>({
-    url: '/ai/admin/agents',
+    headers: platformAuditHeaders(),
+    url: '/platform/ai/agents',
     method: 'get'
   });
 }
@@ -11,15 +13,25 @@ export function fetchAgentAdminList() {
 /** get admin agent detail */
 export function fetchAgentAdminDetail(agentId: string) {
   return request<Api.AiAgent.AdminDetailItem>({
-    url: `/ai/admin/agents/${agentId}`,
+    headers: platformAuditHeaders(),
+    url: `/platform/ai/agents/${agentId}`,
     method: 'get'
   });
 }
 
 /** update admin agent */
-export function fetchUpdateAgentAdmin(agentId: string, data: Api.AiAgent.AdminUpdateReq) {
-  return request<boolean>({
-    url: `/ai/admin/agents/${agentId}`,
+export function fetchUpdateAgentAdmin(
+  agentId: string,
+  data: Api.AiAgent.AdminUpdateReq,
+  audit?: Api.Platform.AuditContext
+) {
+  return request<Api.AiAgent.AdminDetailItem>({
+    headers: {
+      ...platformAuditHeaders(audit),
+      'X-Platform-Ticket': audit?.ticket.trim() || '',
+      'X-Platform-Reason': encodeURIComponent(audit?.reason.trim() || '')
+    },
+    url: `/platform/ai/agents/${agentId}`,
     method: 'put',
     data
   });
@@ -28,7 +40,8 @@ export function fetchUpdateAgentAdmin(agentId: string, data: Api.AiAgent.AdminUp
 /** Get the minimal safe model options used by the Agent editor. */
 export function fetchAgentModelOptions() {
   return request<Api.Ai.ModelOption[]>({
-    url: '/ai/admin/agents/model-options',
+    headers: platformAuditHeaders(),
+    url: '/platform/ai/agents/model-options',
     method: 'get'
   });
 }

@@ -6,6 +6,8 @@ import { $t } from '@/locales';
 interface Props {
   visible: boolean;
   editRow: Api.AiAgent.AdminListItem | null;
+  readOnly?: boolean;
+  requireAudit?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -21,6 +23,17 @@ const visible = computed({
 
 const submitting = ref(false);
 const detailLoading = ref(false);
+const reason = ref('');
+const ticket = ref('');
+const acknowledged = ref(false);
+const auditInvalid = computed(
+  () =>
+    props.requireAudit &&
+    (!reason.value.trim() ||
+      reason.value.length > 256 ||
+      !/^[A-Za-z0-9._:/-]{1,128}$/.test(ticket.value.trim()) ||
+      !acknowledged.value)
+);
 
 const model = ref<Api.AiAgent.AdminUpdateReq & { code?: string }>({});
 const detail = shallowRef<Api.AiAgent.AdminDetailItem | null>(null);
@@ -29,7 +42,8 @@ const modelPreferenceOptions = shallowRef<{ label: string; value: string }[]>([
   { label: $t('page.ai.agent.useGlobalDefault'), value: '' }
 ]);
 
-const descLen = computed(() => model.value.description?.length ?? 0);
+const nameInvalid = computed(() => !model.value.name?.trim() || Array.from(model.value.name).length > 128);
+const descLen = computed(() => Array.from(model.value.description || '').length);
 const descInvalid = computed(() => {
   // only validate once the user has edited the description
   if (model.value.description === undefined) return false;
@@ -51,7 +65,7 @@ async function loadDetail(sequence: number): Promise<boolean> {
       enabled: data.enabled,
       displayOrder: data.displayOrder,
       systemPrompt: data.systemPrompt,
-      modelPreference: data.modelPreference,
+      modelPreference: data.modelPreference ?? '',
       dailyQuotaPerUser: data.dailyQuotaPerUser,
       riskAppetite: data.riskAppetite
     };
@@ -86,7 +100,16 @@ async function loadDrawerData(sequence: number) {
 }
 
 async function handleSubmit() {
-  if (descInvalid.value) return;
+  if (
+    descInvalid.value ||
+    nameInvalid.value ||
+    auditInvalid.value ||
+    props.readOnly ||
+    detailLoading.value ||
+    !detail.value ||
+    submitting.value
+  )
+    return;
   if (!props.editRow) return;
 
   // empty string modelPreference -> null (matches backend AdminUpdateReq schema)
@@ -98,7 +121,9 @@ async function handleSubmit() {
   delete (body as { code?: string }).code;
 
   submitting.value = true;
-  const { error } = await fetchUpdateAgentAdmin(props.editRow.agentId, body);
+  const { error } = props.requireAudit
+    ? await fetchUpdateAgentAdmin(props.editRow.agentId, body, { reason: reason.value, ticket: ticket.value })
+    : await fetchUpdateAgentAdmin(props.editRow.agentId, body);
   submitting.value = false;
 
   if (!error) {
@@ -112,6 +137,11 @@ watch(
   () => props.visible,
   v => {
     const sequence = ++loadSequence;
+    detail.value = null;
+    model.value = {};
+    reason.value = '';
+    ticket.value = '';
+    acknowledged.value = false;
     if (v) {
       modelPreferenceOptions.value = [{ label: $t('page.ai.agent.useGlobalDefault'), value: '' }];
       void loadDrawerData(sequence);
@@ -124,14 +154,21 @@ defineExpose({ descInvalid, model, modelPreferenceOptions, handleSubmit });
 </script>
 
 <template>
-  <NDrawer v-model:show="visible" :width="600" data-testid="ai-agent-drawer">
-    <NDrawerContent :title="$t('page.ai.agent.editTitle')" closable>
-      <NForm :model="model" label-placement="top" :disabled="detailLoading">
+  <NDrawer v-model:show="visible" :width="600" :style="{ maxWidth: '100vw' }" data-testid="ai-agent-drawer">
+    <NDrawerContent :title="$t(readOnly ? 'platform.view' : 'page.ai.agent.editTitle')" closable>
+      <NAlert v-if="requireAudit" type="warning" class="mb-4">{{ $t('platform.scope') }}</NAlert>
+      <NForm :model="model" label-placement="top" :disabled="detailLoading || readOnly || submitting">
         <NFormItem :label="$t('page.ai.agent.code')">
           <NInput :value="model.code" disabled />
         </NFormItem>
-        <NFormItem :label="$t('page.ai.agent.name')" path="name">
-          <NInput v-model:value="model.name" />
+        <NFormItem
+          :label="$t('page.ai.agent.name')"
+          path="name"
+          required
+          :validation-status="nameInvalid && detail ? 'error' : undefined"
+          :feedback="nameInvalid && detail ? $t('platform.nameRequired') : undefined"
+        >
+          <NInput v-model:value="model.name" :input-props="{ 'aria-label': $t('page.ai.agent.name') }" />
         </NFormItem>
         <NFormItem :label="$t('page.ai.agent.enabled')">
           <NSwitch v-model:value="model.enabled" data-testid="ai-agent-enabled" />
@@ -164,13 +201,24 @@ defineExpose({ descInvalid, model, modelPreferenceOptions, handleSubmit });
         <NFormItem :label="$t('page.ai.agent.systemPrompt')">
           <NInput v-model:value="model.systemPrompt" type="textarea" :rows="8" />
         </NFormItem>
+        <template v-if="requireAudit && !readOnly">
+          <NAlert type="info" class="mb-4">{{ $t('platform.auditHint') }}</NAlert>
+          <NFormItem :label="$t('platform.reason')" required>
+            <NInput v-model:value="reason" :maxlength="256" :input-props="{ 'aria-label': $t('platform.reason') }" />
+          </NFormItem>
+          <NFormItem :label="$t('platform.ticket')" required>
+            <NInput v-model:value="ticket" :maxlength="128" :input-props="{ 'aria-label': $t('platform.ticket') }" />
+          </NFormItem>
+          <NCheckbox v-model:checked="acknowledged">{{ $t('platform.acknowledge') }}</NCheckbox>
+        </template>
       </NForm>
       <template #footer>
         <NSpace justify="end">
           <NButton @click="visible = false">{{ $t('common.cancel') }}</NButton>
           <NButton
+            v-if="!readOnly"
             type="primary"
-            :disabled="descInvalid"
+            :disabled="nameInvalid || descInvalid || auditInvalid || detailLoading || !detail || submitting"
             :loading="submitting"
             data-testid="ai-agent-submit"
             @click="handleSubmit"

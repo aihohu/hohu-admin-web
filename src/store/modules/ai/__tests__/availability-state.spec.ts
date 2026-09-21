@@ -78,7 +78,7 @@ describe('AI chat availability', () => {
     expect(store.chatAvailability).toBe('model_unavailable');
   });
 
-  it('preserves readable conversations when chat execution permission is revoked', async () => {
+  it('discards conversations when chat execution permission is revoked', async () => {
     vi.mocked(fetchGetConversationList).mockResolvedValue({
       data: {
         records: [
@@ -105,6 +105,24 @@ describe('AI chat availability', () => {
     await store.init();
 
     expect(store.chatAvailability).toBe('forbidden');
-    expect(store.conversations.map(item => item.conversationId)).toEqual(['conversation-1']);
+    expect(store.conversations).toEqual([]);
+  });
+
+  it('reloads authorized history after an administrator restores access', async () => {
+    const store = useAiStore();
+    vi.mocked(fetchGetChatModels).mockResolvedValue(failed('AI_CHAT_PERMISSION_DENIED'));
+    await store.loadModels();
+    vi.mocked(fetchGetChatModels).mockResolvedValue({
+      data: [{ modelId: '1', capabilities: ['text'] }],
+      error: null
+    } as never);
+    vi.mocked(fetchAiAgents).mockResolvedValue({ data: [{ code: 'shared' }], error: null } as never);
+    vi.mocked(fetchGetConversationList).mockResolvedValue({
+      data: { records: [{ conversationId: 'restored' }] },
+      error: null
+    } as never);
+    await store.init();
+    expect(store.chatAvailability).toBe('ready');
+    expect(store.conversations.map(item => item.conversationId)).toEqual(['restored']);
   });
 });

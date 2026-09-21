@@ -18,7 +18,7 @@ const TOOL_DESCRIPTION_KEYS: Record<string, App.I18n.I18nKey> = {
   'user.distinct': 'page.ai.chat.toolDescriptions.userDistinct',
   'user.count': 'page.ai.chat.toolDescriptions.userCount',
   'user.stats': 'page.ai.chat.toolDescriptions.userStats',
-  'user.import_preview': 'common.importModal.title',
+  'user.import_preview': 'ai.tool.user.import_preview.title',
   'user.import_execute': 'common.importModal.title',
   'user.export': 'common.exportModal.title',
   'role.count': 'page.ai.chat.toolDescriptions.roleCount',

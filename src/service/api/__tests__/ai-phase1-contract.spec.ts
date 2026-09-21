@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+vi.mock('@/service/request/platform', () => ({
+  platformRequest: vi.fn().mockResolvedValue({ data: [], error: null })
+}));
+import { platformRequest } from '@/service/request/platform';
 
 vi.mock('@/service/request', () => ({
   request: vi.fn().mockResolvedValue({ data: [], error: null })
@@ -22,10 +26,16 @@ describe('AI Phase 1 endpoint contracts', () => {
       url: '/ai/chat/models',
       method: 'get'
     });
-    expect(request).toHaveBeenNthCalledWith(2, {
-      url: '/ai/admin/agents/model-options',
-      method: 'get'
+    expect(request).toHaveBeenCalledWith({
+      url: '/platform/ai/agents/model-options',
+      method: 'get',
+      headers: expect.objectContaining({
+        'X-Platform-Reason': expect.any(String),
+        'X-Platform-Ticket': expect.any(String),
+        'X-Correlation-ID': expect.any(String)
+      })
     });
+    expect(platformRequest).not.toHaveBeenCalled();
     expect(request).toHaveBeenNthCalledWith(3, {
       url: '/ai/provider/models',
       method: 'get'

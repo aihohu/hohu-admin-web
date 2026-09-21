@@ -311,6 +311,26 @@ declare namespace App {
     };
 
     type Schema = {
+      platform: {
+        nameRequired: string;
+        title: string;
+        loginHint: string;
+        account: string;
+        password: string;
+        login: string;
+        back: string;
+        scope: string;
+        readOnly: string;
+        noPermission: string;
+        reason: string;
+        ticket: string;
+        auditHint: string;
+        acknowledge: string;
+        accessDenied: string;
+        requestFailed: string;
+        moved: string;
+        view: string;
+      };
       system: {
         title: string;
         updateTitle: string;
@@ -345,6 +365,7 @@ declare namespace App {
         lookForward: string;
         modify: string;
         modifySuccess: string;
+        modifyFailed: string;
         noData: string;
         operate: string;
         pleaseCheckValue: string;
@@ -664,7 +685,11 @@ declare namespace App {
           presetAvatar: string;
           uploadAvatar: string;
         };
-        home: {
+        empty: {
+          tip: string;
+          logout: string;
+        };
+        dashboard: {
           branchDesc: string;
           greeting: string;
           weatherDesc: string;
@@ -772,7 +797,6 @@ declare namespace App {
             };
           };
           menu: {
-            home: string;
             title: string;
             id: string;
             parentId: string;
@@ -812,7 +836,6 @@ declare namespace App {
             };
             menuStatus: string;
             form: {
-              home: string;
               menuType: string;
               parentMenu: string;
               menuName: string;
@@ -987,6 +1010,8 @@ declare namespace App {
               jobName: string;
               jobKey: string;
               cronExpression: string;
+              cronRequired: string;
+              intervalRequired: string;
               jobArgs: string;
               status: string;
               concurrent: string;
@@ -1087,6 +1112,7 @@ declare namespace App {
               configStatus: string;
               isPublic: string;
               remark: string;
+              maskHint: string;
             };
             addConfig: string;
             editConfig: string;
@@ -1099,6 +1125,7 @@ declare namespace App {
           chat: {
             title: string;
             newChat: string;
+            conversationHistory: string;
             searchPlaceholder: string;
             noConversation: string;
             deleteTitle: string;
@@ -1125,7 +1152,12 @@ declare namespace App {
             attachFile: string;
             attachFileHint: string;
             fileUploadFailed: string;
+            fileUploading: string;
+            visionModelUnavailable: string;
+            visionModelSelected: string;
+            exportExactAccounts: string;
             fileTypeUnsupported: string;
+            imageTypeUnsupported: string;
             removeFile: string;
             quickCode: string;
             quickTranslate: string;
@@ -1217,9 +1249,13 @@ declare namespace App {
             toolError: string;
             fileConversation: string;
             imageConversation: string;
+            imageUnavailable: string;
+            imageLoading: string;
             fileFallback: string;
             attachmentFallback: string;
             loadConversationFailed: string;
+            conversationUnavailable: string;
+            conversationLoadFailed: string;
             aiError: string;
             unknownError: string;
             usageLimitExceeded: string;
@@ -1626,6 +1662,11 @@ declare namespace App {
         };
       };
       errorCode: {
+        AI_CHAT_RUN_IN_PROGRESS: string;
+        AI_PREVIEW_REJECTED: string;
+        AI_IMPORT_DUPLICATE_HEADER: string;
+        AI_CONFIRMATION_SETUP_FAILED: string;
+        AI_CONFIRMATION_SETUP_INTERRUPTED: string;
         UNAUTHORIZED: string;
         INVALID_CREDENTIALS: string;
         TOKEN_EXPIRED: string;
@@ -1633,8 +1674,19 @@ declare namespace App {
         ACCOUNT_DISABLED: string;
         UNSUPPORTED_LOGIN_TYPE: string;
         AI_PROVIDER_NOT_FOUND: string;
+        AI_PROVIDER_UPSTREAM_ERROR: string;
         AI_MODEL_NOT_FOUND: string;
+        AI_EXPORT_TARGETS_UNAVAILABLE: string;
+        AI_MODEL_VISION_REQUIRED: string;
+        AI_IMAGE_NOT_AVAILABLE: string;
+        AI_FILE_NOT_FOUND: string;
         AI_CONVERSATION_NOT_FOUND: string;
+        AI_QUERY_CACHE_NOT_FOUND: string;
+        AI_CHAT_PERMISSION_DENIED: string;
+        AI_MODULE_DISABLED: string;
+        AI_AGENT_FORBIDDEN: string;
+        AI_AGENT_NOT_AVAILABLE: string;
+        AI_MODEL_NOT_AVAILABLE: string;
         AI_MODEL_NOT_CONFIGURED: string;
         AI_USAGE_LIMIT_EXCEEDED: string;
         AI_CHAT_GUARD_LOST: string;
@@ -1658,6 +1710,7 @@ declare namespace App {
         INCORRECT_OLD_PASSWORD: string;
         MISSING_PERMISSION: string;
         SUPER_ADMIN_ONLY: string;
+        SYSTEM_ADMIN_ONLY: string;
         AI_AGENT_NOT_FOUND: string;
         AI_AGENT_DESC_LENGTH_INVALID: string;
         AI_AGENT_MODEL_PREFERENCE_INVALID: string;
@@ -1794,7 +1847,7 @@ declare namespace App {
             update: { result: string };
             update_dept: { result: string };
             update_roles: { result: string };
-            import_preview: { result: string };
+            import_preview: { title: string; result: string };
             import_execute: { result: string };
             export: { result: string };
           };

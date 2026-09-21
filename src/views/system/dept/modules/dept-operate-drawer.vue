@@ -4,6 +4,7 @@ import { jsonClone } from '@sa/utils';
 import { enableStatusOptions } from '@/constants/business';
 import { fetchGetDeptTreeOption, fetchSaveDept, fetchUpdateDept } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { getServerErrorMessage, useServerFieldErrors } from '@/hooks/common/server-field-errors';
 import { $t } from '@/locales';
 
 defineOptions({
@@ -30,6 +31,7 @@ const visible = defineModel<boolean>('visible', {
 });
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
+const { applyServerFieldErrors, clearServerFieldErrors, fieldProps } = useServerFieldErrors();
 const { defaultRequiredRule } = useFormRules();
 
 const title = computed(() => {
@@ -139,11 +141,15 @@ async function handleSubmit() {
       window.$message?.success(successMsg);
       closeDrawer();
       emit('submitted');
+    } else if (!applyServerFieldErrors(error)) {
+      window.$message?.error(getServerErrorMessage(error) || $t('common.modifyFailed'));
     }
   } finally {
     loading.value = false;
   }
 }
+
+watch(model, () => clearServerFieldErrors(), { deep: true });
 
 watch(visible, () => {
   if (visible.value) {
@@ -169,10 +175,10 @@ watch(visible, () => {
             :disabled="props.operateType === 'edit'"
           />
         </NFormItem>
-        <NFormItem :label="$t('page.system.dept.deptName')" path="deptName">
+        <NFormItem v-bind="fieldProps('deptName')" :label="$t('page.system.dept.deptName')" path="deptName">
           <NInput v-model:value="model.deptName" :placeholder="$t('page.system.dept.form.deptName')" />
         </NFormItem>
-        <NFormItem :label="$t('page.system.dept.orderNum')" path="orderNum">
+        <NFormItem v-bind="fieldProps('orderNum')" :label="$t('page.system.dept.orderNum')" path="orderNum">
           <NInputNumber
             v-model:value="model.orderNum"
             :placeholder="$t('page.system.dept.form.orderNum')"
@@ -182,10 +188,10 @@ watch(visible, () => {
         <NFormItem :label="$t('page.system.dept.leader')" path="leader">
           <NInput v-model:value="model.leader" :placeholder="$t('page.system.dept.form.leader')" />
         </NFormItem>
-        <NFormItem :label="$t('page.system.dept.phone')" path="phone">
+        <NFormItem v-bind="fieldProps('phone')" :label="$t('page.system.dept.phone')" path="phone">
           <NInput v-model:value="model.phone" :placeholder="$t('page.system.dept.form.phone')" />
         </NFormItem>
-        <NFormItem :label="$t('page.system.dept.email')" path="email">
+        <NFormItem v-bind="fieldProps('email')" :label="$t('page.system.dept.email')" path="email">
           <NInput v-model:value="model.email" :placeholder="$t('page.system.dept.form.email')" />
         </NFormItem>
         <NFormItem :label="$t('page.system.dept.deptStatus')" path="status">

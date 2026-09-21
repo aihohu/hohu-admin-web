@@ -1,4 +1,4 @@
-import { computed, reactive, ref } from 'vue';
+import { computed, onScopeDispose, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { defineStore } from 'pinia';
 import { useLoading } from '@sa/hooks';
@@ -10,12 +10,21 @@ import { $t } from '@/locales';
 import { useAiStore } from '../ai';
 import { useRouteStore } from '../route';
 import { useTabStore } from '../tab';
-import { clearAuthStorage, createSingleFlightAction, getToken } from './shared';
+import { clearAuthStorage, createSingleFlightAction, getToken, watchAuthSession } from './shared';
 
 export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   const route = useRoute();
   const authStore = useAuthStore();
   const aiStore = useAiStore();
+  const sessionSync = watchAuthSession(
+    () => `${localStg.get('authSessionRevision') || ''}:${Boolean(getToken())}`,
+    () => {
+      aiStore.resetStore();
+      // Rebuild routes and cached pages. Logout would erase the new tab's credentials.
+      window.location.reload();
+    }
+  );
+  onScopeDispose(sessionSync.stop);
   const routeStore = useRouteStore();
   const tabStore = useTabStore();
   const { toLogin, redirectFromLogin } = useRouterPush(false);
@@ -27,6 +36,7 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
     userId: '',
     userName: '',
     userAvatar: '',
+    isSystemAdmin: false,
     roles: [],
     buttons: []
   });
@@ -46,6 +56,7 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
     recordUserId();
 
     clearAuthStorage();
+    sessionSync.accept();
 
     aiStore.resetStore();
     authStore.$reset();
@@ -134,10 +145,13 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   }
 
   async function loginByToken(loginToken: Api.Auth.LoginToken) {
+    aiStore.resetStore();
     // 1. stored in the localStorage, the later requests need it in headers
     localStg.set('token', loginToken.token);
     if (loginToken.refreshToken) {
       localStg.set('refreshToken', loginToken.refreshToken);
+      localStg.set('authSessionRevision', crypto.randomUUID());
+      sessionSync.accept();
     }
 
     // 2. get user info

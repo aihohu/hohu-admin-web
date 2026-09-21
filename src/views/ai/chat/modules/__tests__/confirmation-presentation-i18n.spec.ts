@@ -11,7 +11,7 @@ const zh: Record<string, string> = {
   'common.importModal.title': '批量导入用户',
   'common.importModal.confirmImport': '确认导入',
   'common.importHistoryDrawer.totalRowsLabel': '总行数',
-  'common.importHistoryDrawer.summaryNewLabel': '将新增',
+  'common.importHistoryDrawer.summaryNewLabel': '新账号记录',
   'common.importHistoryDrawer.summaryExistsLabel': '已存在',
   'common.importHistoryDrawer.summaryConflictLabel': '冲突',
   'common.importHistoryDrawer.summaryOutOfScopeLabel': '越界',

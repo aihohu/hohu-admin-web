@@ -12,6 +12,10 @@ interface AgentListItem {
   code: string;
 }
 
+interface RoleAgentBinding {
+  allAgents: AgentListItem[];
+}
+
 interface MenuNode {
   menuId: string;
   parentId: string | null;
@@ -79,10 +83,13 @@ function flattenMenus(nodes: MenuNode[]): MenuNode[] {
 function rolePageMenuIds(tree: MenuNode[]) {
   const nodes = flattenMenus(tree);
   const byId = new Map(nodes.map(node => [node.menuId, node]));
+  const homePage = nodes.find(node => node.routeName === 'home');
   const rolePage = nodes.find(node => node.routeName === 'system_role');
+  if (!homePage) throw new Error('Task 14 requires the home route');
   if (!rolePage) throw new Error('Task 14 requires the system role route');
   const roleButtons = rolePage.children ?? [];
   const selected = [
+    homePage,
     rolePage,
     ...roleButtons.filter(node => node.menuType === 'F' && ['查询', 'AI Agent 授权'].includes(node.menuName))
   ];
@@ -170,12 +177,6 @@ test('multi-role delegated admin can bind only Agents inside the combined author
   let delegatedContext: Awaited<ReturnType<typeof loginAsDelegatedAdmin>>['context'] | null = null;
 
   try {
-    const agents = await api<AgentListItem[]>(page, token, 'GET', '/ai/admin/agents');
-    const delegatedAgent = agents.find(agent => agent.code === 'user_mgmt');
-    const blockedAgent = agents.find(agent => agent.code === 'dept_mgmt');
-    if (!delegatedAgent || !blockedAgent) {
-      throw new Error('Task 14 requires user_mgmt and dept_mgmt Agents');
-    }
     const menuTree = await api<MenuNode[]>(page, token, 'GET', '/system/menu/tree');
     const menuIds = rolePageMenuIds(menuTree);
 
@@ -193,6 +194,12 @@ test('multi-role delegated admin can bind only Agents inside the combined author
     }
 
     const [authRoleId, grantRoleId, targetRoleId] = createdRoleIds;
+    const binding = await api<RoleAgentBinding>(page, token, 'GET', `/ai/role-agent/${grantRoleId}`);
+    const delegatedAgent = binding.allAgents.find(agent => agent.code === 'user_mgmt');
+    const blockedAgent = binding.allAgents.find(agent => agent.code === 'dept_mgmt');
+    if (!delegatedAgent || !blockedAgent) {
+      throw new Error('Task 14 requires user_mgmt and dept_mgmt Agents');
+    }
     await api<null>(page, token, 'PUT', `/system/role/menu/${authRoleId}`, menuIds);
     await api<null>(page, token, 'PUT', `/ai/role-agent/${grantRoleId}`, {
       agentIds: [delegatedAgent.agentId]

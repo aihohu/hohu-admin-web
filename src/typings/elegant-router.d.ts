@@ -27,6 +27,8 @@ declare module "@elegant-router/types" {
     "ai_routing-feedback": "/ai/routing-feedback";
     "ai_trace": "/ai/trace";
     "app": "/app";
+    "dashboard": "/dashboard";
+    "empty": "/empty";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
     "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
@@ -35,6 +37,7 @@ declare module "@elegant-router/types" {
     "marketplace-installed": "/marketplace/installed";
     "marketplace-review": "/marketplace-review";
     "marketplace-upload": "/marketplace/upload";
+    "platform": "/platform";
     "profile": "/profile";
     "system": "/system";
     "system_config": "/system/config";
@@ -86,6 +89,8 @@ declare module "@elegant-router/types" {
     | "500"
     | "ai"
     | "app"
+    | "dashboard"
+    | "empty"
     | "home"
     | "iframe-page"
     | "login"
@@ -94,6 +99,7 @@ declare module "@elegant-router/types" {
     | "marketplace-installed"
     | "marketplace-review"
     | "marketplace-upload"
+    | "platform"
     | "profile"
     | "system"
   >;
@@ -115,8 +121,10 @@ declare module "@elegant-router/types" {
     | "403"
     | "404"
     | "500"
+    | "empty"
     | "iframe-page"
     | "login"
+    | "platform"
     | "profile"
     | "ai_agent"
     | "ai_chat"
@@ -124,6 +132,7 @@ declare module "@elegant-router/types" {
     | "ai_routing-feedback"
     | "ai_trace"
     | "app"
+    | "dashboard"
     | "home"
     | "marketplace-detail"
     | "marketplace-installed"

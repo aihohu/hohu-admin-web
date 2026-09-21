@@ -1,4 +1,27 @@
 const local: App.I18n.Schema = {
+  platform: {
+    nameRequired: 'Enter a name of 1–128 characters; whitespace alone is not allowed.',
+    title: 'Platform Agent management',
+    loginHint: 'Sign in with a separate platform account. Tenant administrators cannot manage global Agents.',
+    account: 'Platform account',
+    password: 'Platform password',
+    login: 'Sign in to platform',
+    back: 'Back to business console',
+    scope: 'Agent configuration applies to all tenants. Manage tenant role assignments in the business console.',
+    readOnly: 'This account has read-only access.',
+    noPermission:
+      'Only system super administrators can manage global Agents. Tenant administrators manage their own tenant.',
+    reason: 'Change reason',
+    ticket: 'Ticket or approval reference',
+    auditHint:
+      'Provide a traceable reason and reference. Do not enter passwords or secrets. References accept letters, numbers and - _ . : / only.',
+    acknowledge: 'I confirm this change affects all tenants',
+    accessDenied:
+      'Incorrect platform credentials, expired session, or insufficient permissions. Check your platform account and sign in again.',
+    requestFailed: 'Platform request failed. Retry later or contact your platform administrator.',
+    moved: 'Global Agent settings have moved to the platform console. Sign in with a platform account.',
+    view: 'View details'
+  },
   system: {
     title: 'HoHuAdmin',
     updateTitle: 'System Version Update Notification',
@@ -33,6 +56,7 @@ const local: App.I18n.Schema = {
     lookForward: 'Coming soon',
     modify: 'Modify',
     modifySuccess: 'Modify Success',
+    modifyFailed: 'Submit failed',
     noData: 'No Data',
     operate: 'Operate',
     pleaseCheckValue: 'Please check whether the value is valid',
@@ -98,11 +122,11 @@ const local: App.I18n.Schema = {
       finishedAtLabel: 'Finished At',
       statusLabel: 'Status',
       expiresAtLabel: 'Expires At',
-      summaryNewLabel: 'New',
+      summaryNewLabel: 'New account records',
       summaryExistsLabel: 'Exists',
       summaryConflictLabel: 'Conflict',
       summaryOutOfScopeLabel: 'Out of scope',
-      successCountLabel: 'Success',
+      successCountLabel: 'Created',
       skippedCountLabel: 'Skipped',
       overwrittenCountLabel: 'Overwritten',
       failedCountLabel: 'Failed',
@@ -129,7 +153,7 @@ const local: App.I18n.Schema = {
       uploadDesc: 'Single file ≤ 10MB, rows ≤ 50000',
       downloadTemplate: 'Download Import Template',
       previewTitle: 'Preview (total {total} rows)',
-      previewNew: 'New',
+      previewNew: 'New account records',
       previewExists: 'Exists',
       previewConflict: 'Conflict',
       previewOutOfScope: 'Out of scope',
@@ -343,11 +367,14 @@ const local: App.I18n.Schema = {
     }
   },
   route: {
+    platform: 'Platform Agent management',
     login: 'Login',
     403: 'No Permission',
     404: 'Page Not Found',
     500: 'Server Error',
     'iframe-page': 'Iframe',
+    empty: 'No Features Available',
+    dashboard: 'Dashboard',
     home: 'Home',
     profile: 'Profile',
     system: 'System Manage',
@@ -368,8 +395,8 @@ const local: App.I18n.Schema = {
     auth: 'Permission',
     task: 'Task Center',
     'task_job-log': 'Job Log',
-    ai: 'AI Assistant',
-    ai_chat: 'AI Chat',
+    ai: 'AI Management',
+    ai_chat: 'AI Assistant',
     ai_provider: 'Model Manage',
     ai_agent: 'AI Agent Management',
     'ai_routing-feedback': 'Routing Feedback Analytics',
@@ -447,7 +474,11 @@ const local: App.I18n.Schema = {
       presetAvatar: 'Choose a preset avatar',
       uploadAvatar: 'Upload custom avatar'
     },
-    home: {
+    empty: {
+      tip: 'This account has no feature pages yet. Ask an administrator to configure menus under Permission Management, then sign in again.',
+      logout: 'Sign out'
+    },
+    dashboard: {
       branchDesc:
         'Welcome to HoHu, a front-end and back-end separated permission management system based on FastAPI, SQLAlchemy, Vue3 & Naiveui.',
       greeting: 'Good morning, {userName}, today is another day full of vitality!',
@@ -558,7 +589,6 @@ const local: App.I18n.Schema = {
         }
       },
       menu: {
-        home: 'Home',
         title: 'Menu List',
         id: 'ID',
         parentId: 'Parent ID',
@@ -598,7 +628,6 @@ const local: App.I18n.Schema = {
         },
         menuStatus: 'Menu Status',
         form: {
-          home: 'Please select home',
           menuType: 'Please select menu type',
           parentMenu: 'Please select parent menu',
           menuName: 'Please enter menu name',
@@ -723,6 +752,8 @@ const local: App.I18n.Schema = {
           jobName: 'Enter job name',
           jobKey: 'Select job key',
           cronExpression: 'Enter cron expression',
+          cronRequired: 'Expression is required in Cron mode',
+          intervalRequired: 'Value and unit are required in interval mode',
           jobArgs: 'Enter job args JSON',
           status: 'Select status',
           concurrent: 'Select concurrent strategy',
@@ -822,7 +853,8 @@ const local: App.I18n.Schema = {
           configGroup: 'Please enter config group',
           configStatus: 'Please select config status',
           isPublic: 'Accessible without authentication',
-          remark: 'Please enter remark'
+          remark: 'Please enter remark',
+          maskHint: 'Sensitive values are masked. Keep ****** unchanged to preserve the original value'
         },
         addConfig: 'Add Config',
         editConfig: 'Edit Config',
@@ -885,6 +917,7 @@ const local: App.I18n.Schema = {
       chat: {
         title: 'AI Chat',
         newChat: 'New Chat',
+        conversationHistory: 'Conversation history',
         searchPlaceholder: 'Search conversations...',
         noConversation: 'No conversations',
         deleteTitle: 'Delete Chat',
@@ -902,7 +935,7 @@ const local: App.I18n.Schema = {
         availabilityNoModels: 'No chat-safe model is currently available.',
         availabilityModelUnavailable: 'The selected AI model is no longer available. Reload to refresh model options.',
         availabilityError: 'AI availability could not be loaded. Please try again later.',
-        resultProjectionForbidden: 'This historic AI result is no longer visible with your current permissions.',
+        resultProjectionForbidden: 'This AI result is no longer visible with your current permissions.',
         copy: 'Copy',
         copied: 'Copied',
         regenerate: 'Regenerate',
@@ -910,8 +943,14 @@ const local: App.I18n.Schema = {
         editTip: 'Enter to submit · Esc to cancel',
         attachFile: 'Upload file',
         attachFileHint: 'Supports Excel (.xlsx) and CSV (.csv), max 10MB',
-        fileUploadFailed: 'File upload failed',
-        fileTypeUnsupported: 'Only Excel and CSV files are supported',
+        fileUploadFailed: 'Upload failed. Select or drop the file again to retry.',
+        fileUploading: 'Uploading…',
+        visionModelUnavailable:
+          'No image-capable model is available. Ask an administrator to enable one, or remove images and start a new chat.',
+        visionModelSelected: 'Switched to an image-capable model: {model}',
+        exportExactAccounts: 'Export accounts (exact matches)',
+        fileTypeUnsupported: 'Use PNG/JPEG images or CSV/XLSX spreadsheets (file processing access required)',
+        imageTypeUnsupported: 'Only PNG/JPEG images are supported. Convert the image and upload it again.',
         removeFile: 'Remove file',
         quickCode: 'Write code for me',
         quickTranslate: 'Translate text',
@@ -1005,9 +1044,15 @@ const local: App.I18n.Schema = {
         toolError: 'Error',
         fileConversation: 'File Chat',
         imageConversation: 'Image Chat',
+        imageUnavailable: 'Image unavailable or access denied. Please upload it again.',
+        imageLoading: 'Loading image…',
         fileFallback: 'File',
         attachmentFallback: 'Attachment',
         loadConversationFailed: 'Failed to load conversation',
+        conversationUnavailable:
+          'This conversation was deleted or is not accessible to this account. Previous content has been cleared. Start a new conversation; this request did not continue.',
+        conversationLoadFailed:
+          'This conversation could not be loaded. Retry from history later, or start a new conversation.',
         aiError: 'AI error: {message}',
         unknownError: 'Unknown error',
         usageLimitExceeded: 'AI call limit exceeded. The tool may be incorrect or retrying in a loop; try rephrasing.',
@@ -1021,8 +1066,10 @@ const local: App.I18n.Schema = {
         confirmationNearExpiry: 'The confirmation window is about to expire. Please start it again.',
         confirmationExpired: 'This confirmation expired. Please start it again.',
         resumeFailed: 'Resume failed: {message}',
-        confirmationFailed: 'Confirmation failed',
-        confirmationFailedWithMessage: 'Confirmation failed: {message}',
+        confirmationFailed:
+          'The action result could not be confirmed. Check your connection, then refresh the conversation and review its status before retrying.',
+        confirmationFailedWithMessage:
+          'The action result could not be confirmed: {message}. Reconnect, then refresh the conversation and review its status before retrying.',
         operationCardSyncPending:
           'The action completed, but its message card is not synchronized yet. Please try again later.',
         operationSucceeded: 'Action completed successfully',
@@ -1051,7 +1098,8 @@ const local: App.I18n.Schema = {
         replayFilterHint: 'Open the module page with replay filters',
         downloading: 'Downloading…',
         downloadFile: 'Download file',
-        downloadFailed: 'Download failed',
+        downloadFailed:
+          'Unable to download. Refresh the conversation and retry; if it still fails, export again or ask an administrator to check your access.',
         timeRemaining: 'Remaining',
         expiringSoon: 'Expiring soon',
         autoCancelAfterFiveMinutes: 'Automatically cancels after 5 minutes',
@@ -1113,7 +1161,8 @@ const local: App.I18n.Schema = {
         },
         // Agent routing feedback
         agentAutoName: 'AI Auto Routing',
-        agentAutoDesc: 'AI Supervisor picks the best agent based on your question',
+        agentAutoDesc:
+          'Chooses an assistant using your current question and recent conversation, including topic changes',
         routingFeedback: 'Routing Feedback',
         routingFeedbackTitle: 'Routing Feedback',
         feedbackCorrect: 'Correct Routing',
@@ -1441,6 +1490,14 @@ const local: App.I18n.Schema = {
     }
   },
   errorCode: {
+    AI_CHAT_RUN_IN_PROGRESS:
+      'The previous task is still running. Complete its confirmation or stop it before retrying.',
+    AI_PREVIEW_REJECTED: 'The operation did not pass preview checks. No changes were made.',
+    AI_IMPORT_DUPLICATE_HEADER: 'Duplicate headers. Keep only one column for each field and upload again.',
+    AI_CONFIRMATION_SETUP_FAILED:
+      'Could not prepare confirmation. Nothing was executed. Retry and share this record with your administrator.',
+    AI_CONFIRMATION_SETUP_INTERRUPTED:
+      'Confirmation preparation was interrupted. Nothing was executed. Start the operation again.',
     UNAUTHORIZED: 'Session expired, please login again',
     INVALID_CREDENTIALS: 'Invalid username or password',
     TOKEN_EXPIRED: 'Session expired, please login again',
@@ -1448,8 +1505,24 @@ const local: App.I18n.Schema = {
     ACCOUNT_DISABLED: 'Account has been disabled',
     UNSUPPORTED_LOGIN_TYPE: 'Unsupported login method',
     AI_PROVIDER_NOT_FOUND: 'AI provider not found',
+    AI_PROVIDER_UPSTREAM_ERROR: 'The model service is temporarily unavailable. Please retry later.',
     AI_MODEL_NOT_FOUND: 'AI model not found',
-    AI_CONVERSATION_NOT_FOUND: 'AI conversation not found',
+    AI_EXPORT_TARGETS_UNAVAILABLE:
+      'Some requested accounts are unavailable under your access scope or filters. Check the list; no file was generated.',
+    AI_MODEL_VISION_REQUIRED: 'This model cannot understand images. Select an image-capable model and try again.',
+    AI_IMAGE_NOT_AVAILABLE: 'The image is unavailable or you do not have access. Upload it again and retry.',
+    AI_FILE_NOT_FOUND: 'File unavailable or access denied. Upload your own file and retry.',
+    AI_CONVERSATION_NOT_FOUND:
+      'This conversation was deleted or is not accessible to this account. Start a new conversation to continue.',
+    AI_QUERY_CACHE_NOT_FOUND:
+      'These query results have expired or are not accessible to this account. Return to the AI assistant and run the query again.',
+    AI_CHAT_PERMISSION_DENIED:
+      'AI chat access is unavailable for this account. Previous content has been cleared. Contact your administrator.',
+    AI_MODULE_DISABLED: 'AI has been disabled by the administrator. Try again after it is enabled.',
+    AI_AGENT_FORBIDDEN:
+      'This account cannot use this assistant. Choose another assistant or contact your administrator.',
+    AI_AGENT_NOT_AVAILABLE: 'This assistant is unavailable. Choose another assistant or contact your administrator.',
+    AI_MODEL_NOT_AVAILABLE: 'This model is unavailable. Choose another model or contact your administrator.',
     AI_MODEL_NOT_CONFIGURED: 'AI model not configured, please add in model management',
     AI_USAGE_LIMIT_EXCEEDED: 'AI call limit exceeded. Rephrase and try again.',
     AI_CHAT_GUARD_LOST: 'The conversation lock expired. Refresh and try again.',
@@ -1473,6 +1546,7 @@ const local: App.I18n.Schema = {
     INCORRECT_OLD_PASSWORD: 'Current password is incorrect',
     MISSING_PERMISSION: 'You do not have permission to perform this action. Please contact the administrator.',
     SUPER_ADMIN_ONLY: 'This action is restricted to super admins',
+    SYSTEM_ADMIN_ONLY: 'Only system super administrators can change global configuration',
     AI_AGENT_NOT_FOUND: 'AI Agent not found',
     AI_AGENT_DESC_LENGTH_INVALID: 'Description must be 50-200 characters',
     AI_AGENT_MODEL_PREFERENCE_INVALID: 'model_preference must be a model ID or use provider:model format',
@@ -1609,7 +1683,7 @@ const local: App.I18n.Schema = {
         update: { result: 'Updated user {userName}' },
         update_dept: { result: 'Updated departments for user {userName}' },
         update_roles: { result: 'Updated roles for user {userName}' },
-        import_preview: { result: 'Preview done, {total} rows affected' },
+        import_preview: { title: 'Preview User Import', result: 'Preview done, {total} rows checked (not imported)' },
         import_execute: { result: 'Import done, {count} users created' },
         export: { result: 'Export ready ({count} rows)' }
       },

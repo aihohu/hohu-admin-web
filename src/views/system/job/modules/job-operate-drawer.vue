@@ -4,6 +4,7 @@ import { jsonClone } from '@sa/utils';
 import { enableStatusOptions } from '@/constants/business';
 import { fetchGetRegisteredTasks, fetchSaveJob, fetchUpdateJob } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { getServerErrorMessage, useServerFieldErrors } from '@/hooks/common/server-field-errors';
 import { $t } from '@/locales';
 
 defineOptions({
@@ -26,6 +27,7 @@ const emit = defineEmits<Emits>();
 const visible = defineModel<boolean>('visible', { default: false });
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
+const { applyServerFieldErrors, clearServerFieldErrors, fieldProps } = useServerFieldErrors();
 const { defaultRequiredRule } = useFormRules();
 
 const title = computed(() => {
@@ -110,12 +112,32 @@ async function loadRegisteredTasks() {
   }
 }
 
-type RuleKey = Extract<keyof Model, 'jobName' | 'jobKey' | 'status'>;
+type RuleKey = Extract<
+  keyof Model,
+  'jobName' | 'jobKey' | 'status' | 'cronExpression' | 'intervalValue' | 'intervalUnit'
+>;
+
+function requiredWhenCron(_rule: unknown, value: string | null) {
+  if (model.value.triggerType === 'cron' && !value) {
+    return new Error($t('page.system.job.form.cronRequired'));
+  }
+  return true;
+}
+
+function requiredWhenInterval(_rule: unknown, value: unknown) {
+  if (model.value.triggerType === 'interval' && (value === null || value === undefined)) {
+    return new Error($t('page.system.job.form.intervalRequired'));
+  }
+  return true;
+}
 
 const rules: Record<RuleKey, App.Global.FormRule> = {
   jobName: defaultRequiredRule,
   jobKey: defaultRequiredRule,
-  status: defaultRequiredRule
+  status: defaultRequiredRule,
+  cronExpression: { validator: requiredWhenCron, trigger: ['input', 'blur'] },
+  intervalValue: { validator: requiredWhenInterval, trigger: ['input', 'blur'] },
+  intervalUnit: { validator: requiredWhenInterval, trigger: ['input', 'blur'] }
 };
 
 function handleInitModel() {
@@ -166,11 +188,15 @@ async function handleSubmit() {
       window.$message?.success(successMsg);
       closeDrawer();
       emit('submitted');
+    } else if (!applyServerFieldErrors(error)) {
+      window.$message?.error(getServerErrorMessage(error) || $t('common.modifyFailed'));
     }
   } finally {
     loading.value = false;
   }
 }
+
+watch(model, () => clearServerFieldErrors(), { deep: true });
 
 watch(visible, () => {
   if (visible.value) {
@@ -185,7 +211,7 @@ watch(visible, () => {
   <NDrawer v-model:show="visible" display-directive="show" :width="460">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
       <NForm ref="formRef" :model="model" :rules="rules">
-        <NFormItem :label="$t('page.system.job.jobName')" path="jobName">
+        <NFormItem v-bind="fieldProps('jobName')" :label="$t('page.system.job.jobName')" path="jobName">
           <NInput v-model:value="model.jobName" :placeholder="$t('page.system.job.form.jobName')" />
         </NFormItem>
         <NFormItem :label="$t('page.system.job.jobKey')" path="jobKey">
@@ -205,7 +231,11 @@ watch(visible, () => {
 
         <!-- cron 模式 -->
         <template v-if="model.triggerType === 'cron'">
-          <NFormItem :label="$t('page.system.job.cronExpression')" path="cronExpression">
+          <NFormItem
+            v-bind="fieldProps('cronExpression')"
+            :label="$t('page.system.job.cronExpression')"
+            path="cronExpression"
+          >
             <NInput v-model:value="model.cronExpression" :placeholder="$t('page.system.job.form.cronExpression')" />
           </NFormItem>
           <div class="mb-12px">
@@ -215,6 +245,7 @@ watch(visible, () => {
                 :key="preset.value"
                 size="tiny"
                 quaternary
+                :type="model.cronExpression === preset.value ? 'primary' : 'default'"
                 @click="applyCronPreset(preset.value)"
               >
                 {{ preset.label }}
@@ -228,7 +259,7 @@ watch(visible, () => {
 
         <!-- interval 模式 -->
         <template v-if="model.triggerType === 'interval'">
-          <NFormItem :label="$t('page.system.job.interval')" path="intervalValue">
+          <NFormItem v-bind="fieldProps('intervalValue')" :label="$t('page.system.job.interval')" path="intervalValue">
             <NSpace :size="8" align="center">
               <NInputNumber
                 v-model:value="model.intervalValue"
@@ -246,7 +277,7 @@ watch(visible, () => {
           </NFormItem>
         </template>
 
-        <NFormItem :label="$t('page.system.job.jobArgs')" path="jobArgs">
+        <NFormItem v-bind="fieldProps('jobArgs')" :label="$t('page.system.job.jobArgs')" path="jobArgs">
           <NInput
             v-model:value="model.jobArgs"
             type="textarea"
@@ -264,7 +295,11 @@ watch(visible, () => {
             <NRadio v-for="item in concurrentOptions" :key="item.value" :value="item.value" :label="item.label" />
           </NRadioGroup>
         </NFormItem>
-        <NFormItem :label="$t('page.system.job.timeoutSeconds')" path="timeoutSeconds">
+        <NFormItem
+          v-bind="fieldProps('timeoutSeconds')"
+          :label="$t('page.system.job.timeoutSeconds')"
+          path="timeoutSeconds"
+        >
           <NInputNumber
             v-model:value="model.timeoutSeconds"
             :min="1"

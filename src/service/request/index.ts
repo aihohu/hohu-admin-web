@@ -41,6 +41,14 @@ export const request = createFlatRequest(
       const Authorization = getAuthorization();
       Object.assign(config.headers, { Authorization });
 
+      if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+        if (typeof config.headers.set === 'function') {
+          config.headers.set('Content-Type', 'multipart/form-data');
+        } else {
+          Object.assign(config.headers, { 'Content-Type': 'multipart/form-data' });
+        }
+      }
+
       // 自动清理 GET 请求的查询参数中的无效值
       if (config.params && typeof config.params === 'object') {
         config.params = cleanParams(config.params);
@@ -154,6 +162,7 @@ export const request = createFlatRequest(
 
       // if backend returns errorCode, use i18n mapping
       const errorCode = error.response?.data?.errorCode;
+      if (errorCode === 'SYSTEM_ADMIN_ONLY') useAuthStore().userInfo.isSystemAdmin = false;
       if (errorCode) {
         const i18nKey = `errorCode.${errorCode}`;
         // @ts-expect-error dynamic i18n key from backend errorCode
