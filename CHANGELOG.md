@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.1.5] (Unreleased)
+
+### Licensing
+
+- Adopt Apache-2.0 as the project license starting with v0.1.5, except where otherwise noted. Previously released hohu-admin-web versions through v0.1.4 retain their original MIT license.
+- Preserve the SoybeanAdmin upstream MIT license, including its original copyright attribution, in `THIRD_PARTY_NOTICES.md`.
+- Include license and attribution files in production builds under `dist/licenses/`. Other dependencies retain their respective licenses.
+
 ## [v0.1.4] (2026-07-03)
 
 ### Features

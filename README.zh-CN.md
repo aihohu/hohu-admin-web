@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="license" />
+  <img src="https://img.shields.io/badge/license-Apache--2.0-green.svg" alt="license" />
   <img src="https://img.shields.io/badge/Vue-3.5-42b883.svg" alt="Vue" />
   <img src="https://img.shields.io/badge/Vite-7.3-646cff.svg" alt="Vite" />
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6.svg" alt="TypeScript" />
@@ -110,7 +110,3 @@ pnpm lint         # 代码检查（oxlint + eslint）
 pnpm typecheck    # TypeScript 类型检查
 pnpm gen-route    # 根据 src/views 重新生成路由
 ```
-
-## 许可证
-
-[MIT](./LICENSE)
