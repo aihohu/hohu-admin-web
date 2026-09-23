@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { loginModuleRecord } from '@/constants/app';
 import { useAuthStore } from '@/store/modules/auth';
 import { useRouterPush } from '@/hooks/common/router';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
+import { fetchLoginOptions } from '@/service/api';
 import { shouldShowTenantCodeInput } from '@/utils/tenant-auth';
 
 defineOptions({
@@ -22,19 +23,25 @@ interface FormModel {
 }
 
 const model: FormModel = reactive({
-  tenantCode: '',
+  tenantCode: 'default',
   userName: '',
   password: ''
 });
 
-const showTenantCode = shouldShowTenantCodeInput(import.meta.env.VITE_TENANT_MODE, import.meta.env.VITE_TENANT_LOCATOR);
+const showTenantCode = ref(
+  shouldShowTenantCodeInput(import.meta.env.VITE_TENANT_MODE, import.meta.env.VITE_TENANT_LOCATOR)
+);
+onMounted(async () => {
+  const { data } = await fetchLoginOptions();
+  if (data) showTenantCode.value = shouldShowTenantCodeInput(data.tenantMode, data.tenantLocator);
+});
 
 const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
   // inside computed to make locale reactive, if not apply i18n, you can define it without computed
   const { formRules } = useFormRules();
 
   return {
-    tenantCode: showTenantCode ? [{ required: true, message: $t('page.login.common.tenantCodeRequired') }] : [],
+    tenantCode: showTenantCode.value ? [{ required: true, message: $t('page.login.common.tenantCodeRequired') }] : [],
     userName: formRules.userName,
     password: [{ required: true, message: $t('form.pwd.required') }]
   };
@@ -42,7 +49,7 @@ const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
 
 async function handleSubmit() {
   await validate();
-  await authStore.login(model.userName, model.password, true, showTenantCode ? model.tenantCode : undefined);
+  await authStore.login(model.userName, model.password, true, showTenantCode.value ? model.tenantCode : undefined);
 }
 </script>
 

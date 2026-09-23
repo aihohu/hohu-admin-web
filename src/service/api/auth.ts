@@ -48,3 +48,7 @@ export function fetchRefreshToken(refreshToken: string) {
 export function fetchCustomBackendError(code: string, msg: string) {
   return request({ url: '/auth/error', params: { code, msg } });
 }
+
+export function fetchLoginOptions() {
+  return request<{ tenantMode: 'single' | 'hosted'; tenantLocator: 'code' | 'host' }>({ url: '/auth/login-options' });
+}

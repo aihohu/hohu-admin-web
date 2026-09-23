@@ -7,3 +7,8 @@ it('filters the global Agent menu for tenants without changing source routes', (
   expect(filterSystemAdminRoutes(routes, true)).toEqual(routes);
   expect(routes[0].children).toHaveLength(2);
 });
+it('hides tenant management from tenant administrators', () => {
+  const routes = [{ name: 'tenant' }, { name: 'home' }];
+  expect(filterSystemAdminRoutes(routes, false)).toEqual([{ name: 'home' }]);
+  expect(filterSystemAdminRoutes(routes, true)).toEqual(routes);
+});

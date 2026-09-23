@@ -198,7 +198,8 @@ const routeMap: RouteMap = {
   "system_menu": "/system/menu",
   "system_operation-log": "/system/operation-log",
   "system_role": "/system/role",
-  "system_user": "/system/user"
+  "system_user": "/system/user",
+  "tenant": "/tenant"
 };
 
 /**

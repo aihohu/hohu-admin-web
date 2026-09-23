@@ -367,6 +367,7 @@ const local: App.I18n.Schema = {
     }
   },
   route: {
+    tenant: 'Tenants',
     platform: 'Platform Agent management',
     login: 'Login',
     403: 'No Permission',

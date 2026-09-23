@@ -360,6 +360,7 @@ const local: App.I18n.Schema = {
     }
   },
   route: {
+    tenant: '租户管理',
     platform: '平台 Agent 管理',
     login: '登录',
     403: '无权限',

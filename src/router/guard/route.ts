@@ -22,7 +22,7 @@ export function createRouteGuard(router: Router) {
 
     const authStore = useAuthStore();
     if (
-      (to.name === 'ai_agent' || to.path === '/ai/agent') &&
+      (['ai_agent', 'tenant'].includes(String(to.name)) || ['/ai/agent', '/tenant'].includes(to.path)) &&
       localStg.get('token') &&
       !authStore.userInfo.isSystemAdmin
     ) {
