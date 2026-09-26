@@ -1,6 +1,6 @@
 import type { Router } from 'vue-router';
 import type { LastLevelRouteKey, RouteKey, RouteMap } from '@elegant-router/types';
-import { $t } from '@/locales';
+import { $t, localizedText } from '@/locales';
 import { getRoutePath } from '@/router/elegant/transform';
 
 /**
@@ -67,7 +67,7 @@ export function getTabByRoute(route: App.Global.TabRoute) {
   // Get icon and localIcon from getRouteIcons function
   const { icon, localIcon } = getRouteIcons(route);
 
-  const label = i18nKey ? $t(i18nKey) : title;
+  const label = localizedText(title, i18nKey);
 
   const tab: App.Global.Tab = {
     id: getTabIdByRoute(route),
@@ -234,7 +234,7 @@ export function updateTabByI18nKey(tab: App.Global.Tab) {
 
   return {
     ...tab,
-    label: i18nKey ? $t(i18nKey) : label
+    label: localizedText(label, i18nKey)
   };
 }
 

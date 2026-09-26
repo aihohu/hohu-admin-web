@@ -50,5 +50,7 @@ export function fetchCustomBackendError(code: string, msg: string) {
 }
 
 export function fetchLoginOptions() {
-  return request<{ tenantMode: 'single' | 'hosted'; tenantLocator: 'code' | 'host' }>({ url: '/auth/login-options' });
+  return request<{ defaultLocale: string; tenantMode: 'single' | 'hosted'; tenantLocator: 'code' | 'host' }>({
+    url: '/auth/login-options'
+  });
 }

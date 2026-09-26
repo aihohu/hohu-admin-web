@@ -311,6 +311,12 @@ declare namespace App {
     };
 
     type Schema = {
+      settings: Record<string, string>;
+      builtin: {
+        permission: Record<string, string>;
+        role: Record<string, Record<string, string>>;
+        agent: Record<string, Record<string, string>>;
+      };
       platform: {
         nameRequired: string;
         title: string;

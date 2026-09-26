@@ -236,3 +236,5 @@ describe('chat tool result card', () => {
     expect(wrapper.text()).toContain('[object Object]');
   });
 });
+
+vi.mock('@/locales', () => ({ $t: (key: string) => key, localizedText: (raw: string) => raw }));

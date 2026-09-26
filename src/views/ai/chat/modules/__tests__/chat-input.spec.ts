@@ -137,6 +137,32 @@ describe('chat input behavior', () => {
     expect(window.$message?.warning).toHaveBeenCalledWith('page.ai.chat.fileTypeUnsupported');
   });
 
+  it('uploads markdown and json attachments', async () => {
+    uploadMock
+      .mockResolvedValueOnce({
+        data: { fileId: 'md-1', originalName: 'notes.md', mimeType: 'text/markdown' },
+        error: null
+      })
+      .mockResolvedValueOnce({
+        data: { fileId: 'json-1', originalName: 'data.json', mimeType: 'application/json' },
+        error: null
+      });
+    const wrapper = render();
+    const input = wrapper.get('input[type="file"]');
+    expect(input.attributes('accept')).toContain('.md');
+    expect(input.attributes('accept')).toContain('.json');
+    const md = new File(['# hi'], 'notes.md', { type: 'text/markdown' });
+    const json = new File(['{}'], 'data.json', { type: 'application/json' });
+    Object.defineProperty(input.element, 'files', { configurable: true, value: [md, json] });
+
+    await input.trigger('change');
+    await flushPromises();
+
+    expect(store.addFile).toHaveBeenCalledWith('md-1', 'notes.md', 'text/markdown', md.size);
+    expect(store.addFile).toHaveBeenCalledWith('json-1', 'data.json', 'application/json', json.size);
+    wrapper.unmount();
+  });
+
   it('discards uploads that finish after the private context is cleared', async () => {
     let finish!: (value: unknown) => void;
     uploadMock.mockReturnValue(
@@ -273,3 +299,5 @@ describe('chat input behavior', () => {
     await wrapper.get('.input-wrapper').trigger('drop', { dataTransfer: undefined });
   });
 });
+
+vi.mock('@/locales', () => ({ $t: (key: string) => key, localizedText: (raw: string) => raw }));

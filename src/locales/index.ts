@@ -4,8 +4,8 @@ import { localStg } from '@/utils/storage';
 import messages from './locale';
 
 const i18n = createI18n({
-  locale: localStg.get('lang') || 'zh-CN',
-  fallbackLocale: 'en',
+  locale: supportedLocale(localStg.get('lang')) ? localStg.get('lang')! : 'zh-CN',
+  fallbackLocale: 'en-US',
   messages,
   legacy: false
 });
@@ -29,4 +29,21 @@ export function setLocale(locale: App.I18n.LangType) {
 
 export function getLocale(): App.I18n.LangType {
   return i18n.global.locale.value as App.I18n.LangType;
+}
+
+/** Translate only explicitly owned built-in text; preserve arbitrary user content. */
+export function localizedText(raw: string | null | undefined, key?: string | null): string {
+  if (!key) return raw ?? '';
+  const translated = i18n.global.t(key);
+  return translated === key ? (raw ?? '') : translated;
+}
+
+export function supportedLocale(value: string | null | undefined): value is App.I18n.LangType {
+  return Boolean(value && Object.hasOwn(messages, value));
+}
+
+export function setDefaultLocale(value: string) {
+  const fallback = supportedLocale(value) ? value : 'en-US';
+  i18n.global.fallbackLocale.value = [fallback, 'en-US'];
+  return fallback;
 }

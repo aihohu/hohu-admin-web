@@ -5,7 +5,7 @@ import { enableStatusOptions, userGenderOptions } from '@/constants/business';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { fetchGetAllRoles } from '@/service/api';
 import { translateOptions } from '@/utils/common';
-import { $t } from '@/locales';
+import { $t, localizedText } from '@/locales';
 
 defineOptions({
   name: 'UserSearch'
@@ -32,12 +32,15 @@ const rules = computed<Record<RuleKey, App.Global.FormRule>>(() => {
   };
 });
 
-const roleOptions = ref<{ label: string; value: string }[]>([]);
+const roles = ref<Api.SystemManage.AllRole[]>([]);
+const roleOptions = computed(() =>
+  roles.value.map(r => ({ label: localizedText(r.roleName, r.i18nKeys?.roleName), value: r.roleCode }))
+);
 
 async function loadRoles() {
   const { data, error } = await fetchGetAllRoles();
   if (!error && data) {
-    roleOptions.value = data.map(r => ({ label: r.roleName, value: r.roleCode }));
+    roles.value = data;
   }
 }
 

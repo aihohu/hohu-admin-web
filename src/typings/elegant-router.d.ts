@@ -52,6 +52,7 @@ declare module "@elegant-router/types" {
     "system_menu": "/system/menu";
     "system_operation-log": "/system/operation-log";
     "system_role": "/system/role";
+    "system_setting": "/system/setting";
     "system_user": "/system/user";
     "tenant": "/tenant";
   };
@@ -153,6 +154,7 @@ declare module "@elegant-router/types" {
     | "system_menu"
     | "system_operation-log"
     | "system_role"
+    | "system_setting"
     | "system_user"
     | "tenant"
   >;

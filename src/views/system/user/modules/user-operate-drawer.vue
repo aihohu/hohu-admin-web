@@ -13,7 +13,7 @@ import {
 import { useAuth } from '@/hooks/business/auth';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { getServerErrorMessage, useServerFieldErrors } from '@/hooks/common/server-field-errors';
-import { $t } from '@/locales';
+import { $t, localizedText } from '@/locales';
 
 defineOptions({
   name: 'UserOperateDrawer'
@@ -99,7 +99,13 @@ const initialDeptAssignments = ref<Api.SystemManage.UserDeptItem[]>([]);
 let initializationGeneration = 0;
 
 /** the enabled role options */
-const roleOptions = ref<CommonType.Option<string>[]>([]);
+const candidateRoles = ref<Api.SystemManage.AssignableRole[]>([]);
+const roleOptions = computed(() =>
+  candidateRoles.value.map(role => ({
+    label: localizedText(role.roleName, role.i18nKeys?.roleName),
+    value: role.roleId
+  }))
+);
 
 async function fetchRoleCandidates(query?: string) {
   const { error, data } = await fetchGetAssignableRoles({ query, limit: 20 });
@@ -107,11 +113,9 @@ async function fetchRoleCandidates(query?: string) {
 }
 
 function mergeRoleOptions(roles: Api.SystemManage.AssignableRole[]) {
-  const options = new Map(roleOptions.value.map(option => [option.value, option]));
-  roles.forEach(role => {
-    options.set(role.roleId, { label: role.roleName, value: role.roleId });
-  });
-  roleOptions.value = [...options.values()];
+  const options = new Map(candidateRoles.value.map(role => [role.roleId, role]));
+  roles.forEach(role => options.set(role.roleId, role));
+  candidateRoles.value = [...options.values()];
 }
 
 async function getRoleOptions(generation: number, currentRoleCodes: string[]) {
@@ -201,7 +205,7 @@ function handleInitModel() {
   checkedDeptKeys.value = [];
   indeterminateDeptKeys.value = [];
   primaryDeptId.value = '';
-  roleOptions.value = [];
+  candidateRoles.value = [];
   initialRoleIds.value = [];
   initialDeptAssignments.value = [];
 

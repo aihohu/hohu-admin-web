@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { localizedText } from '@/locales';
 import { computed, h, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NDropdown } from 'naive-ui';
@@ -38,12 +39,12 @@ const canSend = computed(
     (model.value.trim() || aiStore.attachedImages.length > 0 || aiStore.attachedFiles.length > 0)
 );
 
-// Spreadsheet and CSV attachments accepted by the server-side parser.
-const ACCEPTED_FILE_EXTS = ['.csv', '.xlsx'];
+// Spreadsheet, CSV and text attachments accepted by the server-side parser.
+const ACCEPTED_FILE_EXTS = ['.csv', '.xlsx', '.md', '.json'];
 const ACCEPTED_IMAGE_MIMES = ['image/jpeg', 'image/png'];
 const canAttachDataFile = computed(() => aiStore.availableAgents.some(agent => agent.code === 'shared'));
 const acceptedUploadTypes = computed(() =>
-  canAttachDataFile.value ? 'image/jpeg,image/png,.csv,.xlsx' : 'image/jpeg,image/png'
+  canAttachDataFile.value ? 'image/jpeg,image/png,.csv,.xlsx,.md,.json' : 'image/jpeg,image/png'
 );
 
 function isSupportedImage(type: string): boolean {
@@ -122,8 +123,8 @@ const agentOptions = computed<DropdownOption[]>(() => [
   AUTO_AGENT_OPTION,
   ...aiStore.availableAgents.map(a => ({
     key: a.code,
-    label: a.name,
-    description: a.description
+    label: localizedText(a.name, a.i18nKeys?.name),
+    description: localizedText(a.description, a.i18nKeys?.description)
   }))
 ]);
 

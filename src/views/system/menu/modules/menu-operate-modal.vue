@@ -5,7 +5,7 @@ import { enableStatusOptions, menuIconTypeOptions, menuTypeOptions } from '@/con
 import { fetchGetMenuTree, fetchSaveMenu, fetchUpdateMenu } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { getLocalIcons } from '@/utils/icon';
-import { $t } from '@/locales';
+import { $t, localizedText } from '@/locales';
 import IconPicker from '@/components/custom/icon-picker.vue';
 import SvgIcon from '@/components/custom/svg-icon.vue';
 import {
@@ -126,7 +126,12 @@ const disabledMenuType = computed(() => props.operateType === 'edit');
 
 const loading = ref(false);
 
+function translateTree(nodes: Api.SystemManage.MenuTree[]): Api.SystemManage.MenuTree[] {
+  return nodes.map(node => ({ ...node, label: localizedText(node.label, node.i18nKey), children: node.children ? translateTree(node.children) : undefined }));
+}
+
 const parentTreeOptions = ref<Api.SystemManage.MenuTree[]>([]);
+const localizedParentTreeOptions = computed(() => translateTree(parentTreeOptions.value));
 const editingMenuId = ref<string | null>(null);
 // 编辑模式下记下原始按钮 code 集合，用于禁用已有按钮的 code 编辑。
 // code（permission）是稳定业务键，改 code 会触发后端按 code 增量更新逻辑
@@ -362,7 +367,7 @@ watch(
           <NFormItemGi span="24 m:12" :label="$t('page.system.menu.parentMenu')" path="parentId">
             <NTreeSelect
               v-model:value="model.parentId"
-              :options="parentTreeOptions"
+              :options="localizedParentTreeOptions"
               :placeholder="$t('page.system.menu.form.parentMenu')"
               key-field="id"
               label-field="label"

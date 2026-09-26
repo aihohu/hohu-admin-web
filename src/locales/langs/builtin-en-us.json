@@ -1,0 +1,119 @@
+{
+  "permission": {
+    "ai_chat_use": "Use AI chat",
+    "ai_file_parse": "Parse chat files",
+    "system_dept_list": "View",
+    "system_dept_add": "Add",
+    "system_dept_edit": "Edit",
+    "system_dept_move": "Move",
+    "system_dept_delete": "Delete",
+    "system_dept_batch_delete": "Batch delete",
+    "system_user_list": "View",
+    "system_user_add": "Add",
+    "system_user_edit": "Edit",
+    "system_user_delete": "Delete",
+    "system_user_batch_delete": "Batch delete",
+    "system_user_reset_password": "Reset password",
+    "system_user_import": "Import",
+    "system_user_export": "Export",
+    "system_user_role_auth": "Assign roles",
+    "system_role_list": "View",
+    "system_role_add": "Add",
+    "system_role_edit": "Edit",
+    "system_role_delete": "Delete",
+    "system_role_batch_delete": "Batch delete",
+    "system_role_menu_auth": "Assign menu permissions",
+    "system_menu_list": "View",
+    "system_menu_add": "Add",
+    "system_menu_edit": "Edit",
+    "system_menu_delete": "Delete",
+    "system_menu_batch_delete": "Batch delete",
+    "system_dict_type_list": "View",
+    "system_dict_type_add": "Add",
+    "system_dict_type_edit": "Edit",
+    "system_dict_type_delete": "Delete",
+    "system_dict_type_batch_delete": "Batch delete",
+    "system_dict_data_list": "View",
+    "system_dict_data_add": "Add",
+    "system_dict_data_edit": "Edit",
+    "system_dict_data_delete": "Delete",
+    "system_dict_data_batch_delete": "Batch delete",
+    "system_file_list": "View",
+    "system_file_upload": "Upload",
+    "system_file_delete": "Delete",
+    "system_config_list": "View",
+    "system_config_add": "Add",
+    "system_config_edit": "Edit",
+    "system_config_delete": "Delete",
+    "system_config_batch_delete": "Batch delete",
+    "system_config_export": "Export",
+    "system_config_import": "Import",
+    "system_data_scope_demo_list": "View",
+    "system_data_scope_demo_add": "Add",
+    "system_data_scope_demo_edit": "Edit",
+    "system_data_scope_demo_delete": "Delete",
+    "monitor_operation_log_list": "View",
+    "monitor_operation_log_clean": "Clear",
+    "monitor_operation_log_delete": "Delete",
+    "monitor_login_log_list": "View",
+    "monitor_login_log_clean": "Clear",
+    "monitor_login_log_delete": "Delete",
+    "system_job_list": "View",
+    "system_job_add": "Add",
+    "system_job_edit": "Edit",
+    "system_job_delete": "Delete",
+    "system_job_batch_delete": "Batch delete",
+    "system_job_run": "Run now",
+    "system_job_log_list": "View",
+    "system_job_log_clean": "Clear",
+    "system_job_log_batch_delete": "Batch delete",
+    "marketplace_install": "Install, uninstall or manage state",
+    "marketplace_review": "Review",
+    "ai_routing_feedback_list": "View",
+    "system_role_ai_agent_auth": "Assign AI assistants",
+    "system_setting_list": "View settings",
+    "system_setting_edit": "Edit settings"
+  },
+  "role": {
+    "systemAdmin": {
+      "roleName": "System administrator"
+    },
+    "tenantAdmin": {
+      "roleName": "Tenant administrator"
+    },
+    "user": {
+      "roleName": "Standard user",
+      "roleDesc": "Default role for standard accounts"
+    }
+  },
+  "agent": {
+    "shared": {
+      "name": "File assistant",
+      "description": "Parse uploaded Excel and CSV files. User, role and department operations belong to their dedicated assistants."
+    },
+    "user_mgmt": {
+      "name": "User management assistant",
+      "description": "Manage user profiles, imports, exports, department membership and role assignments."
+    },
+    "role_mgmt": {
+      "name": "Role and permission assistant",
+      "description": "Manage delegable roles and their complete menu and assistant assignments. Delete roles from the management page."
+    },
+    "config_mgmt": {
+      "name": "System settings assistant",
+      "description": "Not yet available. Manage settings, dictionaries and menus through the management pages."
+    },
+    "dept_mgmt": {
+      "name": "Department assistant",
+      "description": "Manage accessible departments, their details and hierarchy. Delete departments from the management page."
+    },
+    "provider_mgmt": {
+      "name": "AI provider assistant",
+      "description": "Not yet available. Manage AI providers through the management pages."
+    },
+    "job_mgmt": {
+      "name": "Scheduled task assistant",
+      "description": "Not yet available. Manage scheduled tasks through the management pages."
+    }
+  }
+}

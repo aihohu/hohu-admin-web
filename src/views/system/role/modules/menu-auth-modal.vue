@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue';
 import { fetchGetAllPages, fetchGetMenuTree, fetchGetRoleMenuList, fetchUpdateRoleMenu } from '@/service/api';
-import { $t } from '@/locales';
+import { $t, localizedText } from '@/locales';
 
 defineOptions({
   name: 'MenuAuthModal'
@@ -57,7 +57,16 @@ async function getPages() {
 //   return opts;
 // });
 
+function translateTree(nodes: Api.SystemManage.MenuTree[]): Api.SystemManage.MenuTree[] {
+  return nodes.map(node => ({
+    ...node,
+    label: localizedText(node.label, node.i18nKey),
+    children: node.children ? translateTree(node.children) : undefined
+  }));
+}
+
 const tree = shallowRef<Api.SystemManage.MenuTree[]>([]);
+const localizedTree = computed(() => translateTree(tree.value));
 
 async function getTree() {
   const { error, data } = await fetchGetMenuTree();
@@ -159,7 +168,7 @@ watch(visible, val => {
 
         <NTree
           v-model:checked-keys="checks"
-          :data="tree"
+          :data="localizedTree"
           key-field="id"
           checkable
           cascade

@@ -7,7 +7,7 @@ const api = vi.hoisted(() => ({ info: vi.fn(), list: vi.fn() }));
 let auth = reactive({ token: 'session', userInfo: { userId: '1', isSystemAdmin: true } });
 vi.mock('@/store/modules/auth', () => ({ useAuthStore: () => auth }));
 vi.mock('@/service/api', () => ({ fetchGetUserInfo: api.info, fetchAgentAdminList: api.list }));
-vi.mock('@/locales', () => ({ $t: (key: string) => key }));
+vi.mock('@/locales', () => ({ $t: (key: string) => key, localizedText: (raw: string) => raw }));
 vi.mock('@/views/ai/agent/modules/agent-operate-drawer.vue', () => ({
   default: defineComponent({ template: '<div>editor</div>' })
 }));

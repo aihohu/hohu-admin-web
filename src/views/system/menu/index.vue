@@ -1,4 +1,5 @@
 <script setup lang="tsx">
+import { localizedText } from '@/locales';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
@@ -42,7 +43,7 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
       render: row => {
         const { i18nKey, menuName } = row;
 
-        const label = i18nKey ? $t(i18nKey) : menuName;
+        const label = localizedText(menuName, i18nKey);
 
         return <span>{label}</span>;
       }

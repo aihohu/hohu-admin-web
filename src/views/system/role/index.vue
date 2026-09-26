@@ -1,4 +1,5 @@
 <script setup lang="tsx">
+import { localizedText } from '@/locales';
 import { onMounted, reactive, shallowRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
@@ -56,6 +57,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     },
     {
       key: 'roleName',
+      render: row => localizedText(row.roleName, row.i18nKeys?.roleName),
       title: $t('page.system.role.roleName'),
       align: 'center',
       minWidth: 120

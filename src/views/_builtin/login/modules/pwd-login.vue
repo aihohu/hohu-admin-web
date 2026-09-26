@@ -33,7 +33,9 @@ const showTenantCode = ref(
 );
 onMounted(async () => {
   const { data } = await fetchLoginOptions();
-  if (data) showTenantCode.value = shouldShowTenantCodeInput(data.tenantMode, data.tenantLocator);
+  if (data) {
+    showTenantCode.value = shouldShowTenantCodeInput(data.tenantMode, data.tenantLocator);
+  }
 });
 
 const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {

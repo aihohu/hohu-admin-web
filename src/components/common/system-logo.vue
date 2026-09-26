@@ -1,6 +1,11 @@
+<script setup lang="ts">
+import logo from '@/assets/imgs/logo.png';
+import { brandSettings } from '@/utils/runtime-settings';
+</script>
+
 <template>
   <div class="app-logo">
-    <img src="@/assets/imgs/logo.png" class="size-full" />
+    <img :src="brandSettings.site_logo || logo" alt="" class="size-full" />
   </div>
 </template>
 

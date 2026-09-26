@@ -1,7 +1,7 @@
 import type { RouteLocationNormalizedLoaded, RouteRecordRaw, _RouteRecordBase } from 'vue-router';
 import type { ElegantConstRoute, LastLevelRouteKey, RouteKey, RouteMap } from '@elegant-router/types';
 import { useSvgIcon } from '@/hooks/common/icon';
-import { $t } from '@/locales';
+import { localizedText } from '@/locales';
 import type { AppContributeMenu, AppContributePage } from '@/service/api/lowcode';
 
 /**
@@ -103,7 +103,7 @@ export function updateLocaleOfGlobalMenus(menus: App.Global.Menu[]) {
   menus.forEach(menu => {
     const { i18nKey, label, children } = menu;
 
-    const newLabel = i18nKey ? $t(i18nKey) : label;
+    const newLabel = localizedText(label, i18nKey);
 
     const newMenu: App.Global.Menu = {
       ...menu,
@@ -238,7 +238,7 @@ function getGlobalMenuByBaseRoute(route: RouteLocationNormalizedLoaded | Elegant
   const { name, path } = route;
   const { title, i18nKey, icon = import.meta.env.VITE_MENU_ICON, localIcon, iconFontSize } = route.meta ?? {};
 
-  const label = i18nKey ? $t(i18nKey) : title!;
+  const label = localizedText(title, i18nKey);
 
   const menu: App.Global.Menu = {
     key: name as string,

@@ -1,0 +1,119 @@
+{
+  "permission": {
+    "ai_chat_use": "使用 AI 对话",
+    "ai_file_parse": "解析聊天文件",
+    "system_dept_list": "查询",
+    "system_dept_add": "新增",
+    "system_dept_edit": "修改",
+    "system_dept_move": "移动",
+    "system_dept_delete": "删除",
+    "system_dept_batch_delete": "批量删除",
+    "system_user_list": "查询",
+    "system_user_add": "新增",
+    "system_user_edit": "修改",
+    "system_user_delete": "删除",
+    "system_user_batch_delete": "批量删除",
+    "system_user_reset_password": "重置密码",
+    "system_user_import": "导入",
+    "system_user_export": "导出",
+    "system_user_role_auth": "角色授权",
+    "system_role_list": "查询",
+    "system_role_add": "新增",
+    "system_role_edit": "修改",
+    "system_role_delete": "删除",
+    "system_role_batch_delete": "批量删除",
+    "system_role_menu_auth": "菜单权限",
+    "system_menu_list": "查询",
+    "system_menu_add": "新增",
+    "system_menu_edit": "修改",
+    "system_menu_delete": "删除",
+    "system_menu_batch_delete": "批量删除",
+    "system_dict_type_list": "查询",
+    "system_dict_type_add": "新增",
+    "system_dict_type_edit": "修改",
+    "system_dict_type_delete": "删除",
+    "system_dict_type_batch_delete": "批量删除",
+    "system_dict_data_list": "查询",
+    "system_dict_data_add": "新增",
+    "system_dict_data_edit": "修改",
+    "system_dict_data_delete": "删除",
+    "system_dict_data_batch_delete": "批量删除",
+    "system_file_list": "查询",
+    "system_file_upload": "上传",
+    "system_file_delete": "删除",
+    "system_config_list": "查询",
+    "system_config_add": "新增",
+    "system_config_edit": "修改",
+    "system_config_delete": "删除",
+    "system_config_batch_delete": "批量删除",
+    "system_config_export": "导出",
+    "system_config_import": "导入",
+    "system_data_scope_demo_list": "查询",
+    "system_data_scope_demo_add": "新增",
+    "system_data_scope_demo_edit": "修改",
+    "system_data_scope_demo_delete": "删除",
+    "monitor_operation_log_list": "查询",
+    "monitor_operation_log_clean": "清理",
+    "monitor_operation_log_delete": "批量删除",
+    "monitor_login_log_list": "查询",
+    "monitor_login_log_clean": "清理",
+    "monitor_login_log_delete": "批量删除",
+    "system_job_list": "查询",
+    "system_job_add": "新增",
+    "system_job_edit": "修改",
+    "system_job_delete": "删除",
+    "system_job_batch_delete": "批量删除",
+    "system_job_run": "立即执行",
+    "system_job_log_list": "查询",
+    "system_job_log_clean": "清理",
+    "system_job_log_batch_delete": "批量删除",
+    "marketplace_install": "安装/卸载/启停",
+    "marketplace_review": "审核",
+    "ai_routing_feedback_list": "查询",
+    "system_role_ai_agent_auth": "AI Agent 授权",
+    "system_setting_list": "查看设置",
+    "system_setting_edit": "修改设置"
+  },
+  "role": {
+    "systemAdmin": {
+      "roleName": "系统超级管理员"
+    },
+    "tenantAdmin": {
+      "roleName": "租户管理员"
+    },
+    "user": {
+      "roleName": "普通用户",
+      "roleDesc": "普通账号的默认角色"
+    }
+  },
+  "agent": {
+    "shared": {
+      "name": "通用工具助手",
+      "description": "处理已上传 Excel/CSV 文件的结构化解析，不承载跨业务模块能力。典型 query：'解析这个 CSV 文件'、'读取 Excel 的表头和前三行'。边界：用户、角色和部门业务分别归对应专用 Agent。"
+    },
+    "user_mgmt": {
+      "name": "用户管理助手",
+      "description": "管理用户资料、导入导出以及完整部门和角色集合授权。典型 query：'调整用户所属部门'、'更新用户角色集合'。边界：角色定义和部门结构分别归 role_mgmt 与 dept_mgmt。"
+    },
+    "role_mgmt": {
+      "name": "角色权限助手",
+      "description": "管理受限委派角色的定义、菜单完整集合和 Agent 完整集合。典型 query：'为角色配置菜单权限'、'给角色绑定可委派助手'。边界：用户成员调整归 user_mgmt；角色删除仍走传统页面。"
+    },
+    "config_mgmt": {
+      "name": "系统配置助手",
+      "description": "系统配置助手尚未发布，当前不提供配置、字典或菜单工具。未来典型 query：'查询 AI 相关配置'、'列出性别字典选项'。边界：发布前保持禁用；用户和角色业务分别归 user_mgmt 与 role_mgmt。"
+    },
+    "dept_mgmt": {
+      "name": "部门管理助手",
+      "description": "管理可见范围内的部门资料、状态和组织树移动。典型 query：'移动部门节点'、'更新部门负责人和状态'。边界：用户归属调整归 user_mgmt；部门删除仍走传统页面。"
+    },
+    "provider_mgmt": {
+      "name": "AI Provider 助手",
+      "description": "AI Provider 助手尚未发布，当前不提供 Provider 或模型管理工具。未来典型 query：'添加 OpenAI Provider'、'测试模型连通性'。边界：发布前保持禁用；具体业务对话归已发布的业务 Agent。"
+    },
+    "job_mgmt": {
+      "name": "定时任务管理助手",
+      "description": "定时任务管理助手尚未发布，当前不提供 cron 或执行日志工具。未来典型 query：'修改任务执行时间'、'暂停数据同步任务'。边界：发布前保持禁用；shared 仅负责已上传文件解析。"
+    }
+  }
+}

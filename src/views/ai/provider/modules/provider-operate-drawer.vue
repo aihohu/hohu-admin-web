@@ -118,6 +118,9 @@ function createDefaultModel(): Model {
   };
 }
 
+const modelMaxTokens = ref<number | null>(null);
+const modelTemperature = ref<number | null>(null);
+
 function createEmptyModelForm(): Api.Ai.AiModelCreateParams {
   return {
     name: '',
@@ -144,12 +147,17 @@ async function loadProviderModels() {
 
 function openAddModel() {
   editingModel.value = null;
+  modelMaxTokens.value = null;
+  modelTemperature.value = null;
   newModel.value = createEmptyModelForm();
   showModelForm.value = true;
 }
 
 function openEditModel(m: Api.Ai.AiModel) {
   editingModel.value = m;
+  const generation = m.config?.generation as { max_tokens?: number; temperature?: number } | undefined;
+  modelMaxTokens.value = generation?.max_tokens ?? null;
+  modelTemperature.value = generation?.temperature ?? null;
   newModel.value = {
     name: m.name,
     capabilities: [...m.capabilities],
@@ -162,6 +170,13 @@ function openEditModel(m: Api.Ai.AiModel) {
 }
 
 async function saveModel() {
+  newModel.value.config = {
+    ...newModel.value.config,
+    generation: {
+      ...(modelMaxTokens.value === null ? {} : { max_tokens: modelMaxTokens.value }),
+      ...(modelTemperature.value === null ? {} : { temperature: modelTemperature.value })
+    }
+  };
   try {
     await modelFormRef.value?.validate();
   } catch {
@@ -463,6 +478,13 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
             </NFormItem>
             <NFormItem :label="t('page.ai.provider.modelBaseUrl')">
               <NInput v-model:value="newModel.baseUrl" :placeholder="t('page.ai.provider.form.modelBaseUrl')" />
+            </NFormItem>
+            <NAlert type="info" class="mb-12px">{{ t('settings.modelHint') }}</NAlert>
+            <NFormItem :label="t('settings.modelTokens')">
+              <NInputNumber v-model:value="modelMaxTokens" :min="1" :max="1000000" :precision="0" clearable />
+            </NFormItem>
+            <NFormItem :label="t('settings.modelTemperature')">
+              <NInputNumber v-model:value="modelTemperature" :min="0" :max="2" :step="0.1" clearable />
             </NFormItem>
             <NFormItem :label="t('page.ai.provider.sortOrder')">
               <NInputNumber v-model:value="newModel.sortOrder" :min="0" size="small" />

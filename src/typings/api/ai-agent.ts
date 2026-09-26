@@ -6,6 +6,7 @@ declare namespace Api {
       agentId: string;
       code: string;
       name: string;
+      i18nKeys?: Record<string, string> | null;
       description: string;
       enabled: boolean;
       isBuiltin: boolean;
@@ -42,6 +43,7 @@ declare namespace Api {
       agentId: string;
       code: string;
       name: string;
+      i18nKeys?: Record<string, string> | null;
       description: string;
       enabled: boolean;
       isBuiltin: boolean;

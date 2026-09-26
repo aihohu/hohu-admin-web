@@ -12,7 +12,7 @@ vi.mock('@/service/api', () => ({
   fetchGetRoleMenuList: (...args: unknown[]) => getChecks(...args),
   fetchUpdateRoleMenu: (...args: unknown[]) => updateMenus(...args)
 }));
-vi.mock('@/locales', () => ({ $t: (key: string) => key }));
+vi.mock('@/locales', () => ({ $t: (key: string) => key, localizedText: (raw: string) => raw }));
 
 import MenuAuthModal from '../menu-auth-modal.vue';
 

@@ -41,9 +41,7 @@ vi.mock('@/hooks/common/form', async importOriginal => {
   };
 });
 
-vi.mock('@/locales', () => ({
-  $t: (key: string) => key
-}));
+vi.mock('@/locales', () => ({ localizedText: (raw: string) => raw, $t: (key: string) => key }));
 
 const stubs = {
   NDrawer: { template: '<div><slot /></div>' },

@@ -5,7 +5,7 @@ import { useBoolean } from '@sa/hooks';
 import { router } from '@/router';
 import { localStg } from '@/utils/storage';
 import { SetupStoreId } from '@/enum';
-import { $t, setLocale } from '@/locales';
+import { localizedText, setLocale, setDefaultLocale, supportedLocale } from '@/locales';
 import { setDayjsLocale } from '@/locales/dayjs';
 import { useRouteStore } from '../route';
 import { useTabStore } from '../tab';
@@ -49,7 +49,7 @@ export const useAppStore = defineStore(SetupStoreId.App, () => {
     routeStore.resetRouteCache();
   }
 
-  const locale = ref<App.I18n.LangType>(localStg.get('lang') || 'zh-CN');
+  const locale = ref<App.I18n.LangType>(supportedLocale(localStg.get('lang')) ? localStg.get('lang')! : 'zh-CN');
 
   const localeOptions: App.I18n.LangOption[] = [
     {
@@ -68,11 +68,19 @@ export const useAppStore = defineStore(SetupStoreId.App, () => {
     localStg.set('lang', lang);
   }
 
+  function applyDefaultLocale(value: string) {
+    const fallback = setDefaultLocale(value);
+    if (!supportedLocale(localStg.get('lang'))) {
+      locale.value = fallback;
+      setLocale(fallback);
+    }
+  }
+
   /** Update document title by locale */
   function updateDocumentTitleByLocale() {
     const { i18nKey, title } = router.currentRoute.value.meta;
 
-    const documentTitle = i18nKey ? $t(i18nKey) : title;
+    const documentTitle = localizedText(title, i18nKey);
 
     useTitle(documentTitle);
   }
@@ -149,6 +157,7 @@ export const useAppStore = defineStore(SetupStoreId.App, () => {
     fullContent,
     locale,
     localeOptions,
+    applyDefaultLocale,
     changeLocale,
     themeDrawerVisible,
     openThemeDrawer,

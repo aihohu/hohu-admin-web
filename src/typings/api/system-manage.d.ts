@@ -75,6 +75,7 @@ declare namespace Api {
       roleId: string;
       /** role name */
       roleName: string;
+      i18nKeys?: Record<string, string> | null;
       /** role code */
       roleCode: string;
       /** role description */
@@ -86,26 +87,29 @@ declare namespace Api {
     }>;
 
     /** minimal role metadata returned by tenant-wide role reads */
-    type RoleSummary = Pick<Role, 'roleId' | 'roleName' | 'roleCode' | 'dataScope' | 'status'> & {
+    type RoleSummary = Pick<Role, 'roleId' | 'roleName' | 'roleCode' | 'dataScope' | 'status' | 'i18nKeys'> & {
       delegable: boolean;
       blockedReasonCode: string | null;
     };
 
     /** role model params */
-    type CreateRoleParams = Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'dataScope' | 'status'> & {
+    type CreateRoleParams = Pick<
+      Api.SystemManage.Role,
+      'roleName' | 'roleCode' | 'dataScope' | 'status' | 'i18nKeys'
+    > & {
       roleDesc: string | null;
       deptIds?: string[];
     };
 
     /** mutable role definition fields; roleCode is immutable */
-    type UpdateRoleParams = Pick<Api.SystemManage.Role, 'roleName' | 'dataScope' | 'status'> & {
+    type UpdateRoleParams = Pick<Api.SystemManage.Role, 'roleName' | 'dataScope' | 'status' | 'i18nKeys'> & {
       roleDesc: string | null;
       deptIds?: string[];
     };
 
     /** role search params */
     type RoleSearchParams = CommonType.RecordNullable<
-      Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'dataScope' | 'status'> & CommonSearchParams
+      Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'dataScope' | 'status' | 'i18nKeys'> & CommonSearchParams
     >;
 
     /** role list */
@@ -148,6 +152,7 @@ declare namespace Api {
       /** user role code collection */
       roles: string[];
       /** user role name display */
+      roleNameKeys?: Array<string | null>;
       roleNames: string[];
       /** user dept id list (display) */
       deptIds: string[];
@@ -186,6 +191,7 @@ declare namespace Api {
       roleId: string;
       roleCode: string;
       roleName: string;
+      i18nKeys?: Record<string, string> | null;
       dataScope: string;
     };
 
@@ -461,6 +467,7 @@ declare namespace Api {
     type MenuTree = {
       id: string;
       label: string;
+      i18nKey?: string | null;
       pId: string;
       children?: MenuTree[];
     };
@@ -518,6 +525,7 @@ declare namespace Api {
     type DeptTreeOption = {
       id: string;
       label: string;
+      i18nKey?: string | null;
       pId: string;
       children?: DeptTreeOption[];
     };

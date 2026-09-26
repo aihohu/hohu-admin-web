@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { runtimeSettings } from '@/utils/runtime-settings';
 import { computed } from 'vue';
 import type { DataTableColumns, UploadFileInfo } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
@@ -155,6 +156,11 @@ defineExpose({ open });
               </div>
               <NText>{{ $t('common.importModal.uploadHint') }}</NText>
               <NP depth="3" class="m-0 mt-8px">{{ $t('common.importModal.uploadDesc') }}</NP>
+              <NP v-if="runtimeSettings" depth="3">
+                {{
+                  $t('settings.currentUploadLimit', { limit: runtimeSettings.uploads.import.maxBytes / 1024 / 1024 })
+                }}
+              </NP>
             </NUploadDragger>
           </NUpload>
         </NFormItem>

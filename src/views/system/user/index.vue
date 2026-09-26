@@ -7,7 +7,6 @@ import { REG_PWD } from '@/constants/reg';
 import {
   fetchBatchDeleteUser,
   fetchDeleteUser,
-  fetchGetConfigList,
   fetchGetUserList,
   fetchResetUserPassword
 } from '@/service/api';
@@ -15,7 +14,7 @@ import { fetchAiQueryCache } from '@/service/api/ai';
 import { useAppStore } from '@/store/modules/app';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { useAuth } from '@/hooks/business/auth';
-import { $t } from '@/locales';
+import { $t, localizedText } from '@/locales';
 import UserOperateDrawer from './modules/user-operate-drawer.vue';
 import UserSearch from './modules/user-search.vue';
 import UserImportModal from './modules/user-import-modal.vue';
@@ -29,7 +28,6 @@ const route = useRoute();
 const userImportModalRef = ref();
 const userExportModalRef = ref();
 const userImportHistoryRef = ref();
-const defaultPassword = ref<string>('');
 
 const searchParams: Api.SystemManage.UserSearchParams = reactive({
   current: 1,
@@ -105,9 +103,9 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         if (!row.roleNames || row.roleNames.length === 0) return '-';
         return (
           <NSpace size="small" justify="center">
-            {row.roleNames.map(name => (
+            {row.roleNames.map((name, index) => (
               <NTag size="small" type="info">
-                {name}
+                {localizedText(name, row.roleNameKeys?.[index])}
               </NTag>
             ))}
           </NSpace>
@@ -197,7 +195,6 @@ const {
 
 // Replay cached tool filters when arriving from an AI result card.
 onMounted(async () => {
-  if (hasAuth('system:user:import')) loadDefaultPassword();
   const aiQueryId = route.query.ai_query_id;
   if (typeof aiQueryId !== 'string' || !aiQueryId) return;
   const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
@@ -282,18 +279,6 @@ function openImportHistory() {
   userImportHistoryRef.value?.open();
 }
 
-async function loadDefaultPassword() {
-  const { data: cfgData, error } = await fetchGetConfigList({
-    current: 1,
-    size: 1,
-    configKey: 'auth:default_password'
-  });
-  if (error || !cfgData || cfgData.records.length === 0) return;
-  const cfg = cfgData.records[0];
-  if (cfg && typeof cfg.configValue === 'string' && cfg.configValue) {
-    defaultPassword.value = cfg.configValue;
-  }
-}
 
 function handleImportCompleted() {
   getData();
@@ -377,7 +362,7 @@ function handleExported() {
         :placeholder="$t('page.system.user.form.password')"
       />
     </NModal>
-    <UserImportModal ref="userImportModalRef" :default-password="defaultPassword" @completed="handleImportCompleted" />
+    <UserImportModal ref="userImportModalRef" @completed="handleImportCompleted" />
     <UserExportModal ref="userExportModalRef" :filter="searchParams" @exported="handleExported" />
     <UserImportHistory ref="userImportHistoryRef" />
   </div>

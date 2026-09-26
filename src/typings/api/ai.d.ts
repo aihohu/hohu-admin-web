@@ -473,6 +473,7 @@ declare namespace Api {
 
     /** Agent available in the chat selector */
     type Agent = {
+      i18nKeys?: Record<string, string> | null;
       code: string;
       name: string;
       description: string;

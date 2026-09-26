@@ -20,6 +20,7 @@ RUN pnpm build
 
 # --- Production Stage ---
 FROM nginx:1.31.2-alpine
+ENV UPLOAD_REQUEST_MAX_BYTES=105906176
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist /usr/share/nginx/html

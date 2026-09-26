@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { localizedText } from '@/locales';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { fetchAgentAdminList, fetchGetUserInfo } from '@/service/api';
 import { useAuthStore } from '@/store/modules/auth';
@@ -14,7 +15,11 @@ const agents = ref<Api.AiAgent.AdminListItem[]>([]);
 const drawerVisible = ref(false);
 const selected = ref<Api.AiAgent.AdminListItem | null>(null);
 const filtered = computed(() =>
-  agents.value.filter(a => `${a.name} ${a.code} ${a.description}`.toLowerCase().includes(keyword.value.toLowerCase()))
+  agents.value.filter(a =>
+    `${localizedText(a.name, a.i18nKeys?.name)} ${a.code} ${localizedText(a.description, a.i18nKeys?.description)}`
+      .toLowerCase()
+      .includes(keyword.value.toLowerCase())
+  )
 );
 let sequence = 0;
 function clearData() {
@@ -91,14 +96,18 @@ onUnmounted(() => {
         </div>
         <NSpin :show="busy">
           <div v-if="authorized" class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <NCard v-for="agent in filtered" :key="agent.agentId" :title="agent.name">
+            <NCard
+              v-for="agent in filtered"
+              :key="agent.agentId"
+              :title="localizedText(agent.name, agent.i18nKeys?.name)"
+            >
               <template #header-extra>
                 <NTag :type="agent.enabled ? 'success' : 'default'">
                   {{ $t(agent.enabled ? 'page.ai.agent.enabled' : 'page.ai.agent.disabled') }}
                 </NTag>
               </template>
               <div class="mb-2 text-sm opacity-60">{{ agent.code }}</div>
-              <p class="mb-4">{{ agent.description }}</p>
+              <p class="mb-4">{{ localizedText(agent.description, agent.i18nKeys?.description) }}</p>
               <NButton @click="openAgent(agent)">{{ $t('common.edit') }}</NButton>
             </NCard>
           </div>

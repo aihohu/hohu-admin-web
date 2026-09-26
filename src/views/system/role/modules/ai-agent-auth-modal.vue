@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { localizedText } from '@/locales';
 import { computed, shallowRef, watch } from 'vue';
 import { fetchRoleAgentBinding, fetchUpdateRoleAgentBinding } from '@/service/api';
 import { $t } from '@/locales';
@@ -60,7 +61,7 @@ defineExpose({ handleSubmit, checkedIds, allAgents });
         <NSpace vertical>
           <div v-for="agent in allAgents" :key="agent.agentId" class="flex-y-center gap-12px">
             <NCheckbox :value="agent.agentId" :data-testid="`role-agent-checkbox-${agent.code}`">
-              {{ agent.name }} ({{ agent.code }})
+              {{ localizedText(agent.name, agent.i18nKeys?.name) }} ({{ agent.code }})
             </NCheckbox>
             <NTag v-if="agent.isShared" size="small" type="info">{{ $t('page.ai.aiAgentAuth.sharedTag') }}</NTag>
           </div>

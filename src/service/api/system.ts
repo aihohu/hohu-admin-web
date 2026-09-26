@@ -1,3 +1,5 @@
+import { runtimeSettings, uploadScenario, validateUploadPolicy } from '@/utils/runtime-settings';
+import { $t } from '@/locales';
 import { request } from '../request';
 
 /** get role list */
@@ -516,7 +518,13 @@ export function fetchUpdateDeptUsers(deptId: string, data: Api.SystemManage.Dept
 }
 
 /** upload file */
-export function fetchUploadFile(file: File, businessType?: string, businessId?: string) {
+export async function fetchUploadFile(file: File, businessType?: string, businessId?: string) {
+  const code = validateUploadPolicy(file, runtimeSettings.value?.uploads[uploadScenario(file, businessType)]);
+  if (code) {
+    const message = $t(`common.importModal.errorCode.${code}`);
+    window.$message?.error(message);
+    return { data: null, error: new Error(message), response: null };
+  }
   const formData = new FormData();
   formData.append('file', file);
   if (businessType) {
@@ -533,7 +541,15 @@ export function fetchUploadFile(file: File, businessType?: string, businessId?: 
 }
 
 /** batch upload files */
-export function fetchBatchUploadFiles(files: File[], businessType?: string, businessId?: string) {
+export async function fetchBatchUploadFiles(files: File[], businessType?: string, businessId?: string) {
+  const code = files
+    .map(file => validateUploadPolicy(file, runtimeSettings.value?.uploads[uploadScenario(file, businessType)]))
+    .find(Boolean);
+  if (code) {
+    const message = $t(`common.importModal.errorCode.${code}`);
+    window.$message?.error(message);
+    return { data: null, error: new Error(message), response: null };
+  }
   const formData = new FormData();
   files.forEach(f => formData.append('files', f));
   if (businessType) {
@@ -726,7 +742,13 @@ export function fetchExportConfig(params?: Api.SystemManage.ConfigSearchParams) 
 }
 
 /** import config from excel */
-export function fetchImportConfig(file: File) {
+export async function fetchImportConfig(file: File) {
+  const code = validateUploadPolicy(file, runtimeSettings.value?.uploads.import);
+  if (code) {
+    const message = $t(`common.importModal.errorCode.${code}`);
+    window.$message?.error(message);
+    return { data: null, error: new Error(message), response: null };
+  }
   const formData = new FormData();
   formData.append('file', file);
   return request({

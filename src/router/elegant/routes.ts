@@ -344,6 +344,15 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       },
       {
+        name: 'system_setting',
+        path: '/system/setting',
+        component: 'view.system_setting',
+        meta: {
+          title: 'system_setting',
+          i18nKey: 'route.system_setting'
+        }
+      },
+      {
         name: 'system_user',
         path: '/system/user',
         component: 'view.system_user',

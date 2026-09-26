@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { runtimeSettings } from '@/utils/runtime-settings';
 import { useImportFlow } from '../use-import-flow';
 
 vi.mock('@/service/api', () => ({
@@ -63,6 +64,14 @@ describe('useImportFlow', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    const policy = { maxBytes: 10 * 1024 * 1024, extensions: ['.csv', '.xlsx'] };
+    runtimeSettings.value = {
+      defaultLocale: 'en-US',
+      brand: {},
+      defaultAvatar: '',
+      requirePrimaryDept: false,
+      uploads: { general: policy, image: policy, import: policy, ai_file: policy }
+    };
     messageSpy = { error: vi.fn(), info: vi.fn(), success: vi.fn() };
     (window as any).$message = messageSpy;
   });

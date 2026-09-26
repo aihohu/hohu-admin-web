@@ -8,12 +8,14 @@ import { localStg } from '@/utils/storage';
 import { useRouterPush } from '@/hooks/common/router';
 import { useSvgIcon } from '@/hooks/common/icon';
 import { $t } from '@/locales';
+import { runtimeSettings } from '@/utils/runtime-settings';
 
 defineOptions({
   name: 'UserAvatar'
 });
 
 const authStore = useAuthStore();
+const avatar = computed(() => authStore.userInfo.userAvatar || runtimeSettings.value?.defaultAvatar || '');
 const { routerPushByKey, toLogin } = useRouterPush();
 const { SvgIconVNode } = useSvgIcon();
 
@@ -87,13 +89,8 @@ function handleDropdown(key: DropdownKey) {
   <NDropdown v-else placement="bottom" trigger="click" :options="options" @select="handleDropdown">
     <div>
       <ButtonIcon>
-        <NAvatar
-          v-if="authStore.userInfo.userAvatar && authStore.userInfo.userAvatar.includes('://')"
-          :size="28"
-          round
-          :src="authStore.userInfo.userAvatar"
-        />
-        <Icon v-else-if="authStore.userInfo.userAvatar" :icon="authStore.userInfo.userAvatar" class="text-icon-large" />
+        <NAvatar v-if="avatar && (avatar.includes('://') || avatar.startsWith('/'))" :size="28" round :src="avatar" />
+        <Icon v-else-if="avatar" :icon="avatar" class="text-icon-large" />
         <SvgIcon v-else icon="ph:user-circle" class="text-icon-large" />
         <span class="text-16px font-medium">{{ authStore.userInfo.userName }}</span>
       </ButtonIcon>

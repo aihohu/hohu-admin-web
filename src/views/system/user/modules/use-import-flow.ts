@@ -1,3 +1,4 @@
+import { runtimeSettings, validateUploadPolicy } from '@/utils/runtime-settings';
 import { computed, ref } from 'vue';
 import {
   fetchCancelImportBatch,
@@ -7,7 +8,6 @@ import {
 } from '@/service/api';
 import { $t } from '@/locales';
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = ['.xlsx', '.csv'];
 const TEMPLATE_DOWNLOAD_FILENAME = 'user_import_template.xlsx';
 
@@ -63,7 +63,8 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     const lowerName = f.name.toLowerCase();
     const extOk = ALLOWED_EXTENSIONS.some(ext => lowerName.endsWith(ext));
     if (!extOk) return 'INVALID_MIME';
-    if (f.size > MAX_FILE_SIZE_BYTES) return 'FILE_TOO_LARGE';
+    const policyError = validateUploadPolicy(f, runtimeSettings.value?.uploads.import);
+    if (policyError) return policyError;
     return null;
   }
 

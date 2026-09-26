@@ -1,3 +1,5 @@
+import { useAppStore } from '../app';
+import { clearRuntimeSettings, refreshRuntimeSettings } from '@/utils/runtime-settings';
 import { computed, onScopeDispose, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { defineStore } from 'pinia';
@@ -20,6 +22,7 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
     () => `${localStg.get('authSessionRevision') || ''}:${Boolean(getToken())}`,
     () => {
       aiStore.resetStore();
+      clearRuntimeSettings();
       // Rebuild routes and cached pages. Logout would erase the new tab's credentials.
       window.location.reload();
     }
@@ -59,6 +62,7 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
     sessionSync.accept();
 
     aiStore.resetStore();
+    clearRuntimeSettings();
     authStore.$reset();
 
     if (!route.meta.constant) {
@@ -146,6 +150,7 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
 
   async function loginByToken(loginToken: Api.Auth.LoginToken) {
     aiStore.resetStore();
+    clearRuntimeSettings();
     // 1. stored in the localStorage, the later requests need it in headers
     localStg.set('token', loginToken.token);
     if (loginToken.refreshToken) {
@@ -172,6 +177,8 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
     if (!error) {
       // update store
       Object.assign(userInfo, info);
+      const runtime = await refreshRuntimeSettings();
+      if (runtime) useAppStore().applyDefaultLocale(runtime.defaultLocale);
 
       return true;
     }
