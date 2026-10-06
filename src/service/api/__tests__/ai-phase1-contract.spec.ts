@@ -37,7 +37,8 @@ describe('AI Phase 1 endpoint contracts', () => {
     });
     expect(platformRequest).not.toHaveBeenCalled();
     expect(request).toHaveBeenNthCalledWith(3, {
-      url: '/ai/provider/models',
+      url: '/platform/ai/providers/models',
+      headers: expect.any(Object),
       method: 'get'
     });
   });
@@ -46,7 +47,8 @@ describe('AI Phase 1 endpoint contracts', () => {
     await fetchTestProviderModel('101', '201');
 
     expect(request).toHaveBeenCalledWith({
-      url: '/ai/provider/101/test',
+      url: '/platform/ai/providers/101/test',
+      headers: expect.any(Object),
       method: 'post',
       data: { modelId: '201' }
     });

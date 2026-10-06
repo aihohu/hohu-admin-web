@@ -15,8 +15,8 @@ declare namespace Api {
       providerCode: string;
       /** provider name */
       name: string;
-      /** api key (masked) */
-      apiKey: string;
+      /** Whether a credential is stored; secret values are never returned. */
+      credentialConfigured: boolean;
       /** base url */
       baseUrl: string | null;
       /** is enabled */
@@ -25,8 +25,6 @@ declare namespace Api {
       config: Record<string, unknown> | null;
       /** create time */
       createTime: string;
-      /** update time */
-      updateTime: string;
       /** Runtime egress quarantine status. */
       egressStatus: 'EGRESS_POLICY_BLOCKED' | null;
     };
@@ -110,7 +108,9 @@ declare namespace Api {
     type ProviderList = Common.PaginatingQueryRecord<Provider>;
 
     /** provider create params */
-    type ProviderCreateParams = Pick<Provider, 'providerCode' | 'name' | 'apiKey' | 'baseUrl' | 'isEnabled' | 'config'>;
+    type ProviderCreateParams = Pick<Provider, 'providerCode' | 'name' | 'baseUrl' | 'isEnabled' | 'config'> & {
+      apiKey: string;
+    };
 
     /** provider update params */
     type ProviderUpdateParams = Partial<ProviderCreateParams>;

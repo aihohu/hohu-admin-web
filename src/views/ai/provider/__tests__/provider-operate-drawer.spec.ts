@@ -107,12 +107,11 @@ describe('Provider operate drawer', () => {
           providerId: '101',
           providerCode: 'openai',
           name: 'OpenAI',
-          apiKey: '****',
+          credentialConfigured: true,
           baseUrl: null,
           isEnabled: true,
           config: null,
           createTime: '',
-          updateTime: '',
           egressStatus: 'EGRESS_POLICY_BLOCKED'
         }
       },
@@ -138,12 +137,11 @@ describe('Provider operate drawer', () => {
           providerId: '101',
           providerCode: 'openai',
           name: 'OpenAI',
-          apiKey: '****',
+          credentialConfigured: true,
           baseUrl: 'https://saved.example.com',
           isEnabled: true,
           config: null,
           createTime: '',
-          updateTime: '',
           egressStatus: null
         }
       },
@@ -173,12 +171,11 @@ describe('Provider operate drawer', () => {
         providerId: '301',
         providerCode: 'openai',
         name: 'OpenAI',
-        apiKey: '****',
+        credentialConfigured: true,
         baseUrl: null,
         isEnabled: true,
         config: null,
         createTime: '',
-        updateTime: '',
         egressStatus: null
       },
       error: null
@@ -227,12 +224,11 @@ describe('Provider operate drawer', () => {
           providerId: '101',
           providerCode: 'openai',
           name: 'OpenAI',
-          apiKey: '****',
+          credentialConfigured: true,
           baseUrl: null,
           isEnabled: true,
           config: null,
           createTime: '',
-          updateTime: '',
           egressStatus: null
         }
       },
@@ -284,12 +280,11 @@ describe('Provider operate drawer', () => {
           providerId: '101',
           providerCode: 'openai',
           name: 'OpenAI',
-          apiKey: '****',
+          credentialConfigured: true,
           baseUrl: null,
           isEnabled: true,
           config: null,
           createTime: '',
-          updateTime: '',
           egressStatus: null
         }
       },

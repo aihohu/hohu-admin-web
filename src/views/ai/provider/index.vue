@@ -45,14 +45,10 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       minWidth: 100
     },
     {
-      key: 'apiKey',
+      key: 'credentialConfigured',
       title: t('page.ai.provider.apiKey'),
       minWidth: 160,
-      render: row => {
-        const key = row.apiKey || '';
-        if (key.length <= 8) return key;
-        return `${key.slice(0, 4)}${'*'.repeat(key.length - 8)}${key.slice(-4)}`;
-      }
+      render: row => t(row.credentialConfigured ? 'page.ai.provider.credentialConfigured' : 'page.ai.provider.credentialMissing')
     },
     {
       key: 'baseUrl',

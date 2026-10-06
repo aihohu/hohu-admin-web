@@ -1,4 +1,9 @@
 import { request } from '../request';
+import { platformAuditHeaders } from './platform';
+
+function providerAuditHeaders(reason: string) {
+  return platformAuditHeaders({ reason, ticket: `MODEL-${crypto.randomUUID()}` });
+}
 
 /** Read a chat image with live tenant, owner and AI permission checks. */
 export function fetchChatImage(fileUrl: string) {
@@ -20,7 +25,8 @@ export function fetchAiResultFile(url: string) {
 /** get provider list */
 export function fetchGetProviderList(params?: Api.Ai.ProviderSearchParams) {
   return request<Api.Ai.ProviderList>({
-    url: '/ai/provider/list',
+    url: '/platform/ai/providers',
+    headers: providerAuditHeaders('Read model providers'),
     method: 'get',
     params
   });
@@ -28,8 +34,9 @@ export function fetchGetProviderList(params?: Api.Ai.ProviderSearchParams) {
 
 /** add provider */
 export function fetchSaveProvider(data: Api.Ai.ProviderCreateParams) {
-  return request<App.Service.Response<any>>({
-    url: '/ai/provider/add',
+  return request<Api.Ai.Provider>({
+    url: '/platform/ai/providers',
+    headers: providerAuditHeaders('Create model provider'),
     method: 'post',
     data
   });
@@ -37,8 +44,9 @@ export function fetchSaveProvider(data: Api.Ai.ProviderCreateParams) {
 
 /** update provider */
 export function fetchUpdateProvider(providerId: string, data: Api.Ai.ProviderUpdateParams) {
-  return request<App.Service.Response<any>>({
-    url: `/ai/provider/${providerId}`,
+  return request<Api.Ai.Provider>({
+    url: `/platform/ai/providers/${providerId}`,
+    headers: providerAuditHeaders('Update model provider'),
     method: 'put',
     data
   });
@@ -47,7 +55,8 @@ export function fetchUpdateProvider(providerId: string, data: Api.Ai.ProviderUpd
 /** delete provider */
 export function fetchDeleteProvider(providerId: string) {
   return request({
-    url: `/ai/provider/${providerId}`,
+    url: `/platform/ai/providers/${providerId}`,
+    headers: providerAuditHeaders('Delete model provider'),
     method: 'delete'
   });
 }
@@ -55,7 +64,8 @@ export function fetchDeleteProvider(providerId: string) {
 /** Test a model that already belongs to a persisted Provider. */
 export function fetchTestProviderModel(providerId: string, modelId: string) {
   return request<Api.Ai.ProviderModelTestResult>({
-    url: `/ai/provider/${providerId}/test`,
+    url: `/platform/ai/providers/${providerId}/test`,
+    headers: providerAuditHeaders('Test saved provider model'),
     method: 'post',
     data: { modelId }
   });
@@ -66,15 +76,17 @@ export function fetchTestProviderModel(providerId: string, modelId: string) {
 /** get models under a provider */
 export function fetchGetProviderModels(providerId: string) {
   return request<Api.Ai.AiModel[]>({
-    url: `/ai/provider/${providerId}/models`,
+    url: `/platform/ai/providers/${providerId}/models`,
+    headers: providerAuditHeaders('Read provider models'),
     method: 'get'
   });
 }
 
 /** add model under a provider */
 export function fetchAddProviderModel(providerId: string, data: Api.Ai.AiModelCreateParams) {
-  return request<App.Service.Response<any>>({
-    url: `/ai/provider/${providerId}/models`,
+  return request<Api.Ai.AiModel>({
+    url: `/platform/ai/providers/${providerId}/models`,
+    headers: providerAuditHeaders('Create provider model'),
     method: 'post',
     data
   });
@@ -82,8 +94,9 @@ export function fetchAddProviderModel(providerId: string, data: Api.Ai.AiModelCr
 
 /** update model */
 export function fetchUpdateProviderModel(providerId: string, modelId: string, data: Api.Ai.AiModelUpdateParams) {
-  return request<App.Service.Response<any>>({
-    url: `/ai/provider/${providerId}/models/${modelId}`,
+  return request<Api.Ai.AiModel>({
+    url: `/platform/ai/providers/${providerId}/models/${modelId}`,
+    headers: providerAuditHeaders('Update provider model'),
     method: 'put',
     data
   });
@@ -91,8 +104,9 @@ export function fetchUpdateProviderModel(providerId: string, modelId: string, da
 
 /** delete model */
 export function fetchDeleteProviderModel(providerId: string, modelId: string) {
-  return request<App.Service.Response<any>>({
-    url: `/ai/provider/${providerId}/models/${modelId}`,
+  return request({
+    url: `/platform/ai/providers/${providerId}/models/${modelId}`,
+    headers: providerAuditHeaders('Delete provider model'),
     method: 'delete'
   });
 }
@@ -100,7 +114,8 @@ export function fetchDeleteProviderModel(providerId: string, modelId: string) {
 /** Get the management catalog visible from the Provider page only. */
 export function fetchGetProviderModelCatalog(capability?: string) {
   return request<Api.Ai.ProviderModelCatalogItem[]>({
-    url: '/ai/provider/models',
+    url: '/platform/ai/providers/models',
+    headers: providerAuditHeaders('Read model catalog'),
     method: 'get',
     params: capability ? { capability } : undefined
   });

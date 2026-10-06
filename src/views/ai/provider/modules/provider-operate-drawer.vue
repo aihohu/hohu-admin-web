@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import type { FormInst } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import { jsonClone } from '@sa/utils';
 import {
@@ -72,22 +73,24 @@ const providerModels = ref<Api.Ai.AiModel[]>([]);
 const pendingModels = ref<Api.Ai.AiModelCreateParams[]>([]);
 const modelsLoading = ref(false);
 
-const ALL_CAPABILITIES: { key: Api.Ai.ModelCapability; label: string }[] = [
+const capabilities = computed<{ key: Api.Ai.ModelCapability; label: string }[]>(() => [
   { key: 'text', label: t('page.ai.provider.capText') },
   { key: 'vision', label: t('page.ai.provider.capVision') },
   { key: 'image-gen', label: t('page.ai.provider.capImageGen') },
   { key: 'video', label: t('page.ai.provider.capVideo') },
   { key: 'audio', label: t('page.ai.provider.capAudio') },
   { key: 'embedding', label: t('page.ai.provider.capEmbedding') }
-];
+]);
 
 const editingModel = ref<Api.Ai.AiModel | null>(null);
 const showModelForm = ref(false);
+const modelSaving = ref(false);
+const modelAdvancedSections = ref<string[]>([]);
 
 const newModel = ref(createEmptyModelForm());
 const testingModelId = ref<string | null>(null);
 
-const modelFormRef = ref();
+const modelFormRef = ref<FormInst | null>(null);
 const modelFormRules = computed(() => ({
   name: { required: true, message: t('page.ai.provider.form.modelName'), trigger: 'blur' },
   capabilities: {
@@ -101,7 +104,7 @@ const modelFormRules = computed(() => ({
 
 const capLabelMap = computed(() => {
   const map: Record<string, string> = {};
-  for (const c of ALL_CAPABILITIES) {
+  for (const c of capabilities.value) {
     map[c.key] = c.label;
   }
   return map;
@@ -146,14 +149,17 @@ async function loadProviderModels() {
 }
 
 function openAddModel() {
+  if (loading.value || modelSaving.value) return;
   editingModel.value = null;
   modelMaxTokens.value = null;
   modelTemperature.value = null;
   newModel.value = createEmptyModelForm();
+  modelAdvancedSections.value = [];
   showModelForm.value = true;
 }
 
 function openEditModel(m: Api.Ai.AiModel) {
+  if (loading.value || modelSaving.value) return;
   editingModel.value = m;
   const generation = m.config?.generation as { max_tokens?: number; temperature?: number } | undefined;
   modelMaxTokens.value = generation?.max_tokens ?? null;
@@ -166,45 +172,51 @@ function openEditModel(m: Api.Ai.AiModel) {
     sortOrder: m.sortOrder,
     config: m.config
   };
+  modelAdvancedSections.value = [];
   showModelForm.value = true;
 }
 
-async function saveModel() {
-  newModel.value.config = {
-    ...newModel.value.config,
-    generation: {
-      ...(modelMaxTokens.value === null ? {} : { max_tokens: modelMaxTokens.value }),
-      ...(modelTemperature.value === null ? {} : { temperature: modelTemperature.value })
-    }
-  };
-  try {
-    await modelFormRef.value?.validate();
-  } catch {
-    return;
-  }
-
-  if (props.operateType === 'add') {
-    // 新增模式：暂存到本地列表
-    pendingModels.value.push({ ...newModel.value });
-    showModelForm.value = false;
-    return;
-  }
-
-  if (!props.rowData) return;
-  const providerId = props.rowData.providerId;
-  if (editingModel.value) {
-    const { error } = await fetchUpdateProviderModel(providerId, editingModel.value.modelId, newModel.value);
-    if (!error) {
-      window.$message?.success(t('common.updateSuccess'));
-    }
-  } else {
-    const { error } = await fetchAddProviderModel(providerId, newModel.value);
-    if (!error) {
-      window.$message?.success(t('common.addSuccess'));
-    }
-  }
+function cancelModelForm() {
+  if (modelSaving.value) return;
   showModelForm.value = false;
-  await loadProviderModels();
+}
+
+async function saveModel() {
+  if (loading.value || modelSaving.value) return;
+  modelSaving.value = true;
+  try {
+    newModel.value.config = {
+      ...newModel.value.config,
+      generation: {
+        ...(modelMaxTokens.value === null ? {} : { max_tokens: modelMaxTokens.value }),
+        ...(modelTemperature.value === null ? {} : { temperature: modelTemperature.value })
+      }
+    };
+    try {
+      await modelFormRef.value?.validate();
+    } catch {
+      return;
+    }
+
+    if (props.operateType === 'add') {
+      // 新增模式：暂存到本地列表
+      pendingModels.value.push({ ...newModel.value });
+      showModelForm.value = false;
+      return;
+    }
+
+    if (!props.rowData) return;
+    const providerId = props.rowData.providerId;
+    const { error } = editingModel.value
+      ? await fetchUpdateProviderModel(providerId, editingModel.value.modelId, newModel.value)
+      : await fetchAddProviderModel(providerId, newModel.value);
+    if (error) return;
+    window.$message?.success(t(editingModel.value ? 'common.updateSuccess' : 'common.addSuccess'));
+    showModelForm.value = false;
+    await loadProviderModels();
+  } finally {
+    modelSaving.value = false;
+  }
 }
 
 function removePendingModel(index: number) {
@@ -266,13 +278,19 @@ function handleInitModel() {
 }
 
 function closeDrawer() {
+  if (loading.value || modelSaving.value) return;
   visible.value = false;
 }
 
 async function handleSubmit() {
-  await validate();
+  if (showModelForm.value || loading.value || modelSaving.value) return;
   loading.value = true;
   try {
+    try {
+      await validate();
+    } catch {
+      return;
+    }
     let res;
     if (props.operateType === 'edit' && props.rowData) {
       res = await fetchUpdateProvider(props.rowData.providerId, model.value);
@@ -282,18 +300,14 @@ async function handleSubmit() {
     const { error, data } = res;
     if (!error) {
       // 新增模式：批量保存待处理的模型
-      if (
-        props.operateType === 'add' &&
-        (data as unknown as Api.Ai.Provider)?.providerId &&
-        pendingModels.value.length > 0
-      ) {
-        const providerId = (data as unknown as Api.Ai.Provider).providerId;
+      if (props.operateType === 'add' && data?.providerId && pendingModels.value.length > 0) {
+        const providerId = data.providerId;
         for (const pm of pendingModels.value) {
           await fetchAddProviderModel(providerId, pm);
         }
       }
       window.$message?.success(props.operateType === 'edit' ? t('common.updateSuccess') : t('common.addSuccess'));
-      closeDrawer();
+      visible.value = false;
       emit('submitted');
     }
   } finally {
@@ -312,9 +326,16 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
 </script>
 
 <template>
-  <NDrawer v-model:show="visible" display-directive="show" :width="500">
-    <NDrawerContent :title="title" :native-scrollbar="false" closable>
-      <NForm ref="formRef" :model="model" :rules="rules">
+  <NDrawer
+    v-model:show="visible"
+    display-directive="show"
+    :width="600"
+    :style="{ maxWidth: '100vw' }"
+    :mask-closable="!loading && !modelSaving"
+    :close-on-esc="!loading && !modelSaving"
+  >
+    <NDrawerContent :title="title" :native-scrollbar="false" :closable="!loading && !modelSaving">
+      <NForm ref="formRef" :model="model" :rules="rules" label-placement="top" :disabled="loading || modelSaving">
         <NFormItem :label="t('page.ai.provider.code')" path="providerCode">
           <NInput v-model:value="model.providerCode" :placeholder="t('page.ai.provider.form.code')" />
         </NFormItem>
@@ -412,6 +433,8 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
             dashed
             size="small"
             block
+            :disabled="loading || modelSaving"
+            data-testid="provider-add-model"
             @click="openAddModel"
           >
             <template #icon>
@@ -447,7 +470,15 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
           <div v-if="m.baseUrl" class="model-base-url">{{ m.baseUrl }}</div>
         </div>
 
-        <NButton v-if="!showModelForm" dashed size="small" block @click="openAddModel">
+        <NButton
+          v-if="!showModelForm"
+          dashed
+          size="small"
+          block
+          :disabled="loading || modelSaving"
+          data-testid="provider-add-model"
+          @click="openAddModel"
+        >
           <template #icon>
             <IconIcRoundAdd class="text-14px" />
           </template>
@@ -456,54 +487,101 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
       </div>
 
       <!-- Add/Edit model form (shared) -->
-      <div v-if="showModelForm" class="model-form">
-        <NCard size="small" :title="editingModel ? t('common.edit') : t('page.ai.provider.addModel')">
+      <div v-if="showModelForm" class="model-form" data-testid="provider-model-editor">
+        <NCard size="small" :title="editingModel ? t('page.ai.provider.editModel') : t('page.ai.provider.addModel')">
           <NForm
             ref="modelFormRef"
             :model="newModel"
             :rules="modelFormRules"
-            label-placement="left"
-            label-width="auto"
-            size="small"
+            label-placement="top"
+            :disabled="modelSaving"
           >
-            <NFormItem :label="t('page.ai.provider.name')" path="name">
-              <NInput v-model:value="newModel.name" :placeholder="t('page.ai.provider.form.modelName')" />
+            <NFormItem :label="t('page.ai.provider.modelName')" path="name">
+              <NInput
+                v-model:value="newModel.name"
+                :placeholder="t('page.ai.provider.form.modelName')"
+                data-testid="provider-model-name"
+              />
             </NFormItem>
             <NFormItem :label="t('page.ai.provider.capabilities')" path="capabilities">
-              <NCheckboxGroup v-model:value="newModel.capabilities">
-                <NSpace>
-                  <NCheckbox v-for="cap in ALL_CAPABILITIES" :key="cap.key" :value="cap.key" :label="cap.label" />
-                </NSpace>
+              <NCheckboxGroup
+                v-model:value="newModel.capabilities"
+                class="w-full"
+                data-testid="provider-model-capabilities"
+              >
+                <div class="capability-grid">
+                  <NCheckbox v-for="cap in capabilities" :key="cap.key" :value="cap.key" :label="cap.label" />
+                </div>
               </NCheckboxGroup>
             </NFormItem>
-            <NFormItem :label="t('page.ai.provider.modelBaseUrl')">
-              <NInput v-model:value="newModel.baseUrl" :placeholder="t('page.ai.provider.form.modelBaseUrl')" />
-            </NFormItem>
-            <NAlert type="info" class="mb-12px">{{ t('settings.modelHint') }}</NAlert>
-            <NFormItem :label="t('settings.modelTokens')">
-              <NInputNumber v-model:value="modelMaxTokens" :min="1" :max="1000000" :precision="0" clearable />
-            </NFormItem>
-            <NFormItem :label="t('settings.modelTemperature')">
-              <NInputNumber v-model:value="modelTemperature" :min="0" :max="2" :step="0.1" clearable />
-            </NFormItem>
-            <NFormItem :label="t('page.ai.provider.sortOrder')">
-              <NInputNumber v-model:value="newModel.sortOrder" :min="0" size="small" />
-            </NFormItem>
+            <NCollapse v-model:expanded-names="modelAdvancedSections" class="model-advanced">
+              <NCollapseItem name="advanced" :title="t('page.ai.provider.advancedSettings')">
+                <NFormItem :label="t('page.ai.provider.modelBaseUrl')">
+                  <NInput
+                    v-model:value="newModel.baseUrl"
+                    :placeholder="t('page.ai.provider.form.modelBaseUrlExample')"
+                  />
+                  <template #feedback>{{ t('page.ai.provider.form.modelBaseUrl') }}</template>
+                </NFormItem>
+                <NAlert type="info" class="mb-16px">{{ t('settings.modelHint') }}</NAlert>
+                <NFormItem :label="t('settings.modelTokens')">
+                  <NInputNumber
+                    v-model:value="modelMaxTokens"
+                    :min="1"
+                    :max="1000000"
+                    :precision="0"
+                    clearable
+                    class="w-full"
+                  />
+                </NFormItem>
+                <NFormItem :label="t('settings.modelTemperature')">
+                  <NInputNumber
+                    v-model:value="modelTemperature"
+                    :min="0"
+                    :max="2"
+                    :step="0.1"
+                    clearable
+                    class="w-full"
+                  />
+                </NFormItem>
+                <NFormItem :label="t('page.ai.provider.sortOrder')" :show-feedback="false">
+                  <NInputNumber v-model:value="newModel.sortOrder" :min="0" class="w-full" />
+                </NFormItem>
+              </NCollapseItem>
+            </NCollapse>
           </NForm>
           <template #action>
-            <NSpace>
-              <NButton size="small" @click="showModelForm = false">{{ t('common.cancel') }}</NButton>
-              <NButton type="primary" size="small" @click="saveModel">{{ t('common.confirm') }}</NButton>
+            <NSpace justify="end">
+              <NButton :disabled="modelSaving" data-testid="provider-model-cancel" @click="cancelModelForm">
+                {{ t(editingModel ? 'page.ai.provider.cancelEditModel' : 'page.ai.provider.cancelAddModel') }}
+              </NButton>
+              <NButton type="primary" :loading="modelSaving" data-testid="provider-model-submit" @click="saveModel">
+                {{ t(operateType === 'add' ? 'page.ai.provider.addModelToList' : 'page.ai.provider.saveModel') }}
+              </NButton>
             </NSpace>
           </template>
         </NCard>
       </div>
 
       <template #footer>
-        <NSpace :size="16">
-          <NButton @click="closeDrawer">{{ t('common.cancel') }}</NButton>
-          <NButton type="primary" :loading="loading" @click="handleSubmit">{{ t('common.confirm') }}</NButton>
-        </NSpace>
+        <div class="drawer-footer">
+          <p v-if="showModelForm" id="provider-model-editor-hint" class="model-editor-hint">
+            {{ t('page.ai.provider.completeModelFirst') }}
+          </p>
+          <div class="drawer-footer-actions">
+            <NButton :disabled="loading || modelSaving" @click="closeDrawer">{{ t('common.cancel') }}</NButton>
+            <NButton
+              type="primary"
+              :loading="loading"
+              :disabled="showModelForm || modelSaving"
+              :aria-describedby="showModelForm ? 'provider-model-editor-hint' : undefined"
+              data-testid="provider-config-submit"
+              @click="handleSubmit"
+            >
+              {{ t(operateType === 'add' ? 'page.ai.provider.createConfig' : 'page.ai.provider.saveConfig') }}
+            </NButton>
+          </div>
+        </div>
       </template>
     </NDrawerContent>
   </NDrawer>
@@ -527,20 +605,59 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .model-name {
   font-weight: 500;
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .model-base-url {
   margin-top: 4px;
   font-size: 12px;
   color: var(--n-text-color-3);
+  overflow-wrap: anywhere;
 }
 
 .model-form {
   margin-top: 8px;
+  container-type: inline-size;
+}
+
+.capability-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+@container (max-width: 440px) {
+  .capability-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.model-advanced {
+  border-top: 1px solid var(--n-border-color);
+  padding-top: 16px;
+}
+
+.drawer-footer {
+  width: 100%;
+}
+
+.model-editor-hint {
+  margin: 0 0 12px;
+  color: var(--n-text-color-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.drawer-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 </style>
