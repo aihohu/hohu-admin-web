@@ -61,13 +61,13 @@ export function fetchDeleteProvider(providerId: string) {
   });
 }
 
-/** Test a model that already belongs to a persisted Provider. */
-export function fetchTestProviderModel(providerId: string, modelId: string) {
+/** Test the current Provider and model form without saving either configuration. */
+export function fetchTestProviderModel(data: Api.Ai.ProviderModelTestRequest) {
   return request<Api.Ai.ProviderModelTestResult>({
-    url: `/platform/ai/providers/${providerId}/test`,
-    headers: providerAuditHeaders('Test saved provider model'),
+    url: '/platform/ai/providers/test',
+    headers: providerAuditHeaders('Test provider model form'),
     method: 'post',
-    data: { modelId }
+    data
   });
 }
 

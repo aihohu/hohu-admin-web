@@ -73,7 +73,7 @@ const stubs = {
   NDivider: true,
   NDrawer: { template: '<div><slot /></div>' },
   NDrawerContent: { template: '<div><slot /><slot name="footer" /></div>' },
-  NForm: true,
+  NForm: { template: '<div><slot /></div>', methods: { validate: () => Promise.resolve() } },
   NFormItem: true,
   NInput: true,
   NInputNumber: true,
@@ -135,7 +135,7 @@ describe('Provider operate drawer', () => {
     );
   });
 
-  it('tests a saved model from the edit form, before Cancel Edit, and blocks unsaved model changes', async () => {
+  it('tests current edit form values and clears stale results after changes', async () => {
     const { fetchTestProviderModel } = await import('@/service/api');
     const wrapper = mount(ProviderOperateDrawer, {
       props: {
@@ -171,21 +171,71 @@ describe('Provider operate drawer', () => {
       testButton.element.compareDocumentPosition(cancelButton.element) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     await testButton.trigger('click');
-    expect(fetchTestProviderModel).toHaveBeenCalledWith('101', '201');
+    expect(fetchTestProviderModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: '101',
+        providerCode: 'openai',
+        apiKey: '',
+        model: expect.objectContaining({ name: 'safe-model' })
+      })
+    );
     await flushPromises();
     expect(wrapper.find('[data-testid="provider-model-test-result"]').text()).toBe('page.ai.provider.testPassed');
     state.newModel.name = 'unsaved-name';
     await wrapper.vm.$nextTick();
-    expect(wrapper.find('[data-testid="provider-model-test"]').attributes('disabled')).toBeDefined();
-    await state.handleTestModel(persistedModel);
-    expect(fetchTestProviderModel).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="provider-model-test"]').attributes('disabled')).toBeUndefined();
     expect(wrapper.find('[data-testid="provider-model-test-result"]').exists()).toBe(false);
+    await wrapper.find('[data-testid="provider-model-test"]').trigger('click');
+    expect(fetchTestProviderModel).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        model: expect.objectContaining({ name: 'unsaved-name' })
+      })
+    );
     state.openAddModel();
+    state.newModel.name = 'another-unsaved-model';
     await wrapper.vm.$nextTick();
-    expect(wrapper.find('[data-testid="provider-model-test"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="provider-model-test"]').exists()).toBe(true);
+    await wrapper.find('[data-testid="provider-model-test"]').trigger('click');
+    expect(fetchTestProviderModel).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        providerId: '101',
+        model: expect.objectContaining({ name: 'another-unsaved-model' })
+      })
+    );
   });
 
-  it('tests only the persisted Provider and model IDs and exposes quarantine state', async () => {
+  it('tests a new Provider and model without saving either configuration', async () => {
+    const { fetchSaveProvider, fetchAddProviderModel, fetchTestProviderModel } = await import('@/service/api');
+    const wrapper = mount(ProviderOperateDrawer, {
+      props: { visible: false, operateType: 'add' },
+      global: { stubs }
+    });
+    await wrapper.setProps({ visible: true });
+    const state = (wrapper.vm.$ as unknown as { setupState: Record<string, any> }).setupState;
+    state.model.providerCode = 'openai';
+    state.model.name = 'OpenAI';
+    state.model.apiKey = 'draft-key';
+    state.model.baseUrl = 'https://api.openai.com/v1';
+    state.openAddModel();
+    state.newModel.name = 'new-model';
+    await wrapper.vm.$nextTick();
+
+    const testButton = wrapper.find('[data-testid="provider-model-test"]');
+    expect(testButton.exists()).toBe(true);
+    await testButton.trigger('click');
+
+    expect(fetchTestProviderModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerCode: 'openai',
+        apiKey: 'draft-key',
+        model: expect.objectContaining({ name: 'new-model' })
+      })
+    );
+    expect(fetchSaveProvider).not.toHaveBeenCalled();
+    expect(fetchAddProviderModel).not.toHaveBeenCalled();
+  });
+
+  it('tests the current form and exposes saved quarantine state', async () => {
     const { fetchTestProviderModel } = await import('@/service/api');
     const wrapper = mount(ProviderOperateDrawer, {
       props: {
@@ -212,11 +262,16 @@ describe('Provider operate drawer', () => {
     state.openEditModel(persistedModel);
     await state.handleTestModel(persistedModel);
 
-    expect(fetchTestProviderModel).toHaveBeenCalledWith('101', '201');
+    expect(fetchTestProviderModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: '101',
+        model: expect.objectContaining({ name: 'safe-model' })
+      })
+    );
     expect(wrapper.text()).toContain('page.ai.provider.egressPolicyBlocked');
   });
 
-  it('requires unsaved Provider edits to be saved before testing a persisted model', async () => {
+  it('tests unsaved Provider changes with the current model form', async () => {
     const { fetchTestProviderModel } = await import('@/service/api');
     const wrapper = mount(ProviderOperateDrawer, {
       props: {
@@ -251,8 +306,12 @@ describe('Provider operate drawer', () => {
     await vm.handleTestModel(persistedModel);
 
     expect(vm.providerFormDirty).toBe(true);
-    expect(wrapper.text()).toContain('page.ai.provider.saveBeforeTest');
-    expect(fetchTestProviderModel).not.toHaveBeenCalled();
+    expect(fetchTestProviderModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: '101',
+        baseUrl: 'https://unsaved.example.com'
+      })
+    );
   });
 
   it('covers add-mode pending models and submits the provider before its models', async () => {
@@ -346,7 +405,12 @@ describe('Provider operate drawer', () => {
     );
     expect(fetchAddProviderModel).toHaveBeenCalledWith('101', expect.objectContaining({ name: 'added-model' }));
     expect(fetchDeleteProviderModel).toHaveBeenCalledWith('101', '201');
-    expect(fetchTestProviderModel).toHaveBeenCalledWith('101', '201');
+    expect(fetchTestProviderModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: '101',
+        model: expect.objectContaining({ name: 'safe-model' })
+      })
+    );
 
     state.modelFormRef = { validate: vi.fn().mockRejectedValueOnce(new Error('invalid')) };
     state.openAddModel();

@@ -130,7 +130,7 @@ describe('model editor interactions', () => {
     await wrapper.setProps({ visible: true });
     await wrapper.get('.models-list > button').trigger('click');
     await wrapper.get('.model-form .n-input input').setValue('discarded-model');
-    await wrapper.get('.model-form .n-card__action .n-button--default-type').trigger('click');
+    await wrapper.get('[data-testid="provider-model-cancel"]').trigger('click');
 
     expect(wrapper.find('.model-form').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('discarded-model');

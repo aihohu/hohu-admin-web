@@ -43,14 +43,22 @@ describe('AI Phase 1 endpoint contracts', () => {
     });
   });
 
-  it('tests only a saved model belonging to a saved Provider', async () => {
-    await fetchTestProviderModel('101', '201');
+  it('tests the current Provider and model form through one endpoint', async () => {
+    const payload: Api.Ai.ProviderModelTestRequest = {
+      providerId: '101',
+      providerCode: 'openai',
+      apiKey: '',
+      baseUrl: 'https://api.openai.com/v1',
+      config: null,
+      model: { name: 'draft-model', capabilities: ['text'], baseUrl: null, isEnabled: true, sortOrder: 0, config: null }
+    };
+    await fetchTestProviderModel(payload);
 
     expect(request).toHaveBeenCalledWith({
-      url: '/platform/ai/providers/101/test',
+      url: '/platform/ai/providers/test',
       headers: expect.any(Object),
       method: 'post',
-      data: { modelId: '201' }
+      data: payload
     });
   });
 });

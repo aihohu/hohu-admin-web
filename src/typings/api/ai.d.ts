@@ -87,9 +87,16 @@ declare namespace Api {
       egressStatus: 'EGRESS_POLICY_BLOCKED' | null;
     };
 
+    type ProviderModelTestRequest = {
+      providerId?: string;
+      providerCode: string;
+      apiKey: string;
+      baseUrl: string | null;
+      config: Record<string, unknown> | null;
+      model: AiModelCreateParams;
+    };
+
     type ProviderModelTestResult = {
-      providerId: string;
-      modelId: string;
       status: 'ok';
     };
 

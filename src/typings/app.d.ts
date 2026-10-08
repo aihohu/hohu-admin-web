@@ -1389,8 +1389,6 @@ declare namespace App {
             egressPolicyAllowed: string;
             egressPendingSave: string;
             egressPolicyHint: string;
-            saveBeforeTest: string;
-            saveModelBeforeTest: string;
             modelTestHint: string;
             addProvider: string;
             editProvider: string;

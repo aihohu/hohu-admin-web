@@ -45,7 +45,14 @@ it('uses the ordinary authenticated client and audits every Provider operation',
   await fetchAddProviderModel('101', model);
   await fetchUpdateProviderModel('101', '201', model);
   await fetchDeleteProviderModel('101', '201');
-  await fetchTestProviderModel('101', '201');
+  await fetchTestProviderModel({
+    providerId: '101',
+    providerCode: 'test',
+    apiKey: '',
+    baseUrl: null,
+    config: null,
+    model
+  });
   await fetchGetProviderModelCatalog('text');
   expect(vi.mocked(request).mock.calls.map(([config]) => config.url)).toEqual([
     '/platform/ai/providers',
@@ -56,7 +63,7 @@ it('uses the ordinary authenticated client and audits every Provider operation',
     '/platform/ai/providers/101/models',
     '/platform/ai/providers/101/models/201',
     '/platform/ai/providers/101/models/201',
-    '/platform/ai/providers/101/test',
+    '/platform/ai/providers/test',
     '/platform/ai/providers/models'
   ]);
   for (const [config] of vi.mocked(request).mock.calls) {

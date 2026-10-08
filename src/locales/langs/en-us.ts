@@ -1191,9 +1191,8 @@ const local: App.I18n.Schema = {
         egressPendingSave: 'Save to recheck',
         egressPolicyHint:
           'Checks the destination against server egress rules; test the model, credentials and provider connection separately.',
-        saveBeforeTest: 'Save Provider changes before testing a persisted model.',
-        saveModelBeforeTest: 'Save model changes and reopen the editor before testing the saved configuration.',
-        modelTestHint: 'Testing uses the saved model configuration and sends a real request that may incur charges.',
+        modelTestHint:
+          'Tests the current form without saving changes. This sends a real request and may incur charges.',
         addProvider: 'Add Model Config',
         editProvider: 'Edit Model Config',
         capabilities: 'Capabilities',
