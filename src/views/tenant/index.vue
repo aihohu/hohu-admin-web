@@ -194,6 +194,7 @@ onMounted(() => {
               <th>{{ t('name') }}</th>
               <th>{{ t('code') }}</th>
               <th>{{ t('status') }}</th>
+              <th>{{ t('policies') }}</th>
               <th>{{ t('action') }}</th>
             </tr>
           </thead>
@@ -207,7 +208,13 @@ onMounted(() => {
                 </NTag>
               </td>
               <td>
-                <span v-if="row.tenantId === '0'">{{ t('default') }}</span>
+                <NButton v-if="row.bootstrapStatus === 'ready'" :disabled="busy" @click="open('policies', row)">
+                  {{ t('authorize') }}
+                </NButton>
+                <span v-else>{{ t('authorizeAfterBootstrap') }}</span>
+              </td>
+              <td>
+                <span v-if="row.tenantId === '0'">—</span>
                 <NSpace v-else>
                   <NButton
                     v-if="row.bootstrapStatus === 'pending'"
@@ -216,7 +223,6 @@ onMounted(() => {
                   >
                     {{ t('bootstrap') }}
                   </NButton>
-                  <NButton v-else :disabled="busy" @click="open('policies', row)">{{ t('policies') }}</NButton>
                   <NButton
                     v-if="!row.enabled && row.bootstrapStatus === 'ready'"
                     type="primary"

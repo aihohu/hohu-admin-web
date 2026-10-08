@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   create: vi.fn(),
   bootstrap: vi.fn(),
   status: vi.fn(),
+  models: vi.fn(),
   policies: vi.fn(),
   savePolicy: vi.fn(),
   systemAdmin: true
@@ -15,7 +16,7 @@ const api = vi.hoisted(() => ({
 vi.mock('@/store/modules/auth', () => ({ useAuthStore: () => ({ userInfo: { isSystemAdmin: api.systemAdmin } }) }));
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock('@/service/api', () => ({
-  fetchAgentModelOptions: vi.fn().mockResolvedValue({ data: [] }),
+  fetchAgentModelOptions: api.models,
   fetchTenantList: api.list,
   fetchCreateTenant: api.create,
   fetchBootstrapTenant: api.bootstrap,
@@ -35,6 +36,22 @@ const input = defineComponent({
   template: '<input :value="value" @input="$emit(\'update:value\', $event.target.value)" />'
 });
 const modal = defineComponent({ props: ['show'], template: '<section v-if="show"><slot /></section>' });
+const select = defineComponent({
+  props: ['value', 'options'],
+  emits: ['update:value'],
+  template:
+    '<select :value="value" @change="$emit(\'update:value\', $event.target.value)">' +
+    '<option value="">Select</option>' +
+    '<option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>' +
+    '</select>'
+});
+const toggle = defineComponent({
+  props: ['value', 'disabled'],
+  emits: ['update:value'],
+  template:
+    '<input type="checkbox" :checked="value" :disabled="disabled" ' +
+    '@change="$emit(\'update:value\', $event.target.checked)" />'
+});
 function render() {
   return mount(TenantPage, {
     global: {
@@ -48,6 +65,9 @@ function render() {
         NTable: container,
         NButton: button,
         NInput: input,
+        NSelect: select,
+        NSwitch: toggle,
+        NInputNumber: true,
         NModal: modal,
         NPagination: true
       }
@@ -59,6 +79,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   api.systemAdmin = true;
   api.list.mockResolvedValue({ data: { records: [], total: 0 } });
+  api.models.mockResolvedValue({ data: [] });
+  api.policies.mockResolvedValue({ data: [] });
+  api.savePolicy.mockResolvedValue({ data: {} });
 });
 
 it('denies tenant administrators without requesting the global registry', async () => {
@@ -95,4 +118,104 @@ it('retains failed creation inputs and retries with the same idempotency key', a
   expect(api.create.mock.calls[0]).toEqual(api.create.mock.calls[1]);
   expect(api.list).toHaveBeenCalledTimes(2);
   expect(page.find('section').exists()).toBe(false);
+});
+
+it('lets the system administrator authorize a model for the default tenant without lifecycle actions', async () => {
+  api.list.mockResolvedValue({
+    data: {
+      records: [
+        {
+          tenantId: '0',
+          tenantCode: 'default',
+          tenantName: 'Default Tenant',
+          enabled: true,
+          lifecycleState: 'active',
+          bootstrapStatus: 'ready'
+        }
+      ],
+      total: 1
+    }
+  });
+  const modelId = '9007199254740993';
+  api.models.mockResolvedValue({
+    data: [{ modelId, label: 'DeepSeek / model', capabilities: ['text'] }]
+  });
+  const page = render();
+  await flushPromises();
+  const row = page.find('tbody tr');
+  expect(page.findAll('th').map(item => item.text())).toEqual(['name', 'code', 'status', 'policies', 'action']);
+  const cells = row.findAll('td');
+  expect(cells[3].find('button').text()).toBe('authorize');
+  expect(cells[4].text()).toBe('—');
+  expect(cells[4].find('button').exists()).toBe(false);
+  await cells[3].find('button').trigger('click');
+  await flushPromises();
+  expect(api.policies).toHaveBeenCalledWith('0');
+  await page.find('select').setValue(modelId);
+  await page.findAll('input[type="checkbox"]')[1].setValue(true);
+  await page
+    .findAll('button')
+    .find(item => item.text() === 'save')!
+    .trigger('click');
+  await flushPromises();
+  expect(api.savePolicy).toHaveBeenCalledWith('0', modelId, {
+    enabled: true,
+    isDefault: true,
+    dailyQuotaPerUser: null
+  });
+  expect(api.bootstrap).not.toHaveBeenCalled();
+  expect(api.status).not.toHaveBeenCalled();
+  expect(page.find('section').exists()).toBe(false);
+});
+
+it('separates business tenant AI authorization from lifecycle actions and requires initialization', async () => {
+  api.list.mockResolvedValue({
+    data: {
+      records: [
+        {
+          tenantId: '9007199254740993',
+          tenantCode: 'active',
+          tenantName: 'Active Tenant',
+          enabled: true,
+          lifecycleState: 'active',
+          bootstrapStatus: 'ready'
+        },
+        {
+          tenantId: '9007199254740994',
+          tenantCode: 'prepared',
+          tenantName: 'Prepared Tenant',
+          enabled: false,
+          lifecycleState: 'prepared',
+          bootstrapStatus: 'ready'
+        },
+        {
+          tenantId: '9007199254740995',
+          tenantCode: 'pending',
+          tenantName: 'Pending Tenant',
+          enabled: false,
+          lifecycleState: 'prepared',
+          bootstrapStatus: 'pending'
+        }
+      ],
+      total: 3
+    }
+  });
+  const page = render();
+  await flushPromises();
+  const rows = page.findAll('tbody tr');
+  const active = rows[0].findAll('td');
+  const prepared = rows[1].findAll('td');
+  const pending = rows[2].findAll('td');
+  expect(active[3].find('button').text()).toBe('authorize');
+  expect(active[4].findAll('button').map(item => item.text())).toEqual(['disable']);
+  expect(prepared[3].find('button').text()).toBe('authorize');
+  expect(prepared[4].findAll('button').map(item => item.text())).toEqual(['activate']);
+  expect(pending[3].text()).toBe('authorizeAfterBootstrap');
+  expect(pending[3].find('button').exists()).toBe(false);
+  expect(pending[4].findAll('button').map(item => item.text())).toEqual(['bootstrap']);
+  await active[3].find('button').trigger('click');
+  await flushPromises();
+  expect(api.policies).toHaveBeenCalledWith('9007199254740993');
+  expect(api.bootstrap).not.toHaveBeenCalled();
+  expect(api.status).not.toHaveBeenCalled();
 });
