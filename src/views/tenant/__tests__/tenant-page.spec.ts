@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
   models: vi.fn(),
   policies: vi.fn(),
   savePolicy: vi.fn(),
+  catalog: vi.fn(),
   systemAdmin: true
 }));
 vi.mock('@/store/modules/auth', () => ({ useAuthStore: () => ({ userInfo: { isSystemAdmin: api.systemAdmin } }) }));
@@ -22,7 +23,9 @@ vi.mock('@/service/api', () => ({
   fetchBootstrapTenant: api.bootstrap,
   fetchTenantStatus: api.status,
   fetchTenantPolicies: api.policies,
-  fetchSaveTenantPolicy: api.savePolicy
+  fetchSaveTenantPolicy: api.savePolicy,
+  fetchTenantModelCatalog: api.catalog,
+  fetchSaveTenantPolicies: api.savePolicy
 }));
 
 const container = defineComponent({ template: '<div><slot /><slot name="footer" /></div>' });
@@ -69,6 +72,10 @@ function render() {
         NSwitch: toggle,
         NInputNumber: true,
         NModal: modal,
+        NDrawer: modal,
+        NDrawerContent: container,
+        NSpin: container,
+        NEmpty: container,
         NPagination: true
       }
     }
@@ -81,6 +88,7 @@ beforeEach(() => {
   api.list.mockResolvedValue({ data: { records: [], total: 0 } });
   api.models.mockResolvedValue({ data: [] });
   api.policies.mockResolvedValue({ data: [] });
+  api.catalog.mockResolvedValue({ data: { models: [], revision: 'a'.repeat(64) } });
   api.savePolicy.mockResolvedValue({ data: {} });
 });
 
@@ -140,6 +148,24 @@ it('lets the system administrator authorize a model for the default tenant witho
   api.models.mockResolvedValue({
     data: [{ modelId, label: 'DeepSeek / model', capabilities: ['text'] }]
   });
+  api.catalog.mockResolvedValue({
+    data: {
+      revision: 'a'.repeat(64),
+      models: [
+        {
+          modelId,
+          modelName: 'model',
+          providerId: '1',
+          providerName: 'DeepSeek',
+          enabled: false,
+          isDefault: false,
+          dailyQuotaPerUser: null,
+          modelAvailable: true,
+          unavailableReason: null
+        }
+      ]
+    }
+  });
   const page = render();
   await flushPromises();
   const row = page.find('tbody tr');
@@ -150,18 +176,17 @@ it('lets the system administrator authorize a model for the default tenant witho
   expect(cells[4].find('button').exists()).toBe(false);
   await cells[3].find('button').trigger('click');
   await flushPromises();
-  expect(api.policies).toHaveBeenCalledWith('0');
-  await page.find('select').setValue(modelId);
-  await page.findAll('input[type="checkbox"]')[1].setValue(true);
+  expect(api.catalog).toHaveBeenCalledWith('0');
+  await page.find('input[type="checkbox"]').setValue(true);
+  await page.find('input[type="radio"]').setValue();
   await page
     .findAll('button')
-    .find(item => item.text() === 'save')!
+    .find(item => item.text() === 'saveChanges')!
     .trigger('click');
   await flushPromises();
-  expect(api.savePolicy).toHaveBeenCalledWith('0', modelId, {
-    enabled: true,
-    isDefault: true,
-    dailyQuotaPerUser: null
+  expect(api.savePolicy).toHaveBeenCalledWith('0', {
+    revision: 'a'.repeat(64),
+    policies: [{ modelId, enabled: true, isDefault: true, dailyQuotaPerUser: null }]
   });
   expect(api.bootstrap).not.toHaveBeenCalled();
   expect(api.status).not.toHaveBeenCalled();
@@ -215,7 +240,7 @@ it('separates business tenant AI authorization from lifecycle actions and requir
   expect(pending[4].findAll('button').map(item => item.text())).toEqual(['bootstrap']);
   await active[3].find('button').trigger('click');
   await flushPromises();
-  expect(api.policies).toHaveBeenCalledWith('9007199254740993');
+  expect(api.catalog).toHaveBeenCalledWith('9007199254740993');
   expect(api.bootstrap).not.toHaveBeenCalled();
   expect(api.status).not.toHaveBeenCalled();
 });

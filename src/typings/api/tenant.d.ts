@@ -31,5 +31,18 @@ declare namespace Api {
       modelAvailable: boolean;
       dailyQuotaPerUser: number | null;
     }
+    interface ModelCatalogItem extends Policy {
+      providerId: string;
+      capabilities: string[];
+      unavailableReason: 'provider_disabled' | 'model_disabled' | 'text_required' | null;
+    }
+    interface ModelCatalog {
+      models: ModelCatalogItem[];
+      revision: string;
+    }
+    interface PoliciesPut {
+      revision: string;
+      policies: Pick<Policy, 'modelId' | 'enabled' | 'isDefault' | 'dailyQuotaPerUser'>[];
+    }
   }
 }

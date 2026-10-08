@@ -50,6 +50,22 @@ export function fetchTenantPolicies(tenantId: string) {
   });
 }
 
+export function fetchTenantModelCatalog(tenantId: string) {
+  return request<Api.Tenant.ModelCatalog>({
+    url: `/platform/tenants/${tenantId}/ai/model-policies/catalog`,
+    headers: auditHeaders('Read tenant AI authorization catalog')
+  });
+}
+
+export function fetchSaveTenantPolicies(tenantId: string, data: Api.Tenant.PoliciesPut) {
+  return request<Api.Tenant.ModelCatalog>({
+    url: `/platform/tenants/${tenantId}/ai/model-policies`,
+    method: 'put',
+    data,
+    headers: auditHeaders('Save tenant AI authorization')
+  });
+}
+
 export function fetchSaveTenantPolicy(
   tenantId: string,
   modelId: string,

@@ -6,12 +6,11 @@ import {
   fetchAgentModelOptions,
   fetchBootstrapTenant,
   fetchCreateTenant,
-  fetchSaveTenantPolicy,
   fetchTenantList,
-  fetchTenantPolicies,
   fetchTenantStatus
 } from '@/service/api';
 import { messages } from './messages';
+import PolicyDrawer from './modules/policy-drawer.vue';
 
 const { t } = useI18n({ messages });
 const auth = useAuthStore();
@@ -21,29 +20,17 @@ const busy = ref(false);
 const failed = ref(false);
 const current = ref(1);
 const total = ref(0);
-const mode = ref<'create' | 'bootstrap' | 'policies' | null>(null);
+const mode = ref<'create' | 'bootstrap' | null>(null);
+const policyOpen = ref(false);
 const selected = ref<Api.Tenant.Record | null>(null);
 const form = reactive({ tenantName: '', tenantCode: '', adminPassword: '', defaultModelId: '' });
-const policies = ref<Api.Tenant.Policy[]>([]);
-const policy = reactive({ modelId: '', enabled: true, isDefault: false, dailyQuotaPerUser: null as number | null });
 let requestKey = crypto.randomUUID();
 let requestFingerprint = '';
-const options = computed(() => {
-  const available = models.value
-    .filter(model => mode.value !== 'bootstrap' || model.capabilities.includes('text'))
-    .map(model => ({ label: model.label, value: model.modelId }));
-  if (mode.value === 'policies') {
-    policies.value.forEach(item => {
-      if (!available.some(option => option.value === item.modelId)) {
-        available.push({
-          label: `${item.providerName} / ${item.modelName} (${t('unavailable')})`,
-          value: item.modelId
-        });
-      }
-    });
-  }
-  return available;
-});
+const options = computed(() =>
+  models.value
+    .filter(model => model.capabilities.includes('text'))
+    .map(model => ({ label: model.label, value: model.modelId }))
+);
 
 async function load() {
   busy.value = true;
@@ -60,8 +47,12 @@ async function load() {
 }
 
 async function open(next: 'create' | 'bootstrap' | 'policies', row?: Api.Tenant.Record) {
-  mode.value = next;
   selected.value = row || null;
+  if (next === 'policies') {
+    policyOpen.value = true;
+    return;
+  }
+  mode.value = next;
   Object.assign(form, { tenantName: '', tenantCode: '', adminPassword: '', defaultModelId: '' });
   requestKey = crypto.randomUUID();
   requestFingerprint = '';
@@ -70,11 +61,6 @@ async function open(next: 'create' | 'bootstrap' | 'policies', row?: Api.Tenant.
     if (next !== 'create') {
       const result = await fetchAgentModelOptions();
       models.value = result.data || [];
-    }
-    if (next === 'policies' && row) {
-      const result = await fetchTenantPolicies(row.tenantId);
-      policies.value = result.data || [];
-      Object.assign(policy, { modelId: '', enabled: true, isDefault: false, dailyQuotaPerUser: null });
     }
   } finally {
     busy.value = false;
@@ -86,16 +72,6 @@ function close() {
   mode.value = null;
   form.adminPassword = '';
   requestFingerprint = '';
-}
-
-function selectPolicy(id: string) {
-  const existing = policies.value.find(item => item.modelId === id);
-  Object.assign(policy, {
-    modelId: id,
-    enabled: existing?.enabled ?? true,
-    isDefault: existing?.isDefault ?? false,
-    dailyQuotaPerUser: existing?.dailyQuotaPerUser ?? null
-  });
 }
 
 async function save() {
@@ -114,7 +90,6 @@ async function save() {
     window.$message?.warning(t('required'));
     return;
   }
-  if (mode.value === 'policies' && !policy.modelId) return;
   const fingerprint = JSON.stringify(form);
   if (requestFingerprint && requestFingerprint !== fingerprint) requestKey = crypto.randomUUID();
   requestFingerprint = fingerprint;
@@ -132,12 +107,6 @@ async function save() {
         { defaultModelId: form.defaultModelId, adminPassword: form.adminPassword },
         requestKey
       ));
-    } else if (mode.value === 'policies' && selected.value) {
-      ({ error } = await fetchSaveTenantPolicy(selected.value.tenantId, policy.modelId, {
-        enabled: policy.enabled,
-        isDefault: policy.isDefault,
-        dailyQuotaPerUser: policy.dailyQuotaPerUser
-      }));
     }
     if (!error) {
       mode.value = null;
@@ -242,6 +211,13 @@ onMounted(() => {
       </div>
       <NPagination v-model:page="current" :item-count="total" :page-size="20" :disabled="busy" @update:page="load" />
     </NSpace>
+    <PolicyDrawer
+      v-if="selected"
+      v-model:show="policyOpen"
+      :tenant-id="selected.tenantId"
+      :tenant-name="selected.tenantName"
+      @saved="load"
+    />
     <NModal
       :show="mode !== null"
       :mask-closable="!busy"
@@ -272,33 +248,6 @@ onMounted(() => {
               <NSelect v-model:value="form.defaultModelId" :options="options" />
             </NFormItem>
             <NAlert v-if="!options.length" type="warning">{{ t('noModels') }}</NAlert>
-          </template>
-          <template v-else-if="mode === 'policies'">
-            <NSpace class="mb-16px">
-              <NTag v-for="item in policies" :key="item.modelId" :type="item.enabled ? 'success' : 'default'">
-                {{ item.modelName }} · {{ t(item.enabled ? 'enabled' : 'disabled') }}
-                {{ item.isDefault ? t('isDefault') : '' }}
-              </NTag>
-            </NSpace>
-            <NFormItem :label="t('model')">
-              <NSelect :value="policy.modelId" :options="options" @update:value="selectPolicy" />
-            </NFormItem>
-            <NFormItem :label="t('enabled')">
-              <NSwitch
-                v-model:value="policy.enabled"
-                @update:value="
-                  value => {
-                    if (!value) policy.isDefault = false;
-                  }
-                "
-              />
-            </NFormItem>
-            <NFormItem :label="t('isDefault')">
-              <NSwitch v-model:value="policy.isDefault" :disabled="!policy.enabled" />
-            </NFormItem>
-            <NFormItem :label="t('quota')">
-              <NInputNumber v-model:value="policy.dailyQuotaPerUser" :min="1" />
-            </NFormItem>
           </template>
         </NForm>
         <template #footer>

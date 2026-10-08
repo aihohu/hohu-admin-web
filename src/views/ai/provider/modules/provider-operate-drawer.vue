@@ -89,6 +89,29 @@ const modelAdvancedSections = ref<string[]>([]);
 
 const newModel = ref(createEmptyModelForm());
 const testingModelId = ref<string | null>(null);
+const testResults = ref<Record<string, 'passed' | 'failed' | undefined>>({});
+const savedModelFingerprint = ref('');
+const modelMaxTokens = ref<number | null>(null);
+const modelTemperature = ref<number | null>(null);
+
+function modelFingerprint(): string {
+  const config = { ...newModel.value.config };
+  delete config.generation;
+  return JSON.stringify({
+    name: newModel.value.name,
+    capabilities: newModel.value.capabilities,
+    baseUrl: newModel.value.baseUrl || '',
+    isEnabled: newModel.value.isEnabled,
+    sortOrder: newModel.value.sortOrder,
+    config,
+    maxTokens: modelMaxTokens.value,
+    temperature: modelTemperature.value
+  });
+}
+
+const modelFormDirty = computed(
+  () => Boolean(editingModel.value) && modelFingerprint() !== savedModelFingerprint.value
+);
 
 const modelFormRef = ref<FormInst | null>(null);
 const modelFormRules = computed(() => ({
@@ -121,9 +144,6 @@ function createDefaultModel(): Model {
   };
 }
 
-const modelMaxTokens = ref<number | null>(null);
-const modelTemperature = ref<number | null>(null);
-
 function createEmptyModelForm(): Api.Ai.AiModelCreateParams {
   return {
     name: '',
@@ -149,7 +169,7 @@ async function loadProviderModels() {
 }
 
 function openAddModel() {
-  if (loading.value || modelSaving.value) return;
+  if (loading.value || modelSaving.value || testingModelId.value) return;
   editingModel.value = null;
   modelMaxTokens.value = null;
   modelTemperature.value = null;
@@ -159,7 +179,7 @@ function openAddModel() {
 }
 
 function openEditModel(m: Api.Ai.AiModel) {
-  if (loading.value || modelSaving.value) return;
+  if (loading.value || modelSaving.value || testingModelId.value) return;
   editingModel.value = m;
   const generation = m.config?.generation as { max_tokens?: number; temperature?: number } | undefined;
   modelMaxTokens.value = generation?.max_tokens ?? null;
@@ -173,16 +193,17 @@ function openEditModel(m: Api.Ai.AiModel) {
     config: m.config
   };
   modelAdvancedSections.value = [];
+  savedModelFingerprint.value = modelFingerprint();
   showModelForm.value = true;
 }
 
 function cancelModelForm() {
-  if (modelSaving.value) return;
+  if (modelSaving.value || testingModelId.value) return;
   showModelForm.value = false;
 }
 
 async function saveModel() {
-  if (loading.value || modelSaving.value) return;
+  if (loading.value || modelSaving.value || testingModelId.value) return;
   modelSaving.value = true;
   try {
     newModel.value.config = {
@@ -211,6 +232,7 @@ async function saveModel() {
       ? await fetchUpdateProviderModel(providerId, editingModel.value.modelId, newModel.value)
       : await fetchAddProviderModel(providerId, newModel.value);
     if (error) return;
+    if (editingModel.value) testResults.value[editingModel.value.modelId] = undefined;
     window.$message?.success(t(editingModel.value ? 'common.updateSuccess' : 'common.addSuccess'));
     showModelForm.value = false;
     await loadProviderModels();
@@ -233,16 +255,35 @@ async function deleteModel(m: Api.Ai.AiModel) {
 }
 
 async function handleTestModel(m: Api.Ai.AiModel) {
-  if (!props.rowData) return;
+  if (
+    !props.rowData ||
+    !showModelForm.value ||
+    editingModel.value?.modelId !== m.modelId ||
+    testingModelId.value ||
+    loading.value ||
+    modelSaving.value
+  )
+    return;
   if (providerFormDirty.value) {
     window.$message?.warning(t('page.ai.provider.saveBeforeTest'));
     return;
   }
+  if (modelFormDirty.value) {
+    window.$message?.warning(t('page.ai.provider.saveModelBeforeTest'));
+    return;
+  }
   testingModelId.value = m.modelId;
-  const { error } = await fetchTestProviderModel(props.rowData.providerId, m.modelId);
-  testingModelId.value = null;
-  if (!error) {
-    window.$message?.success(t('page.ai.provider.modelTestSuccess', { name: m.name }));
+  try {
+    const { error } = await fetchTestProviderModel(props.rowData.providerId, m.modelId);
+    testResults.value[m.modelId] = error ? 'failed' : 'passed';
+    if (!error) {
+      window.$message?.success(t('page.ai.provider.modelTestSuccess', { name: m.name }));
+    }
+  } catch {
+    testResults.value[m.modelId] = 'failed';
+    window.$message?.error(t('page.ai.provider.testFailed'));
+  } finally {
+    testingModelId.value = null;
   }
 }
 
@@ -259,6 +300,7 @@ function handleInitModel() {
   providerModels.value = [];
   pendingModels.value = [];
   showModelForm.value = false;
+  testResults.value = {};
 
   if (props.operateType === 'edit' && props.rowData) {
     const cloned = jsonClone(props.rowData);
@@ -278,7 +320,7 @@ function handleInitModel() {
 }
 
 function closeDrawer() {
-  if (loading.value || modelSaving.value) return;
+  if (loading.value || modelSaving.value || testingModelId.value) return;
   visible.value = false;
 }
 
@@ -331,10 +373,10 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
     display-directive="show"
     :width="600"
     :style="{ maxWidth: '100vw' }"
-    :mask-closable="!loading && !modelSaving"
-    :close-on-esc="!loading && !modelSaving"
+    :mask-closable="!loading && !modelSaving && !testingModelId"
+    :close-on-esc="!loading && !modelSaving && !testingModelId"
   >
-    <NDrawerContent :title="title" :native-scrollbar="false" :closable="!loading && !modelSaving">
+    <NDrawerContent :title="title" :native-scrollbar="false" :closable="!loading && !modelSaving && !testingModelId">
       <NForm ref="formRef" :model="model" :rules="rules" label-placement="top" :disabled="loading || modelSaving">
         <NFormItem :label="t('page.ai.provider.code')" path="providerCode">
           <NInput v-model:value="model.providerCode" :placeholder="t('page.ai.provider.form.code')" />
@@ -360,14 +402,27 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
         </NFormItem>
       </NForm>
 
+      <div v-if="operateType === 'edit' && rowData" data-testid="provider-egress-status" class="mb-16px">
+        <NSpace align="center" :size="8">
+          <span>{{ t('page.ai.provider.egressStatus') }}</span>
+          <NTag v-if="providerFormDirty" type="warning">{{ t('page.ai.provider.egressPendingSave') }}</NTag>
+          <NTag v-else :type="rowData.egressStatus === 'EGRESS_POLICY_BLOCKED' ? 'error' : 'success'">
+            {{
+              t(
+                rowData.egressStatus === 'EGRESS_POLICY_BLOCKED'
+                  ? 'page.ai.provider.egressPolicyBlocked'
+                  : 'page.ai.provider.egressPolicyAllowed'
+              )
+            }}
+          </NTag>
+        </NSpace>
+        <div class="mt-4px text-12px text-gray-500">{{ t('page.ai.provider.egressPolicyHint') }}</div>
+      </div>
+
       <!-- Models section -->
       <NDivider style="margin: 12px 0 8px">
         {{ t('page.ai.provider.models') }}
       </NDivider>
-
-      <NAlert v-if="providerFormDirty" type="warning" :bordered="false">
-        {{ t('page.ai.provider.saveBeforeTest') }}
-      </NAlert>
 
       <!-- Edit mode: server-side models -->
       <NSpin v-if="operateType === 'edit'" :show="modelsLoading">
@@ -385,25 +440,6 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
                 >
                   {{ capLabelMap[cap] || cap }}
                 </NTag>
-                <NTooltip>
-                  <template #trigger>
-                    <NButton
-                      v-permission="'ai:provider:test-model'"
-                      :disabled="providerFormDirty"
-                      :data-testid="`ai-provider-test-${m.modelId}`"
-                      quaternary
-                      circle
-                      size="tiny"
-                      :loading="testingModelId === m.modelId"
-                      @click="handleTestModel(m)"
-                    >
-                      <template #icon>
-                        <IconIcRoundPlayArrow class="text-14px" />
-                      </template>
-                    </NButton>
-                  </template>
-                  {{ t('page.ai.provider.testConnectivity') }}
-                </NTooltip>
                 <NButton v-permission="'ai:provider:edit'" quaternary circle size="tiny" @click="openEditModel(m)">
                   <template #icon>
                     <IconIcRoundEdit class="text-14px" />
@@ -489,6 +525,9 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
       <!-- Add/Edit model form (shared) -->
       <div v-if="showModelForm" class="model-form" data-testid="provider-model-editor">
         <NCard size="small" :title="editingModel ? t('page.ai.provider.editModel') : t('page.ai.provider.addModel')">
+          <NAlert v-if="editingModel && (providerFormDirty || modelFormDirty)" type="warning" :bordered="false">
+            {{ t(providerFormDirty ? 'page.ai.provider.saveBeforeTest' : 'page.ai.provider.saveModelBeforeTest') }}
+          </NAlert>
           <NForm
             ref="modelFormRef"
             :model="newModel"
@@ -551,13 +590,52 @@ defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
             </NCollapse>
           </NForm>
           <template #action>
-            <NSpace justify="end">
-              <NButton :disabled="modelSaving" data-testid="provider-model-cancel" @click="cancelModelForm">
-                {{ t(editingModel ? 'page.ai.provider.cancelEditModel' : 'page.ai.provider.cancelAddModel') }}
-              </NButton>
-              <NButton type="primary" :loading="modelSaving" data-testid="provider-model-submit" @click="saveModel">
-                {{ t(operateType === 'add' ? 'page.ai.provider.addModelToList' : 'page.ai.provider.saveModel') }}
-              </NButton>
+            <div v-if="editingModel" class="model-editor-hint mb-8px">{{ t('page.ai.provider.modelTestHint') }}</div>
+            <NSpace justify="space-between" align="center">
+              <NSpace align="center" :size="8">
+                <NButton
+                  v-if="operateType === 'edit' && editingModel"
+                  v-permission="'ai:provider:test-model'"
+                  :disabled="providerFormDirty || modelFormDirty || loading || modelSaving || testingModelId !== null"
+                  :loading="testingModelId === editingModel.modelId"
+                  data-testid="provider-model-test"
+                  @click="handleTestModel(editingModel)"
+                >
+                  {{ t('page.ai.provider.testConnectivity') }}
+                </NButton>
+                <NTag
+                  v-if="editingModel && testResults[editingModel.modelId] && !providerFormDirty && !modelFormDirty"
+                  :type="testResults[editingModel.modelId] === 'passed' ? 'success' : 'error'"
+                  size="small"
+                  data-testid="provider-model-test-result"
+                >
+                  {{
+                    t(
+                      testResults[editingModel.modelId] === 'passed'
+                        ? 'page.ai.provider.testPassed'
+                        : 'page.ai.provider.testFailed'
+                    )
+                  }}
+                </NTag>
+              </NSpace>
+              <NSpace align="center">
+                <NButton
+                  :disabled="modelSaving || testingModelId !== null"
+                  data-testid="provider-model-cancel"
+                  @click="cancelModelForm"
+                >
+                  {{ t(editingModel ? 'page.ai.provider.cancelEditModel' : 'page.ai.provider.cancelAddModel') }}
+                </NButton>
+                <NButton
+                  type="primary"
+                  :loading="modelSaving"
+                  :disabled="testingModelId !== null"
+                  data-testid="provider-model-submit"
+                  @click="saveModel"
+                >
+                  {{ t(operateType === 'add' ? 'page.ai.provider.addModelToList' : 'page.ai.provider.saveModel') }}
+                </NButton>
+              </NSpace>
             </NSpace>
           </template>
         </NCard>

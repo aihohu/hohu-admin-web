@@ -1387,7 +1387,11 @@ declare namespace App {
             egressStatus: string;
             egressPolicyBlocked: string;
             egressPolicyAllowed: string;
+            egressPendingSave: string;
+            egressPolicyHint: string;
             saveBeforeTest: string;
+            saveModelBeforeTest: string;
+            modelTestHint: string;
             addProvider: string;
             editProvider: string;
             capabilities: string;
@@ -1423,6 +1427,7 @@ declare namespace App {
             completeModelFirst: string;
             capabilitiesRequired: string;
             testConnectivity: string;
+            testPassed: string;
             testSuccess: string;
             testFailed: string;
             testNoModel: string;

@@ -63,8 +63,11 @@ vi.mock('vue-i18n', () => ({
 
 const stubs = {
   NAlert: { template: '<div><slot /></div>' },
-  NButton: true,
-  NCard: true,
+  NButton: {
+    props: ['disabled', 'loading'],
+    template: '<button :disabled="disabled || loading"><slot /></button>'
+  },
+  NCard: { template: '<div><slot /><slot name="action" /></div>' },
   NCheckbox: true,
   NCheckboxGroup: true,
   NDivider: true,
@@ -75,7 +78,7 @@ const stubs = {
   NInput: true,
   NInputNumber: true,
   NPopconfirm: true,
-  NSpace: true,
+  NSpace: { template: '<div><slot /></div>' },
   NSpin: { template: '<div><slot /></div>' },
   NSwitch: true,
   NTag: { template: '<span><slot /></span>' },
@@ -95,6 +98,91 @@ describe('Provider operate drawer', () => {
       success: vi.fn(),
       warning: vi.fn()
     } as unknown as typeof window.$message;
+  });
+
+  it('shows the saved Provider egress state and marks it stale while editing', async () => {
+    const wrapper = mount(ProviderOperateDrawer, {
+      props: {
+        visible: false,
+        operateType: 'edit',
+        rowData: {
+          providerId: '101',
+          providerCode: 'openai',
+          name: 'OpenAI',
+          credentialConfigured: true,
+          baseUrl: null,
+          isEnabled: true,
+          config: null,
+          createTime: '',
+          egressStatus: 'EGRESS_POLICY_BLOCKED'
+        }
+      },
+      global: { stubs }
+    });
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="provider-egress-status"]').text()).toContain(
+      'page.ai.provider.egressPolicyBlocked'
+    );
+    const state = (wrapper.vm.$ as unknown as { setupState: Record<string, any> }).setupState;
+    state.model.baseUrl = 'https://changed.example.com/v1';
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="provider-egress-status"]').text()).toContain(
+      'page.ai.provider.egressPendingSave'
+    );
+    expect(wrapper.find('[data-testid="provider-egress-status"]').text()).not.toContain(
+      'page.ai.provider.egressPolicyBlocked'
+    );
+  });
+
+  it('tests a saved model from the edit form, before Cancel Edit, and blocks unsaved model changes', async () => {
+    const { fetchTestProviderModel } = await import('@/service/api');
+    const wrapper = mount(ProviderOperateDrawer, {
+      props: {
+        visible: false,
+        operateType: 'edit',
+        rowData: {
+          providerId: '101',
+          providerCode: 'openai',
+          name: 'OpenAI',
+          credentialConfigured: true,
+          baseUrl: null,
+          isEnabled: true,
+          config: null,
+          createTime: '',
+          egressStatus: null
+        }
+      },
+      global: { stubs }
+    });
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="ai-provider-test-201"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="provider-egress-status"]').text()).toContain(
+      'page.ai.provider.egressPolicyAllowed'
+    );
+    const state = (wrapper.vm.$ as unknown as { setupState: Record<string, any> }).setupState;
+    state.openEditModel(persistedModel);
+    await wrapper.vm.$nextTick();
+    const testButton = wrapper.find('[data-testid="provider-model-test"]');
+    const cancelButton = wrapper.find('[data-testid="provider-model-cancel"]');
+    expect(testButton.text()).toBe('page.ai.provider.testConnectivity');
+    expect(
+      testButton.element.compareDocumentPosition(cancelButton.element) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    await testButton.trigger('click');
+    expect(fetchTestProviderModel).toHaveBeenCalledWith('101', '201');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="provider-model-test-result"]').text()).toBe('page.ai.provider.testPassed');
+    state.newModel.name = 'unsaved-name';
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="provider-model-test"]').attributes('disabled')).toBeDefined();
+    await state.handleTestModel(persistedModel);
+    expect(fetchTestProviderModel).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="provider-model-test-result"]').exists()).toBe(false);
+    state.openAddModel();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="provider-model-test"]').exists()).toBe(false);
   });
 
   it('tests only the persisted Provider and model IDs and exposes quarantine state', async () => {
@@ -120,8 +208,9 @@ describe('Provider operate drawer', () => {
 
     await wrapper.setProps({ visible: true });
     await flushPromises();
-    const vm = wrapper.vm as unknown as { handleTestModel: (model: Api.Ai.AiModel) => Promise<void> };
-    await vm.handleTestModel(persistedModel);
+    const state = (wrapper.vm.$ as unknown as { setupState: Record<string, any> }).setupState;
+    state.openEditModel(persistedModel);
+    await state.handleTestModel(persistedModel);
 
     expect(fetchTestProviderModel).toHaveBeenCalledWith('101', '201');
     expect(wrapper.text()).toContain('page.ai.provider.egressPolicyBlocked');
@@ -155,6 +244,8 @@ describe('Provider operate drawer', () => {
       handleTestModel: (model: Api.Ai.AiModel) => Promise<void>;
     };
     vm.model.baseUrl = 'https://unsaved.example.com';
+    const state = (wrapper.vm.$ as unknown as { setupState: Record<string, any> }).setupState;
+    state.openEditModel(persistedModel);
     await wrapper.vm.$nextTick();
 
     await vm.handleTestModel(persistedModel);
@@ -245,6 +336,7 @@ describe('Provider operate drawer', () => {
     state.newModel.name = 'added-model';
     await state.saveModel();
     await state.deleteModel(persistedModel);
+    state.openEditModel(persistedModel);
     await state.handleTestModel(persistedModel);
 
     expect(fetchUpdateProviderModel).toHaveBeenCalledWith(
@@ -264,6 +356,8 @@ describe('Provider operate drawer', () => {
     vi.mocked(fetchDeleteProviderModel).mockResolvedValueOnce({ data: null, error: new Error('delete') } as never);
     vi.mocked(fetchTestProviderModel).mockResolvedValueOnce({ data: null, error: new Error('test') } as never);
     await state.deleteModel(persistedModel);
+    state.cancelModelForm();
+    state.openEditModel(persistedModel);
     await state.handleTestModel(persistedModel);
   });
 
