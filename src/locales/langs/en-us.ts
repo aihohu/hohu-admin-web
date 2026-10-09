@@ -1317,9 +1317,32 @@ const local: App.I18n.Schema = {
       },
       aiAgentAuth: {
         title: 'AI Agent Authorization',
-        sharedHint:
-          'Every Agent, including shared, requires an explicit binding validated against the delegation ceiling',
-        sharedTag: 'Platform capability'
+        guidance: 'Choose available assistants. Expand one to see its tool permissions.',
+        rolePermissionsOnly: 'This shows this role only. Other roles, model access, and data scope also affect use.',
+        entryGranted: 'AI assistant entry permission granted',
+        entryMissing: 'This role lacks AI assistant access: ai:chat:use',
+        details: 'View permissions',
+        hideDetails: 'Collapse',
+        missingCount: '{count} permissions missing',
+        permissionsReady: 'Permissions granted',
+        toolName: 'Tool',
+        requiredMenuPermissions: 'Required menu permissions',
+        globalDisabled: 'Disabled globally',
+        noAgents: 'No Agents are available for authorization',
+        noTools: 'No visible tools',
+        readonlyTool: 'Read',
+        writeTool: 'Write',
+        toolDisabled: 'Tool disabled',
+        permissionGranted: 'Granted',
+        permissionMissing: 'Missing',
+        noExtraPermission: 'No additional menu permission required',
+        menuAuth: 'Open menu authorization',
+        saveThenMenuAuth: 'Save and open menu authorization',
+        discardTitle: 'Discard Agent authorization changes?',
+        discardContent: 'Unsaved Agent selections will be lost.',
+        discard: 'Discard changes',
+        keepEditing: 'Keep editing',
+        loadFailed: 'Unable to load Agent authorization. Close and retry.'
       }
     },
     marketplace: {

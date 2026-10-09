@@ -1514,8 +1514,32 @@ declare namespace App {
           };
           aiAgentAuth: {
             title: string;
-            sharedHint: string;
-            sharedTag: string;
+            guidance: string;
+            rolePermissionsOnly: string;
+            entryGranted: string;
+            entryMissing: string;
+            details: string;
+            hideDetails: string;
+            missingCount: string;
+            permissionsReady: string;
+            toolName: string;
+            requiredMenuPermissions: string;
+            globalDisabled: string;
+            noAgents: string;
+            noTools: string;
+            readonlyTool: string;
+            writeTool: string;
+            toolDisabled: string;
+            permissionGranted: string;
+            permissionMissing: string;
+            noExtraPermission: string;
+            menuAuth: string;
+            saveThenMenuAuth: string;
+            discardTitle: string;
+            discardContent: string;
+            discard: string;
+            keepEditing: string;
+            loadFailed: string;
           };
         };
         marketplace: {

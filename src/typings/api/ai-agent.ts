@@ -48,12 +48,22 @@ declare namespace Api {
       enabled: boolean;
       isBuiltin: boolean;
       isShared: boolean;
+      tools: AgentToolRow[];
+    }
+
+    interface AgentToolRow {
+      name: string;
+      summary: string;
+      readonly: boolean;
+      enabled: boolean;
+      requiredPermissions: Array<{ code: string; granted: boolean }>;
     }
 
     interface RoleAgentBinding {
       roleId: string;
       allAgents: AgentRow[];
       boundAgentIds: string[];
+      aiChatEntryGranted: boolean;
     }
 
     interface RoleAgentBindReq {

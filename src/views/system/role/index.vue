@@ -1,6 +1,6 @@
 <script setup lang="tsx">
 import { localizedText } from '@/locales';
-import { onMounted, reactive, shallowRef } from 'vue';
+import { nextTick, onMounted, reactive, shallowRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
@@ -207,6 +207,13 @@ function onAiAgentAuthClick(id: string) {
   aiAgentAuthRoleId.value = id;
   openAiAgentAuthModal();
 }
+
+async function onAgentMenuAuthClick(id: string) {
+  aiAgentAuthVisible.value = false;
+  currentRoleId.value = id;
+  await nextTick();
+  openMenuAuthModal();
+}
 </script>
 
 <template>
@@ -249,7 +256,12 @@ function onAiAgentAuthClick(id: string) {
     </NCard>
 
     <MenuAuthModal v-model:visible="menuAuthVisible" :role-id="currentRoleId" />
-    <AiAgentAuthModal v-model:visible="aiAgentAuthVisible" :role-id="aiAgentAuthRoleId" />
+    <AiAgentAuthModal
+      v-model:visible="aiAgentAuthVisible"
+      :role-id="aiAgentAuthRoleId"
+      :can-open-menu-auth="hasAuth('system:role:menu-auth')"
+      @open-menu-auth="onAgentMenuAuthClick"
+    />
   </div>
 </template>
 
