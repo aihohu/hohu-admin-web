@@ -55,4 +55,64 @@ describe('single-level route detection by component shape', () => {
     expect(resolveHostedCapabilityHome(routes, 'ai_chat', 'ai_chat')).toBe('home');
     expect(routes.map(item => item.name)).not.toContain('ai_chat');
   });
+
+  it('resolves monitoring and demo groups without changing existing page paths', () => {
+    const routes = [
+      {
+        name: 'system',
+        path: '/system',
+        component: 'layout.base',
+        meta: { title: '系统管理' },
+        children: [
+          {
+            name: 'system_monitor',
+            path: '/system/monitor',
+            component: 'layout.base',
+            meta: { title: '监控管理' },
+            children: [
+              {
+                name: 'system_operation-log',
+                path: '/system/operation-log',
+                component: 'view.system_operation-log',
+                meta: { title: '操作日志' }
+              },
+              {
+                name: 'system_login-log',
+                path: '/system/login-log',
+                component: 'view.system_login-log',
+                meta: { title: '登录日志' }
+              }
+            ]
+          },
+          {
+            name: 'system_demo',
+            path: '/system/demo',
+            component: 'layout.base',
+            meta: { title: '演示管理' },
+            children: [
+              { name: 'dashboard', path: '/dashboard', component: 'view.dashboard', meta: { title: '仪表盘' } },
+              {
+                name: 'system_data-scope-demo',
+                path: '/system/data-scope-demo',
+                component: 'view.system_data-scope-demo',
+                meta: { title: '数据权限演示' }
+              }
+            ]
+          }
+        ]
+      }
+    ];
+    const [root] = getAuthVueRoutes(routes as unknown as ElegantConstRoute[]);
+    const children = root.children!;
+    expect(children.find(route => String(route.name) === 'system_demo')?.redirect).toEqual({ name: 'dashboard' });
+    expect(children.find(route => route.name === 'system_monitor')?.redirect).toEqual({ name: 'system_operation-log' });
+    for (const [name, path] of [
+      ['dashboard', '/dashboard'],
+      ['system_data-scope-demo', '/system/data-scope-demo'],
+      ['system_operation-log', '/system/operation-log'],
+      ['system_login-log', '/system/login-log']
+    ] as const) {
+      expect(children.find(route => route.name === name)).toMatchObject({ path, component: views[name] });
+    }
+  });
 });

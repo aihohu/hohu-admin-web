@@ -386,6 +386,7 @@ const local: App.I18n.Schema = {
     system_job: '定时任务',
     'system_job-log': '任务日志',
     system_monitor: '监控管理',
+    system_demo: '演示管理',
     'system_operation-log': '操作日志',
     'system_login-log': '登录日志',
     system_config: '自定义参数',

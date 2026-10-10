@@ -393,6 +393,7 @@ const local: App.I18n.Schema = {
     system_job: 'Scheduled Job',
     'system_job-log': 'Job Log',
     system_monitor: 'Monitor',
+    system_demo: 'Demo Management',
     'system_operation-log': 'Operation Log',
     'system_login-log': 'Login Log',
     system_config: 'Custom Parameters',
