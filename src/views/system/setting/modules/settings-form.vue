@@ -6,19 +6,23 @@ import type { SettingField, SettingGroup } from '@/service/api/settings';
 import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
 import { refreshRuntimeSettings } from '@/utils/runtime-settings';
+import MailSettings from './mail-settings.vue';
 import FileUpload from '@/components/custom/file-upload.vue';
 import { useAppStore } from '@/store/modules/app';
 
 const { hasAuth } = useAuth();
 const route = useRoute();
 const router = useRouter();
+const mailDirty = ref(false);
 const groups = ref<string[]>([]);
 const active = ref('brand');
 const drafts = ref<Record<string, SettingGroup>>({});
 const baselines = ref<Record<string, string>>({});
 const form = computed(() => drafts.value[active.value] ?? null);
-const dirty = computed(() =>
-  Object.entries(drafts.value).some(([key, draft]) => JSON.stringify(draft.values) !== baselines.value[key])
+const dirty = computed(
+  () =>
+    mailDirty.value ||
+    Object.entries(drafts.value).some(([key, draft]) => JSON.stringify(draft.values) !== baselines.value[key])
 );
 const loading = ref(false);
 const saving = ref(false);
@@ -40,7 +44,7 @@ async function load(group = active.value) {
   active.value = group;
   loading.value = true;
   failed.value = false;
-  if (drafts.value[group]) {
+  if (group === 'mail' || drafts.value[group]) {
     loading.value = false;
     return;
   }
@@ -138,12 +142,27 @@ onMounted(() => {
         {{ $t('settings.loadFailed') }}
         <NButton text @click="groups.length ? load() : initialize()">{{ $t('settings.retry') }}</NButton>
       </NAlert>
-      <NForm v-if="form" label-placement="top" class="max-w-720px" :disabled="readOnly || saving">
+      <MailSettings
+        v-if="groups.includes('mail')"
+        v-show="active === 'mail'"
+        @dirty="mailDirty = $event"
+        @saved="drafts.account && (drafts.account.mailReady = $event)"
+      />
+      <NForm v-if="form && active !== 'mail'" label-placement="top" class="max-w-720px" :disabled="readOnly || saving">
         <NAlert v-if="active === 'files'" type="info" class="mb-16px">{{ $t('settings.limitHint') }}</NAlert>
+        <NAlert v-if="active === 'account' && !form.mailReady" type="warning" class="mb-16px">
+          {{ $t('account.mailNotReady') }}
+        </NAlert>
         <NFormItem v-for="field in form.fields" :key="field.key" :label="label(field.key)">
           <NSwitch
             v-if="field.kind === 'boolean'"
             :value="Boolean(form.values[field.key])"
+            :disabled="
+              active === 'account' &&
+              ['register_enabled', 'password_reset_enabled'].includes(field.key) &&
+              !form.mailReady &&
+              !form.values[field.key]
+            "
             @update:value="form.values[field.key] = $event"
           />
           <NInputNumber
@@ -156,6 +175,12 @@ onMounted(() => {
           >
             <template v-if="scale(field) > 1" #suffix>MiB</template>
           </NInputNumber>
+          <NSelect
+            v-else-if="field.key === 'registration_role_id'"
+            :value="String(form.values[field.key])"
+            :options="[{ label: $t('account.personalOnly'), value: '' }, ...(form.roleOptions || [])]"
+            @update:value="form.values[field.key] = $event"
+          />
           <NSelect
             v-else-if="field.kind === 'select'"
             :value="String(form.values[field.key])"

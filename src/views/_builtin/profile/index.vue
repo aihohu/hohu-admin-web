@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import EmailBinding from './email-binding.vue';
 import { Icon } from '@iconify/vue';
 import { enableStatusRecord, userGenderRecord } from '@/constants/business';
 import { REG_PWD } from '@/constants/reg';
@@ -116,8 +117,7 @@ async function handleSaveInfo() {
   const { error } = await fetchUpdateUserProfile({
     nickname: infoModel.nickname,
     userGender: infoModel.userGender,
-    userPhone: infoModel.userPhone || null,
-    userEmail: infoModel.userEmail || null
+    userPhone: infoModel.userPhone || null
   });
   savingInfo.value = false;
   if (!error) {
@@ -257,7 +257,7 @@ onMounted(() => {
                   <NInput v-model:value="infoModel.userPhone" :placeholder="$t('page.system.user.form.userPhone')" />
                 </NFormItem>
                 <NFormItem :label="$t('page.system.user.userEmail')" path="userEmail">
-                  <NInput v-model:value="infoModel.userEmail" :placeholder="$t('page.system.user.form.userEmail')" />
+                  <NInput :value="profile.userEmail" disabled />
                 </NFormItem>
                 <NDivider />
                 <NSpace justify="end">
@@ -269,6 +269,7 @@ onMounted(() => {
               </NForm>
             </NTabPane>
 
+            <NTabPane name="email" :tab="$t('account.recoveryEmail')"><EmailBinding @saved="loadProfile" /></NTabPane>
             <!-- 修改密码 -->
             <NTabPane name="password" :tab="$t('page.system.user.resetPwd.title')">
               <NForm

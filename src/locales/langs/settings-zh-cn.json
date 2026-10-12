@@ -36,5 +36,9 @@
   "retry": "重新加载",
   "upload": "上传图片",
   "currentUploadLimit": "当前单文件上限：{limit} MiB",
-  "unsavedChanges": "还有未保存的设置，确定离开此页面吗？"
+  "unsavedChanges": "还有未保存的设置，确定离开此页面吗？",
+  "mail": "邮件服务",
+  "field_password_reset_enabled": "允许邮箱找回密码",
+  "field_email_code_minutes": "邮箱验证码有效期（分钟，5–30）",
+  "field_registration_role_id": "新注册用户角色"
 }

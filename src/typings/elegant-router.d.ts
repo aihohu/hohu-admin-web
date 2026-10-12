@@ -31,7 +31,7 @@ declare module "@elegant-router/types" {
     "empty": "/empty";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
-    "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
+    "login": "/login/:module(pwd-login|register|reset-pwd|bind-wechat)?";
     "marketplace": "/marketplace";
     "marketplace-detail": "/marketplace/detail";
     "marketplace-installed": "/marketplace/installed";

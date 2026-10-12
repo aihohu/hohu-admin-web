@@ -1,7 +1,9 @@
+import account from './account-en-us.json';
 import builtin from './builtin-en-us.json';
 import settings from './settings-en-us.json';
 const local: App.I18n.Schema = {
   settings,
+  account,
   builtin,
   platform: {
     nameRequired: 'Enter a name of 1–128 characters; whitespace alone is not allowed.',
@@ -1538,6 +1540,15 @@ const local: App.I18n.Schema = {
     }
   },
   errorCode: {
+    MAIL_NOT_CONFIGURED: 'Mail service is disabled or incomplete. Contact your system administrator.',
+    MAIL_SEND_FAILED: 'Unable to send email. Retry later or contact your administrator.',
+    ACCOUNT_SERVICE_DISABLED: 'This account service is disabled. Return to sign in.',
+    EMAIL_CODE_INVALID: 'Code is invalid, expired, or has too many failed attempts. Request a new code.',
+    EMAIL_RATE_LIMITED: 'Too many email requests. Please try again later.',
+    EMAIL_VERIFICATION_UNAVAILABLE: 'Email verification is temporarily unavailable.',
+    REGISTRATION_ROLE_INVALID: 'Registration role is unavailable or contains management permissions.',
+    REGISTRATION_CONFLICT: 'Registration could not be completed. Check the username or contact your administrator.',
+    TENANT_REQUIRED: 'Enter a tenant code first.',
     AI_CHAT_RUN_IN_PROGRESS:
       'The previous task is still running. Complete its confirmation or stop it before retrying.',
     AI_PREVIEW_REJECTED: 'The operation did not pass preview checks. No changes were made.',

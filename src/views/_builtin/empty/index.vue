@@ -25,6 +25,7 @@ async function handleLogout() {
     </div>
     <h2 class="text-20px font-semibold">{{ $t('route.empty') }}</h2>
     <p class="max-w-480px text-center text-14px opacity-70">{{ $t('page.empty.tip') }}</p>
+    <NButton @click="routerPushByKey('profile')">{{ $t('account.personalAccount') }}</NButton>
     <NButton type="primary" @click="handleLogout">{{ $t('page.empty.logout') }}</NButton>
   </div>
 </template>

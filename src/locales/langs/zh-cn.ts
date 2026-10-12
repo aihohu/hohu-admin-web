@@ -1,7 +1,9 @@
+import account from './account-zh-cn.json';
 import builtin from './builtin-zh-cn.json';
 import settings from './settings-zh-cn.json';
 const local: App.I18n.Schema = {
   settings,
+  account,
   builtin,
   platform: {
     nameRequired: '请填写 1–128 字的名称，不能只填写空格。',
@@ -1518,6 +1520,15 @@ const local: App.I18n.Schema = {
     }
   },
   errorCode: {
+    MAIL_NOT_CONFIGURED: '邮件服务尚未启用或配置不完整，请联系系统管理员。',
+    MAIL_SEND_FAILED: '邮件发送失败，请稍后重试或联系管理员。',
+    ACCOUNT_SERVICE_DISABLED: '此账号服务已关闭，请返回登录页。',
+    EMAIL_CODE_INVALID: '验证码无效、已过期或尝试次数过多，请重新获取。',
+    EMAIL_RATE_LIMITED: '请求过于频繁，请稍后再试。',
+    EMAIL_VERIFICATION_UNAVAILABLE: '邮箱验证暂时不可用，请稍后重试。',
+    REGISTRATION_ROLE_INVALID: '注册角色不可用或包含管理权限，请联系管理员。',
+    REGISTRATION_CONFLICT: '无法完成注册，请检查用户名或联系管理员。',
+    TENANT_REQUIRED: '请先填写租户代码。',
     AI_CHAT_RUN_IN_PROGRESS: '上一个任务仍在处理，请先完成确认或停止后再试。',
     AI_PREVIEW_REJECTED: '操作预检未通过，未执行任何变更。',
     AI_IMPORT_DUPLICATE_HEADER: '表头重复，同一字段请只保留一列后重新上传。',

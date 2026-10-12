@@ -36,5 +36,9 @@
   "retry": "Reload",
   "upload": "Upload image",
   "currentUploadLimit": "Current per-file limit: {limit} MiB",
-  "unsavedChanges": "You have unsaved settings. Leave this page?"
+  "unsavedChanges": "You have unsaved settings. Leave this page?",
+  "mail": "Mail service",
+  "field_password_reset_enabled": "Allow email password recovery",
+  "field_email_code_minutes": "Email code lifetime (minutes, 5–30)",
+  "field_registration_role_id": "New account role"
 }

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
-import { loginModuleRecord } from '@/constants/app';
+import { computed, reactive } from 'vue';
 import { useAuthStore } from '@/store/modules/auth';
 import { useRouterPush } from '@/hooks/common/router';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
-import { fetchLoginOptions } from '@/service/api';
-import { shouldShowTenantCodeInput } from '@/utils/tenant-auth';
+import AccountLinks from './account-links.vue';
+import type { AccountCapabilities } from '@/service/api/account';
+const props = defineProps<{ tenantCode?: string; capabilities: AccountCapabilities | null }>();
 
 defineOptions({
   name: 'PwdLogin'
@@ -17,25 +17,13 @@ const { toggleLoginModule } = useRouterPush();
 const { formRef, validate } = useNaiveForm();
 
 interface FormModel {
-  tenantCode: string;
   userName: string;
   password: string;
 }
 
 const model: FormModel = reactive({
-  tenantCode: 'default',
   userName: '',
   password: ''
-});
-
-const showTenantCode = ref(
-  shouldShowTenantCodeInput(import.meta.env.VITE_TENANT_MODE, import.meta.env.VITE_TENANT_LOCATOR)
-);
-onMounted(async () => {
-  const { data } = await fetchLoginOptions();
-  if (data) {
-    showTenantCode.value = shouldShowTenantCodeInput(data.tenantMode, data.tenantLocator);
-  }
 });
 
 const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
@@ -43,7 +31,6 @@ const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
   const { formRules } = useFormRules();
 
   return {
-    tenantCode: showTenantCode.value ? [{ required: true, message: $t('page.login.common.tenantCodeRequired') }] : [],
     userName: formRules.userName,
     password: [{ required: true, message: $t('form.pwd.required') }]
   };
@@ -51,15 +38,12 @@ const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
 
 async function handleSubmit() {
   await validate();
-  await authStore.login(model.userName, model.password, true, showTenantCode.value ? model.tenantCode : undefined);
+  await authStore.login(model.userName, model.password, true, props.tenantCode);
 }
 </script>
 
 <template>
   <NForm ref="formRef" :model="model" :rules="rules" size="large" :show-label="false" @keyup.enter="handleSubmit">
-    <NFormItem v-if="showTenantCode" path="tenantCode">
-      <NInput v-model:value="model.tenantCode" :placeholder="$t('page.login.common.tenantCodePlaceholder')" />
-    </NFormItem>
     <NFormItem path="userName">
       <NInput v-model:value="model.userName" :placeholder="$t('page.login.common.userNamePlaceholder')" />
     </NFormItem>
@@ -71,25 +55,14 @@ async function handleSubmit() {
         :placeholder="$t('page.login.common.passwordPlaceholder')"
       />
     </NFormItem>
-    <NSpace vertical :size="24">
-      <div class="flex-y-center justify-between">
-        <NCheckbox>{{ $t('page.login.pwdLogin.rememberMe') }}</NCheckbox>
-        <NButton quaternary @click="toggleLoginModule('reset-pwd')">
-          {{ $t('page.login.pwdLogin.forgetPassword') }}
-        </NButton>
-      </div>
-      <NButton type="primary" size="large" round block :loading="authStore.loginLoading" @click="handleSubmit">
-        {{ $t('common.confirm') }}
-      </NButton>
-      <div class="flex-y-center justify-between gap-12px">
-        <NButton class="flex-1" block @click="toggleLoginModule('code-login')">
-          {{ $t(loginModuleRecord['code-login']) }}
-        </NButton>
-        <NButton class="flex-1" block @click="toggleLoginModule('register')">
-          {{ $t(loginModuleRecord.register) }}
-        </NButton>
-      </div>
-    </NSpace>
+    <NButton type="primary" size="large" round block :loading="authStore.loginLoading" @click="handleSubmit">
+      {{ $t('common.confirm') }}
+    </NButton>
+    <AccountLinks
+      :registration="Boolean(capabilities?.registrationEnabled)"
+      :recovery="Boolean(capabilities?.passwordResetEnabled)"
+      @navigate="toggleLoginModule"
+    />
   </NForm>
 </template>
 

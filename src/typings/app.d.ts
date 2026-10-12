@@ -312,6 +312,7 @@ declare namespace App {
 
     type Schema = {
       settings: Record<string, string>;
+      account: Record<string, string>;
       builtin: {
         permission: Record<string, string>;
         role: Record<string, Record<string, string>>;
@@ -1708,6 +1709,15 @@ declare namespace App {
         };
       };
       errorCode: {
+        MAIL_NOT_CONFIGURED: string;
+        MAIL_SEND_FAILED: string;
+        ACCOUNT_SERVICE_DISABLED: string;
+        EMAIL_CODE_INVALID: string;
+        EMAIL_RATE_LIMITED: string;
+        EMAIL_VERIFICATION_UNAVAILABLE: string;
+        REGISTRATION_ROLE_INVALID: string;
+        REGISTRATION_CONFLICT: string;
+        TENANT_REQUIRED: string;
         AI_CHAT_RUN_IN_PROGRESS: string;
         AI_PREVIEW_REJECTED: string;
         AI_IMPORT_DUPLICATE_HEADER: string;
