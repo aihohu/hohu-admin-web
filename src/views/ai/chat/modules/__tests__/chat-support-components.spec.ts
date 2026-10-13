@@ -121,6 +121,49 @@ describe('chat confirmation, clarification, and sidebar support', () => {
     wrapper.unmount();
   });
 
+  it.each([
+    {
+      tool: 'user.batch_delete',
+      fields: [{ label: 'user_ids', value: 'Alpha (ID: 9007199254740993); Bravo (ID: 9007199254740994)' }],
+      label: 'page.ai.chat.deleteTargets',
+      title: 'page.ai.chat.toolDescriptions.userBatchDelete',
+      values: ['Alpha (ID: 9007199254740993)', 'Bravo (ID: 9007199254740994)']
+    },
+    {
+      tool: 'job.update_cron',
+      fields: [
+        { label: 'job_id', value: 'Nightly cleanup', rawValue: '9007199254740993' },
+        { label: 'cron_expression', value: '0 2 * * *' }
+      ],
+      label: 'page.system.job.jobName',
+      title: 'page.ai.chat.toolDescriptions.jobUpdateCron',
+      values: ['Nightly cleanup', '9007199254740993', '0 2 * * *']
+    }
+  ])('renders bound targets for $tool before approval', async ({ tool, fields, label, title, values }) => {
+    store.pendingConfirmation = {
+      type: 'confirmation_required',
+      confirmationId: 'builtin-confirmation',
+      tool,
+      toolCallId: 'builtin-call',
+      summary: 'Review changes',
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+      presentation: { title: tool, fields, warnings: [] }
+    };
+    const wrapper = mount(ChatConfirmationDrawer, {
+      props: { show: true },
+      attachTo: document.body,
+      global: { stubs: drawerStubs }
+    });
+    await wrapper.vm.$nextTick();
+    (document.querySelector('.n-collapse-item__header-main') as HTMLElement | null)?.click();
+    await wrapper.vm.$nextTick();
+    expect(document.body.textContent).toContain(label);
+    expect(document.body.textContent).toContain(title);
+    values.forEach(value => expect(document.body.textContent).toContain(value));
+    expect(store.approveTool).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it('handles an absent confirmation and clears its countdown when closed', async () => {
     vi.useFakeTimers();
     const wrapper = mount(ChatConfirmationDrawer, {

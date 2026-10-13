@@ -20,6 +20,7 @@ const USER_UPDATE_TOOL = 'user.update';
 const USER_UPDATE_DEPT_TOOL = 'user.update_dept';
 const USER_UPDATE_ROLES_TOOL = 'user.update_roles';
 const USER_BATCH_DELETE_TOOL = 'user.batch_delete';
+const JOB_UPDATE_CRON_TOOL = 'job.update_cron';
 const ROLE_CREATE_TOOL = 'role.create';
 const ROLE_UPDATE_TOOL = 'role.update';
 const ROLE_UPDATE_MENUS_TOOL = 'role.update_menus';
@@ -83,6 +84,17 @@ const USER_CREATE_FIELD_LABEL_KEYS: Record<string, App.I18n.I18nKey> = {
   user_name: 'page.system.user.userName',
   primary_dept_id: 'page.system.user.primaryDept',
   role_assignment: 'page.system.user.userRole',
+  affectedCount: 'page.ai.chat.confirmAffected'
+};
+
+const USER_BATCH_DELETE_FIELD_LABEL_KEYS: Record<string, App.I18n.I18nKey> = {
+  user_ids: 'page.ai.chat.deleteTargets',
+  affectedCount: 'page.ai.chat.confirmAffected'
+};
+
+const JOB_UPDATE_CRON_FIELD_LABEL_KEYS: Record<string, App.I18n.I18nKey> = {
+  job_id: 'page.system.job.jobName',
+  cron_expression: 'ai.tool.field.newCron',
   affectedCount: 'page.ai.chat.confirmAffected'
 };
 
@@ -203,6 +215,7 @@ export function localizeConfirmationTool(tool: string, t: Translate): string {
   if (tool === USER_UPDATE_DEPT_TOOL) return t('page.ai.chat.updateUserDepartments');
   if (tool === USER_UPDATE_ROLES_TOOL) return t('page.ai.chat.updateUserRoles');
   if (tool === USER_BATCH_DELETE_TOOL) return t('page.ai.chat.toolDescriptions.userBatchDelete');
+  if (tool === JOB_UPDATE_CRON_TOOL) return t('page.ai.chat.toolDescriptions.jobUpdateCron');
   const phase3LabelKey = PHASE3_TOOL_LABEL_KEYS[tool];
   if (phase3LabelKey) return t(phase3LabelKey);
   return t('page.ai.chat.toolOperation');
@@ -291,6 +304,13 @@ export function localizeConfirmationField(
   field: ConfirmationField,
   t: Translate
 ): LocalizedConfirmationField {
+  if (tool === USER_BATCH_DELETE_TOOL || tool === JOB_UPDATE_CRON_TOOL) {
+    const labelKeys =
+      tool === USER_BATCH_DELETE_TOOL ? USER_BATCH_DELETE_FIELD_LABEL_KEYS : JOB_UPDATE_CRON_FIELD_LABEL_KEYS;
+    const labelKey = labelKeys[field.label];
+    return { ...field, displayLabel: labelKey ? t(labelKey) : field.label, displayValue: field.value };
+  }
+
   if (tool === USER_EXPORT_TOOL) {
     const labelKey = USER_EXPORT_FIELD_LABEL_KEYS[field.label];
     return {

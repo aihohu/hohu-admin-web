@@ -1191,6 +1191,7 @@ declare namespace App {
             confirmSummary: string;
             confirmImpact: string;
             confirmAffected: string;
+            deleteTargets: string;
             resetPasswordOldPasswordWarning: string;
             deptLookup: string;
             userId: string;

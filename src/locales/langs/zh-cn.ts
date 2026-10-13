@@ -975,6 +975,7 @@ const local: App.I18n.Schema = {
         confirmSummary: '摘要',
         confirmImpact: '影响范围',
         confirmAffected: '影响行数',
+        deleteTargets: '待删除用户（完整名单）',
         resetPasswordOldPasswordWarning: '确认后旧密码将立即失效。',
         deptLookup: '按名称或路径查询部门',
         userId: '用户 ID',

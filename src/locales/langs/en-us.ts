@@ -986,6 +986,7 @@ const local: App.I18n.Schema = {
         confirmSummary: 'Summary',
         confirmImpact: 'Impact',
         confirmAffected: 'Affected Rows',
+        deleteTargets: 'Users to delete (complete list)',
         resetPasswordOldPasswordWarning: 'The old password becomes invalid immediately after confirmation.',
         deptLookup: 'Find department by name or path',
         userId: 'User ID',
