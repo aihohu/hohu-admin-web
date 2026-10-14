@@ -55,6 +55,68 @@ function detail(actions: Api.Ai.PendingAction[]) {
 }
 
 describe('prepared action recovery', () => {
+  it.each([
+    ['succeeded', true],
+    ['running', true],
+    ['succeeded', false]
+  ])('checks deletion receipt ownership after %s confirmation (matching trace: %s)', async (status, matchingTrace) => {
+    vi.useFakeTimers();
+    const warning = vi.fn();
+    const oldMessage = window.$message;
+    window.$message = { warning, success: vi.fn() } as unknown as typeof window.$message;
+    try {
+      const deletion: Api.Ai.PendingAction = {
+        ...pendingAction,
+        tool: 'user.batch_delete',
+        sourceToolCallId: null,
+        interactionFlow: 'direct'
+      };
+      const receipt = {
+        messageId: 'receipt-1',
+        conversationId: '1',
+        parentMessageId: '1001',
+        role: 'assistant',
+        messageType: 'text',
+        content: 'Deletion completed; details removed.',
+        parts: null,
+        toolCalls: undefined,
+        completedToolCallIds: [pendingAction.toolCallId],
+        traceId: matchingTrace ? pendingAction.traceId : 'other-trace',
+        tokensInput: null,
+        tokensOutput: null,
+        createTime: '2026-08-08T12:00:01Z'
+      };
+      vi.mocked(fetchGetConversationDetail)
+        .mockResolvedValueOnce(detail([deletion]))
+        .mockResolvedValueOnce({
+          data: { conversation: { conversationId: '1' }, messages: [receipt], pendingActions: [] },
+          error: null
+        } as never);
+      vi.mocked(fetchAiConfirm).mockResolvedValue({
+        data: { actionId: '9001', toolCallId: pendingAction.toolCallId, status },
+        error: null
+      } as never);
+      vi.mocked(fetchAiOperationLog).mockResolvedValue({
+        data: { toolCallId: pendingAction.toolCallId, status: 'success' },
+        error: null
+      } as never);
+      const store = useAiStore();
+      await store.selectConversation('1');
+      await store.approveTool();
+      if (status === 'running') await vi.advanceTimersByTimeAsync(1500);
+      if (matchingTrace) {
+        expect(warning).not.toHaveBeenCalled();
+        expect(store.currentMessages).toEqual([receipt]);
+      } else {
+        expect(warning).toHaveBeenCalledOnce();
+        expect(store.currentMessages).not.toContainEqual(receipt);
+      }
+      expect(store.pendingConfirmation).toBeNull();
+    } finally {
+      window.$message = oldMessage;
+      vi.useRealTimers();
+    }
+  });
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.resetAllMocks();

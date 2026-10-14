@@ -176,7 +176,9 @@ declare namespace Api {
       content: string | null;
       /** structured message parts (images, files, etc.) */
       parts: MessagePart[] | null;
-      /** persisted tool calls used to restore cards after reopening a conversation */
+      /** Audited completed calls in a safe receipt, without deleted target details. */
+      completedToolCallIds?: string[];
+      /** Persisted tool details; safe completion receipts do not restore these. */
       toolCalls?: Array<{
         tool: string;
         tool_call_id: string;

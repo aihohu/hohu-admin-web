@@ -24,6 +24,14 @@ function message(toolCalls: Api.Ai.Message['toolCalls']): Api.Ai.Message {
 }
 
 describe('per-message tool card projection', () => {
+  it('accepts audited completion IDs without recreating deleted target cards', () => {
+    const receipt = { ...message(undefined), completedToolCallIds: ['deleted-1'] };
+    expect(messageCoversToolCalls(receipt, ['deleted-1'])).toBe(true);
+    expect(messageCoversToolCalls(receipt, ['deleted-1', 'unverified-2'])).toBe(false);
+    expect(messageCoversToolCalls({ ...receipt, role: 'user' }, ['deleted-1'])).toBe(false);
+    expect(projectMessageToolCards(receipt)).toEqual([]);
+    expect(messageCoversToolCalls({ ...message(undefined), content: 'Deletion completed' }, ['deleted-1'])).toBe(false);
+  });
   it('does not label an orphan result or legacy card readonly before metadata arrives', () => {
     const result: Api.Ai.ToolCallResultEvent = {
       type: 'tool_call_result',

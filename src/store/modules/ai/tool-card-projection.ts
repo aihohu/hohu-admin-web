@@ -187,6 +187,9 @@ export function serializeToolCards(cards: ToolCallCardProjection[]): NonNullable
 
 export function messageCoversToolCalls(message: Api.Ai.MessageProjection, expectedToolCallIds: string[]): boolean {
   if (isMessageTombstone(message) || message.role !== 'assistant') return false;
-  const actual = new Set((message.toolCalls || []).map(toolCall => toolCall.tool_call_id));
+  const actual = new Set([
+    ...(message.toolCalls || []).map(toolCall => toolCall.tool_call_id),
+    ...(message.completedToolCallIds || [])
+  ]);
   return expectedToolCallIds.every(toolCallId => actual.has(toolCallId));
 }
