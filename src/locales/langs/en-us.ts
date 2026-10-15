@@ -29,7 +29,7 @@ const local: App.I18n.Schema = {
     view: 'View details'
   },
   system: {
-    title: 'HoHuAdmin',
+    title: 'HoHu Admin',
     updateTitle: 'System Version Update Notification',
     updateContent: 'A new version of the system has been detected. Do you want to refresh the page immediately?',
     updateConfirm: 'Refresh immediately',

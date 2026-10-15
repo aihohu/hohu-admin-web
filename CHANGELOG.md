@@ -2,13 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v0.1.5] (Unreleased)
+## [v0.1.5]
+
+### Features
+
+- **Tenant management** — Add tenant creation, administrator/model initialization, activation and disabling, and a dedicated AI authorization entry for initialized tenants. Hosted sign-in supports the backend's optional tenant locator and login capabilities.
+- **Tenant model access** — Add model-policy management with availability, default-model selection, per-user daily quotas, and batch authorization through the tenant model catalog.
+- **AI Agent administration** — Add Agent editing, Role-Agent authorization, supervisor routing choices and clarification cards, and routing-feedback views. Role authorization now shows tool permission requirements, grant status, and disabled-tool diagnostics.
+- **AI-first navigation** — Use AI chat as the primary landing page when authorized, retain dashboard compatibility for existing home menus, and select accessible fallbacks when AI access is unavailable.
+- **Structured AI conversations** — Embed tool cards under their owning messages, render structured results and business links, and expose conversation traces and authorized operation details. Improve Agent/model selectors, attachment chips, and routing feedback.
+- **Durable confirmations** — Restore persisted prepared confirmations after refresh, separate approval/rejection from drawer visibility, and synchronize completion with committed history or safe deletion receipts. Preserve frozen targets instead of rebuilding execution arguments in the client.
+- **User import/export** — Add upload, preview, confirmation, execution-result, and history flows with protected downloads and AI entry chips. Surface row errors, resource limits, and import/export status through the shared business workflow.
+- **Scoped system administration** — Add authorized user-role and department-assignment flows, delegated role/department management, data-scope controls, and responsive user/role/department interfaces.
+- **Grouped settings** — Add localized brand, account, language, file, agreement, and security settings, with custom parameters maintained separately. Handle revision conflicts and configured-secret states without redisplaying saved passwords.
+- **Email account services** — Add system mail settings and testing, email-verified registration, password recovery, and authenticated recovery-email binding. Login and account forms follow backend capability flags, tenant selection, code expiry, and resend cooldowns.
+- **Model configuration** — Restore system model management, improve Provider/model editor layout and save actions, and test saved configurations or current unsaved form values without implicitly saving drafts.
+
+### Security and Bug Fixes
+
+- **Session isolation** — Serialize token refresh and hosted rollback resets, remove inherited request credentials, and clear account-scoped AI, routing, and pending-operation state on logout or identity changes.
+- **Authorization changes** — Fail closed when Agent/model access, tool permissions, or business scope is revoked. Keep interface visibility aligned with backend checks rather than treating hidden controls as authorization.
+- **Confirmation clarity** — Localize user deletion targets, task names, cron changes, enable states, and errors. Keep technical details expandable and preserve string IDs and backend-bound values.
+- **Write-result verification** — Do not report unverified AI writes as completed. Recognize audited deletion receipts after deleted targets are removed from history projections, avoiding false synchronization failures.
+- **Stream and recovery state** — Isolate concurrent prepared-action recovery, reset stale resume state when conversations change, and release abandoned requests. Keep transient streaming cards separate from persisted conversation history.
+- **Sensitive content** — Suppress sensitive diagnostic output and preserve safe rendering and download boundaries in chat and file management.
+- **System forms and navigation** — Align user validation, assignment controls, menu translations, and grouped routes with backend contracts; stabilize router startup, dashboard fallback, and responsive action layouts.
+
+### Deployment and Maintenance
+
+- Add GitHub-to-Gitee source mirroring and default-branch manual test-image builds, with optional ACR synchronization and anonymous verification of matching `linux/amd64` and `linux/arm64` image digests.
+- Disable shared-build provenance/SBOM attestation manifests for ACR compatibility. Keep manual test tags separate from version tags and `latest`, and run mirroring only after a successful image build.
+- Keep production request-size configuration aligned with deployment upload limits, and distribute project and upstream license notices with static assets.
+- Expand isolated component, store, request, permission, and browser acceptance coverage for tenant management, settings, account services, model editing, and AI confirmation workflows.
 
 ### Licensing
 
 - Adopt Apache-2.0 as the project license starting with v0.1.5, except where otherwise noted. Previously released hohu-admin-web versions through v0.1.4 retain their original MIT license.
 - Preserve the SoybeanAdmin upstream MIT license, including its original copyright attribution, in `THIRD_PARTY_NOTICES.md`.
 - Include license and attribution files in production builds under `dist/licenses/`. Other dependencies retain their respective licenses.
+
+### Upgrade Notes
+
+- Use a backend build implementing the v0.1.5 tenant, grouped-settings, account-service, model-policy, and durable-confirmation contracts. Frontend and backend releases are independent; matching version numbers alone do not establish compatibility. Review the [backend changelog](https://github.com/aihohu/hohu-admin/blob/main/CHANGELOG.md) before deployment.
+- System tenant, Agent, Provider, and model-policy management uses an ordinary default-tenant system-administrator session. The username `admin` grants no authority, and legacy platform tokens do not authorize these management APIs.
+- Configure Role-Agent grants, explicit business permissions, data scope, and tenant model policies separately. Grant-status displays help identify missing configuration but do not automatically grant access or establish a user's final effective permissions.
+- Backend account-service migration disables registration. Configure and verify mail delivery before enabling registration or password recovery for the required tenants; existing email addresses need verification before recovery use.
+- Built-in settings now use grouped settings APIs while custom parameters remain separate. Reload a group after revision conflicts and merge changes rather than silently overwriting another administrator's values; blank password inputs retain configured secrets unless explicitly cleared.
+- Fresh installations receive the reorganized default menus; incremental initialization preserves existing menu grouping, ordering, and grants. Retained Marketplace/Lowcode source or old menu entries do not mean those capabilities are supported by the current main application.
+- Restoring a durable confirmation observes its state; it does not approve or replay a tool. Persisted approvals do not provide a background job queue or guarantee completion after disconnects or service restarts.
 
 ## [v0.1.4] (2026-07-03)
 
