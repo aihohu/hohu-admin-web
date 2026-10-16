@@ -3,6 +3,7 @@ dist
 .git
 .github
 *.md
+!public/licenses/THIRD_PARTY_NOTICES.md
 .vscode
 .idea
 *.log

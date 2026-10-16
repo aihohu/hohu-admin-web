@@ -41,7 +41,6 @@
     "lint": "oxlint --fix && eslint --fix .",
     "prepare": "simple-git-hooks",
     "preview": "vite preview",
-    "release": "sa release",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

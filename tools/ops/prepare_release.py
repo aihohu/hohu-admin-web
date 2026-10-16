@@ -1,0 +1,85 @@
+"""Validate stable release metadata and extract its reviewed CHANGELOG notes."""
+
+import argparse
+import re
+import json
+from pathlib import Path
+
+STABLE_TAG = re.compile(r"v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", re.ASCII)
+
+
+def release_notes(changelog: str, tag: str) -> str:
+    """Ignore fenced examples and reject ambiguous or unfinished release entries."""
+    lines = changelog.splitlines(keepends=True)
+    headings = []
+    fence = None
+    for index, line in enumerate(lines):
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+        if marker:
+            token = marker[1]
+            if fence is None:
+                fence = token
+            elif token[0] == fence[0] and len(token) >= len(fence):
+                fence = None
+            continue
+        if fence is None and line.startswith("## "):
+            headings.append((index, line.strip()))
+
+    matches = [
+        (position, index, heading)
+        for position, (index, heading) in enumerate(headings)
+        if re.match(rf"^## \[{re.escape(tag)}\](?:\s|$)", heading)
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"CHANGELOG must contain exactly one ## [{tag}] entry")
+    position, index, heading = matches[0]
+    if not re.fullmatch(
+        rf"## \[{re.escape(tag)}\](?: (?:\(\d{{4}}-\d{{2}}-\d{{2}}\)|- \d{{4}}-\d{{2}}-\d{{2}}))?",
+        heading,
+    ):
+        raise ValueError("Release heading must be finalized (no Unreleased marker)")
+    if any(re.match(r"## \[v\d", item[1]) for item in headings[:position]):
+        raise ValueError("Release must be the first version entry in CHANGELOG")
+    end = headings[position + 1][0] if position + 1 < len(headings) else len(lines)
+    notes = "".join(lines[index + 1 : end]).strip()
+    if not notes:
+        raise ValueError("Release notes must not be empty")
+    return notes + "\n"
+
+
+def prepare(root: Path, tag: str) -> str:
+    if STABLE_TAG.fullmatch(tag) is None:
+        raise ValueError("Tag must be a stable vMAJOR.MINOR.PATCH version")
+    project = json.loads((root / "package.json").read_text(encoding="utf-8"))
+    if project["version"] != tag[1:]:
+        raise ValueError("Tag and package.json version do not match")
+    return release_notes((root / "CHANGELOG.md").read_text(encoding="utf-8"), tag)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, default=Path.cwd())
+    parser.add_argument("--tag", required=True)
+    parser.add_argument("--notes-file", type=Path, required=True)
+    parser.add_argument("--mode", choices=("test", "release"), default="release")
+    parser.add_argument("--github-output", type=Path)
+    args = parser.parse_args()
+    try:
+        if args.mode == "test":
+            if args.tag:
+                raise ValueError("Test mode must not specify a release version")
+            notes = None
+        else:
+            notes = prepare(args.root, args.tag)
+    except (OSError, KeyError, ValueError) as error:
+        parser.exit(1, f"Release validation failed: {error}\n")
+    if notes is not None:
+        args.notes_file.parent.mkdir(parents=True, exist_ok=True)
+        args.notes_file.write_text(notes, encoding="utf-8")
+    if args.github_output:
+        with args.github_output.open("a", encoding="utf-8") as output:
+            output.write(f"mode={args.mode}\ntag={args.tag}\n")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,9 +1,21 @@
 name: Release
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
+    inputs:
+      mode:
+        description: '发布模式：test 测试镜像 / release 正式发布'
+        type: choice
+        required: true
+        default: test
+        options:
+          - test
+          - release
+      version:
+        description: '正式发布版本（例如 v0.1.5）；测试镜像请留空'
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -17,13 +29,99 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  prepare:
+    name: Validate web release request
+    if: github.repository == 'aihohu/hohu-admin-web' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      mode: ${{ steps.request.outputs.mode }}
+      tag: ${{ steps.request.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Require the default branch
+        env:
+          SELECTED_REF: ${{ github.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          if [[ "$SELECTED_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
+            echo '::error::Run this workflow from the default branch.'
+            exit 1
+          fi
+
+      - name: Validate versions and reviewed release notes
+        id: request
+        env:
+          RELEASE_MODE: ${{ inputs.mode }}
+          RELEASE_TAG: ${{ inputs.version }}
+        run: |
+          python3 -B tools/ops/prepare_release.py --mode "$RELEASE_MODE" --tag "$RELEASE_TAG" \
+            --notes-file .local/artifacts/release-notes.md --github-output "$GITHUB_OUTPUT"
+
+      - name: Reject an existing version from another run
+        if: steps.request.outputs.mode == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.request.outputs.tag }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: python3 -B -m tools.ops.release_tag check
+
+      - name: Run standalone release tooling tests
+        run: |
+          mkdir -p .local/tmp
+          TMPDIR="$PWD/.local/tmp" python3 -B -m unittest discover -s tests/tools -p 'test_*release*.py' -v
+
+  ci:
+    name: Verify release source
+    needs: prepare
+    if: needs.prepare.outputs.mode == 'release'
+    uses: ./.github/workflows/ci.yml
+
+  tag:
+    name: Create release tag after frontend verification
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: docker
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Create or verify the tag owned by this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.version }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: python3 -B -m tools.ops.release_tag create
+
   docker:
     name: Build and Push Docker Image
+    needs: [prepare, ci, tag]
+    # Skipped release checks must not skip the manual test build.
     if: >-
-      github.repository == 'aihohu/hohu-admin-web' &&
-      (github.event_name == 'release' ||
-       (github.event_name == 'workflow_dispatch' &&
-        github.ref == format('refs/heads/{0}', github.event.repository.default_branch)))
+      ${{ always() && !cancelled() && github.repository == 'aihohu/hohu-admin-web' &&
+          github.event_name == 'workflow_dispatch' && needs.prepare.result == 'success' &&
+          github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+          (needs.prepare.outputs.mode == 'test' ||
+           (needs.prepare.outputs.mode == 'release' &&
+            needs.ci.result == 'success' && needs.tag.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     environment: docker
@@ -38,6 +136,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Record source commit
@@ -49,7 +148,7 @@ jobs:
         run: python3 -B -m unittest discover -s tests/tools -p test_sync_image_mirror.py -v
 
       - name: Validate manual ACR test configuration
-        if: github.event_name == 'workflow_dispatch'
+        if: needs.prepare.outputs.mode == 'test'
         shell: bash
         env:
           ACR_MIRROR_ENABLED: ${{ vars.ACR_MIRROR_ENABLED }}
@@ -68,7 +167,7 @@ jobs:
 
       - name: Generate isolated test image tag
         id: test_tag
-        if: github.event_name == 'workflow_dispatch'
+        if: needs.prepare.outputs.mode == 'test'
         shell: bash
         env:
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
@@ -94,13 +193,13 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        if: github.event_name == 'release'
+        if: needs.prepare.outputs.mode == 'release'
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ needs.prepare.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.prepare.outputs.tag }}
           flavor: |
             latest=true
 
@@ -122,7 +221,7 @@ jobs:
   acr:
     name: Sync and anonymously verify ACR image
     needs: docker
-    # Only the direct build must succeed; skipped ancestors must not block sync.
+    # Manual builds skip qualification; only the direct build must succeed.
     if: >-
       ${{ !cancelled() && needs.docker.result == 'success' &&
           github.repository == 'aihohu/hohu-admin-web' && vars.ACR_MIRROR_ENABLED == 'true' }}
@@ -200,3 +299,51 @@ jobs:
         if: always()
         shell: bash
         run: rm -f -- "$REGISTRY_AUTH_FILE"
+
+  github-release:
+    name: Publish GitHub Release after image delivery
+    needs: [prepare, docker, acr]
+    if: >-
+      ${{ !cancelled() && github.repository == 'aihohu/hohu-admin-web' &&
+          github.event_name == 'workflow_dispatch' && needs.prepare.outputs.mode == 'release' &&
+          needs.docker.result == 'success' &&
+          (needs.acr.result == 'success' ||
+           (needs.acr.result == 'skipped' && vars.ACR_MIRROR_ENABLED != 'true')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.docker.outputs.commit }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Extract release notes from the built source
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: python3 -B tools/ops/prepare_release.py --tag "$RELEASE_TAG" --notes-file .local/artifacts/release-notes.md
+
+      - name: Publish release without overwriting an existing announcement
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          SOURCE_SHA: ${{ needs.docker.outputs.commit }}
+        run: |
+          set -euo pipefail
+          python3 -B -m tools.ops.release_tag verify
+          if draft="$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft')"; then
+            if [[ "$draft" == 'true' ]]; then
+              gh release edit "$RELEASE_TAG" --draft=false --notes-file .local/artifacts/release-notes.md
+            else
+              echo "Release $RELEASE_TAG already published; keeping its existing notes."
+            fi
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" \
+              --notes-file .local/artifacts/release-notes.md
+          fi

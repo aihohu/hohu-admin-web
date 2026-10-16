@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Check and build frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      VITE_SERVICE_BASE_URL: /api
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.16.0'
+
+      - name: Prepare pinned pnpm and local output directories
+        run: |
+          mkdir -p .local/tmp .local/cache .local/reports .local/artifacts
+          corepack enable
+          corepack prepare pnpm@11.5.3 --activate
+
+      - name: Install locked dependencies
+        env:
+          TMPDIR: ${{ github.workspace }}/.local/tmp
+        run: pnpm install --frozen-lockfile --store-dir "$PWD/.local/cache/pnpm"
+
+      - name: Run standalone release and mirror regressions
+        env:
+          TMPDIR: ${{ github.workspace }}/.local/tmp
+        run: python3 -B -m unittest discover -s tests/tools -p 'test_*.py' -v
+
+      - name: Lint without modifying release source
+        run: |
+          pnpm exec oxlint
+          pnpm exec eslint .
+
+      - name: Check formatting
+        run: pnpm exec oxfmt --check
+
+      - name: Check TypeScript and Vue types
+        run: pnpm typecheck
+
+      - name: Run all unit tests with coverage gates
+        run: pnpm test:coverage --maxWorkers=2 --coverage.reportsDirectory=.local/reports/coverage
+
+      - name: Build production assets and verify notices
+        run: |
+          pnpm build --outDir .local/artifacts/web-dist
+          test -s .local/artifacts/web-dist/index.html
+          test -s .local/artifacts/web-dist/licenses/LICENSE
+          test -s .local/artifacts/web-dist/licenses/NOTICE
+          test -s .local/artifacts/web-dist/licenses/THIRD_PARTY_NOTICES.md
+          git diff --exit-code
+
+      - name: Upload coverage diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .local/reports/coverage/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
