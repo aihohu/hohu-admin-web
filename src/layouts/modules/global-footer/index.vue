@@ -15,7 +15,7 @@ defineOptions({
       target="_blank"
       rel="noopener noreferrer"
     >
-      Copyright MIT © 2025 HoHu
+      Copyright © 2026 HoHu
     </a>
   </DarkModeContainer>
 </template>
