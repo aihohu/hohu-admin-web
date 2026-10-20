@@ -1,8 +1,14 @@
 First of all, thank you for your contribution! 😄
 
-New feature please send pull request to feature branch, and rest to main branch. Pull request will be merged after one of collaborators approve. Please makes sure that these form are filled before submitting your pull request, thank you!
+First confirm the target product and Web versions under the [versioning and compatibility policy](https://github.com/aihohu/hohu-admin/blob/main/docs/VERSIONING.md); both must match the full Backend version. Branch daily code changes as `feat/*` or `fix/*` from the corresponding `release/<version>` and target that release branch. After release acceptance, open the release integration PR against `main`. Follow the policy's specified paths for ordinary documentation copy edits and initial CI governance changes. Complete the information below; merge only after maintainer review and applicable checks pass.
 
 [[中文版模板 / Chinese template](./pr_cn.md)]
+
+### Release scope
+
+- Target product / Web version:
+- Target branch:
+- Scope for this release and related Backend PRs (if any):
 
 ### This is a ...
 
@@ -41,6 +47,7 @@ New feature please send pull request to feature branch, and rest to main branch.
 
 ### Self Check before Merge
 
+- [ ] Target versions and branch follow the policy; any applicable exception is justified
 - [ ] Doc is updated/provided or not needed
 - [ ] Demo is updated/provided or not needed
 - [ ] TypeScript definition is updated/provided or not needed
