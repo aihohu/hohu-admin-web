@@ -1249,6 +1249,8 @@ declare namespace App {
             confirmTechnicalDetailsHint: string;
             confirmSecondsLeft: string;
             toolRunning: string;
+            toolReconciliation: string;
+            reconciliationNotice: string;
             toolSuccess: string;
             toolFailed: string;
             toolDetails: string;

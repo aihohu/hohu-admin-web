@@ -54,6 +54,32 @@ function render(props: Record<string, unknown>) {
 }
 
 describe('chat tool result card', () => {
+  it('shows a rejected decision neutrally without an error panel after replay', async () => {
+    const wrapper = render({ started: started(), result: result({ ok: false, errorCode: 'USER_REJECTED' }) });
+    await wrapper.get('.tool-card-head').trigger('click');
+    expect(wrapper.attributes('data-status')).toBe('cancelled');
+    expect(wrapper.get('.tool-status-text').text()).toContain('USER_REJECTED');
+    expect(wrapper.find('.tool-error').exists()).toBe(false);
+    expect(wrapper.find('.hitl-bar').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('AI_INTERNAL_ERROR');
+    await wrapper.setProps({ result: result({ ok: false, errorCode: 'AI_INTERNAL_ERROR' }) });
+    expect(wrapper.attributes('data-status')).toBe('failed');
+    expect(wrapper.find('.tool-error').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('keeps reconciliation static and suppresses stale results and approval controls', async () => {
+    const wrapper = render({ started: started(), result: result(), isPending: true, reconciliationRequired: true });
+    expect(wrapper.attributes('data-status')).toBe('reconciliation');
+    expect(wrapper.find('.hitl-bar').exists()).toBe(false);
+    expect(wrapper.find('.chip-link').exists()).toBe(false);
+    expect(wrapper.find('.tool-icon--running').exists()).toBe(false);
+    expect(wrapper.text()).toContain('toolCallId=tc-phase4');
+    await wrapper.setProps({ result: result({ ok: false, errorCode: 'AI_INTERNAL_ERROR' }) });
+    expect(wrapper.find('.tool-error').exists()).toBe(false);
+    expect(wrapper.emitted('approve')).toBeUndefined();
+    wrapper.unmount();
+  });
   beforeEach(() => {
     requestMock.mockReset();
     (window as any).$message = { error: vi.fn() };

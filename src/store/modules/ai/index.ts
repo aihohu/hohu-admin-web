@@ -14,6 +14,7 @@ import {
 } from '@/service/api/ai';
 import {
   isMessageTombstone,
+  isReconciliationCode,
   isPendingActionStatus,
   messageCoversToolCalls,
   projectMessageToolCards,
@@ -337,6 +338,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     }
     currentMessages.value = messages;
     reconcilePendingActions(actions);
+    for (const card of messages.flatMap(message => projectMessageToolCards(message))) {
+      if (card.reconciliationRequired) {
+        stopPolling(card.started.toolCallId);
+        removePendingByToolCallId(card.started.toolCallId);
+      }
+    }
     return projectionRevoked;
   }
 
@@ -774,6 +781,15 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         streamEvents.value.push(event);
         break;
       case 'ai_error':
+        if (isReconciliationCode(event.errorCode)) {
+          streamEvents.value.push(event);
+          for (const card of allStreamToolCards().filter(item => item.reconciliationRequired)) {
+            recordReconciliation(card.started.toolCallId);
+          }
+          window.$message?.warning($t('page.ai.chat.reconciliationNotice'));
+          void refreshCurrentConversationDetail();
+          break;
+        }
         if (event.errorCode === 'AI_UNVERIFIED_WRITE_CLAIM') {
           streamingText.value = '';
           reasoningText.value = '';
@@ -1225,6 +1241,48 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   }
 
   /** 用户在 HITL 抽屉点确认 / 取消，调 /ai/confirm 后启动 30s 轮询兜底 */
+  function recordReconciliation(toolCallId: string) {
+    const pending = Object.values(pendingActionsById.value).find(item => item.toolCallId === toolCallId);
+    stopPolling(toolCallId);
+    removePendingByToolCallId(toolCallId);
+    const reference = `[AI_EXECUTION_OUTCOME_UNKNOWN] toolCallId=${toolCallId}`;
+    const notice = `${$t('page.ai.chat.reconciliationNotice')}\n${reference}`;
+    streamEvents.value.push({ type: 'ai_error', errorCode: 'AI_EXECUTION_OUTCOME_UNKNOWN', message: reference });
+    let displayed = false;
+    for (const message of currentMessages.value) {
+      if (
+        !isMessageTombstone(message) &&
+        message.role === 'assistant' &&
+        (message.toolCalls?.some(call => call.tool_call_id === toolCallId) ||
+          (pending?.traceId && message.traceId === pending.traceId))
+      ) {
+        displayed = true;
+        if (!message.toolCalls?.some(call => call.tool_call_id === toolCallId) && pending) {
+          message.toolCalls = [...(message.toolCalls || []), { tool: pending.tool, tool_call_id: toolCallId }];
+        }
+        if (!message.content?.includes(reference)) message.content = `${message.content || ''}\n\n${notice}`;
+      }
+    }
+    if (!displayed && pending && currentConversationId.value) {
+      freezeTempAssistantProjection(pending.traceId || '', currentConversationId.value, notice, [
+        {
+          started: {
+            type: 'tool_call_started',
+            tool: pending.tool,
+            toolCallId,
+            summary: '',
+            args: {},
+            traceId: pending.traceId || ''
+          },
+          result: null,
+          isPending: false,
+          reconciliationRequired: true
+        }
+      ]);
+    }
+    if (!streamingText.value.includes(reference)) streamingText.value += `\n\n${notice}`;
+  }
+
   async function resolveConfirmation(action: 'approve' | 'reject', actionId?: string) {
     const confirmation = actionId ? pendingActionsById.value[actionId] : pendingConfirmation.value;
     if (!confirmation) return;
@@ -1307,6 +1365,12 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         if (!isActivePoll()) return;
         if (error || !data) {
           applyRuntimeAvailabilityError(getBackendErrorCode(error));
+          return;
+        }
+        if (isReconciliationCode(data.errorCode)) {
+          recordReconciliation(toolCallId);
+          window.$message?.warning($t('page.ai.chat.reconciliationNotice'));
+          await refreshCurrentConversationDetail();
           return;
         }
         const terminalStatus = ['success', 'failed', 'rejected', 'expired'];

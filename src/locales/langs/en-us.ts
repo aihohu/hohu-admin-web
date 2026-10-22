@@ -1046,6 +1046,9 @@ const local: App.I18n.Schema = {
         confirmSecondsLeft: ' s until timeout',
         resumedAt: 'Reconnected at {time}',
         toolRunning: 'Running',
+        toolReconciliation: 'Pending reconciliation',
+        reconciliationNotice:
+          'The outcome needs verification. Do not repeat this operation. Refresh the conversation or contact an administrator.',
         toolSuccess: 'Success',
         toolFailed: 'Failed',
         toolDetails: 'Details',
