@@ -55,6 +55,44 @@ function detail(actions: Api.Ai.PendingAction[]) {
 }
 
 describe('prepared action recovery', () => {
+  it.each(['AI_EXECUTION_OUTCOME_UNKNOWN', 'AI_EXECUTION_RECONCILIATION_REQUIRED'])(
+    'stops polling and cannot approve again for %s when detail is unavailable',
+    async errorCode => {
+      vi.useFakeTimers();
+      const oldMessage = window.$message;
+      window.$message = { warning: vi.fn(), error: vi.fn() } as unknown as typeof window.$message;
+      try {
+        vi.mocked(fetchGetConversationDetail)
+          .mockResolvedValueOnce(detail([pendingAction]))
+          .mockRejectedValue(new Error('offline'));
+        vi.mocked(fetchAiConfirm).mockResolvedValue({
+          data: { actionId: '9001', toolCallId: pendingAction.toolCallId, status: 'running' },
+          error: null
+        } as never);
+        vi.mocked(fetchAiOperationLog).mockResolvedValue({
+          data: { toolCallId: pendingAction.toolCallId, status: 'running', errorCode },
+          error: null
+        } as never);
+        const store = useAiStore();
+        await store.selectConversation('1');
+        await store.approveTool();
+        await vi.advanceTimersByTimeAsync(45_000);
+        expect(fetchAiOperationLog).toHaveBeenCalledOnce();
+        expect(store.pendingConfirmation).toBeNull();
+        await store.approveTool();
+        expect(fetchAiConfirm).toHaveBeenCalledOnce();
+        expect(store.streamingText).toContain(`toolCallId=${pendingAction.toolCallId}`);
+        expect(
+          store.currentMessages
+            .flatMap(message => store.messageToolCards(message))
+            .some(card => card.reconciliationRequired)
+        ).toBe(true);
+      } finally {
+        window.$message = oldMessage;
+        vi.useRealTimers();
+      }
+    }
+  );
   it.each([
     ['succeeded', true],
     ['running', true],

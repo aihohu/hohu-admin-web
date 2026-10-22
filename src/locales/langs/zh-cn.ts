@@ -1034,6 +1034,8 @@ const local: App.I18n.Schema = {
         confirmSecondsLeft: ' 秒后超时',
         resumedAt: '已重连于 {time}',
         toolRunning: '执行中',
+        toolReconciliation: '待核对',
+        reconciliationNotice: '操作结果尚待核对，请勿重新办理；请刷新会话或联系管理员核对。',
         toolSuccess: '已成功',
         toolFailed: '失败',
         toolDetails: '详情',
