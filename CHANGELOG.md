@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.1.6]
+
+### Compatibility Fixes
+
+- Preserve unknown AI write outcomes as requiring reconciliation, including legacy and restored history. A disconnected confirmation or failed result delivery must not display an unverified failure or offer a second execution.
+- Keep prepared confirmations, cancellation, preflight rejection, and conversation readiness aligned with backend durable facts. A proven rejection allows a new request without replaying the rejected operation; ambiguous outcomes remain visible for review.
+- Retain safe history projection, current authorization checks, and compatibility with Backend 0.1.6 recovery semantics. Preserve the footer link attribution fix included since 0.1.5.
+
+### Release and Maintenance
+
+- Apply full lint, type, build, test, and coverage gates to version branches and require a same-version Backend/Web combination.
+- Protect complete-version images against overwrites and resume only downstream delivery from the first successful build in the same workflow run. Keep existing series and `latest` aliases unchanged.
+
+### Compatibility and Upgrade Notes
+
+- Pair Web 0.1.6 with Backend 0.1.6 and use the validated `release.json` attached to the matching [Backend release](https://github.com/aihohu/hohu-admin/releases). A component announcement or matching version string alone does not qualify the product combination.
+- CLI 0.1.16 uses `hohu deploy` with the [manual fixed-artifact procedure](https://github.com/aihohu/hohu-admin-docs/blob/86691fb578ed17768796d8a7c6b95957e226043c/docs/guide/operations/upgrade.md). It does not validate the product manifest or automatically stop old writers and scheduled jobs.
+- Candidate installation, upgrade from the original 0.1.5 images, recovery, and cached 0.1.5 Web compatibility have been exercised on `linux/amd64`. Repeat acceptance with the final published Backend/Web digests; other platforms remain unverified until supported by their own evidence. Mobile and desktop clients are not released in this product version.
+- Terminate old writers, fence stale credentials, back up database/files/keys and current revocation facts, and pause the scheduler before migration. Unknown AI outcomes must remain visible without retrying the business operation. Restoring 0.1.5 must retain its documented AI safety restriction.
+- Deploy fixed digests from the verified product manifest. This release does not advance series or `latest` aliases and does not make source creation from `main` a reproducible fixed-product installation.
+
 ## [v0.1.5]
 
 ### Features
