@@ -4,7 +4,30 @@ export type ToolCallCardProjection = {
   isPending: boolean;
   pendingExpiresAt?: string;
   actionId?: string;
+  reconciliationRequired?: boolean;
 };
+
+export function isReconciliationCode(code?: string | null): boolean {
+  return code === 'AI_EXECUTION_OUTCOME_UNKNOWN' || code === 'AI_EXECUTION_RECONCILIATION_REQUIRED';
+}
+
+function requiresReconciliation(content: string | null | undefined, callId: string): boolean {
+  return (content || '')
+    .split('\n')
+    .some(line =>
+      ['AI_EXECUTION_OUTCOME_UNKNOWN', 'AI_EXECUTION_RECONCILIATION_REQUIRED'].some(
+        code => line.trim() === `[${code}] toolCallId=${callId}`
+      )
+    );
+}
+
+function markReconciliation(card: ToolCallCardProjection) {
+  card.reconciliationRequired = true;
+  card.result = null;
+  card.isPending = false;
+  card.pendingExpiresAt = undefined;
+  card.actionId = undefined;
+}
 
 type PendingProjection = Api.Ai.ConfirmationRequiredEvent | Api.Ai.ConfirmationResumedEvent;
 
@@ -67,7 +90,7 @@ export function projectMessageToolCards(
     .filter(toolCall => Boolean(toolCall.tool && toolCall.tool_call_id))
     .map(toolCall => {
       const pending = pendingForTool(pendingActions, toolCall.tool_call_id);
-      return {
+      const card: ToolCallCardProjection = {
         started: {
           type: 'tool_call_started' as const,
           tool: toolCall.tool,
@@ -83,6 +106,10 @@ export function projectMessageToolCards(
         pendingExpiresAt: pending?.expiresAt,
         actionId: pending?.actionId
       } satisfies ToolCallCardProjection;
+      if (requiresReconciliation(message.content, toolCall.tool_call_id) || isReconciliationCode(toolCall.error_code)) {
+        markReconciliation(card);
+      }
+      return card;
     });
 
   // A prepared preview may already be durable while its execute action is still
@@ -145,6 +172,10 @@ export function projectStreamToolCards(
         traceId: '',
         chipTarget: null
       });
+      if (card.reconciliationRequired || isReconciliationCode(event.errorCode)) {
+        markReconciliation(card);
+        continue;
+      }
       card.result = event;
       card.isPending = false;
       card.pendingExpiresAt = undefined;
@@ -153,9 +184,19 @@ export function projectStreamToolCards(
     if (event.type === 'confirmation_required' || event.type === 'confirmation_resumed') {
       const pending = pendingForTool(pendingActions, event.toolCallId) || event;
       const card = ensureCard(startedFromPending(pending));
+      if (card.reconciliationRequired) continue;
       card.isPending = true;
       card.pendingExpiresAt = pending.expiresAt;
       card.actionId = pending.actionId;
+    }
+    if (event.type === 'ai_error' && isReconciliationCode(event.errorCode)) {
+      for (const card of cards) {
+        if (
+          !card.result &&
+          (!event.message.includes('toolCallId=') || requiresReconciliation(event.message, card.started.toolCallId))
+        )
+          markReconciliation(card);
+      }
     }
   }
   return cards;

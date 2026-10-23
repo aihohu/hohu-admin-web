@@ -24,6 +24,17 @@ function message(toolCalls: Api.Ai.Message['toolCalls']): Api.Ai.Message {
 }
 
 describe('per-message tool card projection', () => {
+  it('renders persisted reconciliation references without manufacturing a failed result', () => {
+    const legacy = message([{ tool: 'user.create', tool_call_id: 'tc-legacy' }]);
+    legacy.content = '操作结果尚待核对，请勿重新办理。\n[AI_EXECUTION_OUTCOME_UNKNOWN] toolCallId=tc-legacy';
+    const card = projectMessageToolCards(legacy)[0];
+    expect(card.reconciliationRequired).toBe(true);
+    expect(card.result).toBeNull();
+    expect(card.isPending).toBe(false);
+    expect(serializeToolCards([card])[0]).not.toHaveProperty('ok');
+    expect(serializeToolCards([card])[0]).not.toHaveProperty('error_code');
+  });
+
   it('accepts audited completion IDs without recreating deleted target cards', () => {
     const receipt = { ...message(undefined), completedToolCallIds: ['deleted-1'] };
     expect(messageCoversToolCalls(receipt, ['deleted-1'])).toBe(true);

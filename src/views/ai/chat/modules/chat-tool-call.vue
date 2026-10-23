@@ -17,6 +17,7 @@ const props = defineProps<{
   result?: Api.Ai.ToolCallResultEvent | null;
   /** whether the tool is waiting for human confirmation */
   isPending?: boolean;
+  reconciliationRequired?: boolean;
   /** HITL pending 过期时间 ISO 8601 UTC */
   pendingExpiresAt?: string;
 }>();
@@ -38,12 +39,13 @@ const riskText = computed(() => {
 });
 
 // ===== Card state =====
-type CardStatus = 'running' | 'success' | 'failed' | 'pending' | 'cancelled';
+type CardStatus = 'running' | 'success' | 'failed' | 'pending' | 'cancelled' | 'reconciliation';
 
 // A user rejection is a decision, not a failure — render it neutrally.
 const isUserRejected = computed(() => props.result?.errorCode === 'USER_REJECTED');
 
 const cardStatus = computed<CardStatus>(() => {
+  if (props.reconciliationRequired) return 'reconciliation';
   if (props.isPending) return 'pending';
   if (!props.result) return 'running';
   if (props.result.ok) return 'success';
@@ -51,6 +53,7 @@ const cardStatus = computed<CardStatus>(() => {
 });
 
 const iconChar = computed(() => {
+  if (cardStatus.value === 'reconciliation') return '—';
   if (cardStatus.value === 'running') return '⟳';
   if (cardStatus.value === 'success') return '✓';
   if (cardStatus.value === 'pending') return '⚠';
@@ -65,6 +68,7 @@ const errorCodeFriendly = computed(() => {
 });
 
 const statusText = computed(() => {
+  if (props.reconciliationRequired) return t('page.ai.chat.toolReconciliation');
   if (props.isPending) return t('page.ai.chat.toolWaitingConfirmation');
   if (!props.result) return t('page.ai.chat.toolRunning');
   if (props.result.ok) {
@@ -105,12 +109,14 @@ const viewComponent = computed<Component>(() => {
 });
 
 const viewProps = computed<Api.Ai.UIResult | null>(() => {
+  if (props.reconciliationRequired) return null;
   if (!props.result?.ok || !props.result.ui) return null;
   return props.result.ui;
 });
 
 // The backend owns navigation targets so frontend routes cannot drift from tool metadata.
 const chipHref = computed<string | null>(() => {
+  if (props.reconciliationRequired) return null;
   if (!props.result?.ok) return null;
   if (!props.started.traceId) return null;
   if (!props.started.chipTarget) return null;
@@ -120,6 +126,7 @@ const chipHref = computed<string | null>(() => {
 // Keep authenticated downloads visible without expanding the result body.
 // Navigation uses RouterLink; file downloads use a button and an authenticated Blob request.
 const downloadAction = computed<{ url: string; filename: string } | null>(() => {
+  if (props.reconciliationRequired) return null;
   if (!props.result?.ok) return null;
   const ui = props.result.ui;
   if (!ui || ui.viewType !== 'detail_card') return null;
@@ -175,6 +182,7 @@ async function handleDownload() {
 
 // 兜底：result.ok=True 但 ui=None（老 tool 未迁移 / executor fallback）
 const fallbackJson = computed(() => {
+  if (props.reconciliationRequired) return '';
   if (!props.result?.ok || props.result.ui) return '';
   try {
     return JSON.stringify(props.result.result, null, 2);
@@ -217,7 +225,7 @@ function stopCountdown() {
 }
 
 watch(
-  () => props.isPending,
+  () => props.isPending && !props.reconciliationRequired,
   v => {
     if (v) startCountdown();
     else stopCountdown();
@@ -228,10 +236,12 @@ watch(
 onUnmounted(() => stopCountdown());
 
 function onApprove() {
+  if (props.reconciliationRequired) return;
   emit('approve');
 }
 
 function onReject() {
+  if (props.reconciliationRequired) return;
   emit('reject');
 }
 </script>
@@ -290,7 +300,7 @@ function onReject() {
         </div>
         <pre class="tool-pre">{{ fallbackJson }}</pre>
       </div>
-      <div v-if="result && !result.ok" class="tool-section tool-error">
+      <div v-if="!reconciliationRequired && result && !result.ok && !isUserRejected" class="tool-section tool-error">
         <div class="tool-section-title">{{ t('page.ai.chat.toolError') }}</div>
         <div class="tool-error-code">{{ result.errorCode }}</div>
         <div class="tool-error-msg">{{ errorCodeFriendly }}</div>
@@ -319,7 +329,11 @@ function onReject() {
       {{ t('page.ai.chat.downloadFailed') }}
     </div>
 
-    <div v-if="isPending" class="hitl-bar">
+    <div v-if="reconciliationRequired" class="reconciliation-note" role="status">
+      {{ t('page.ai.chat.reconciliationNotice') }}
+      <code>toolCallId={{ started.toolCallId }}</code>
+    </div>
+    <div v-if="isPending && !reconciliationRequired" class="hitl-bar">
       <span>⏱</span>
       <span>{{ t('page.ai.chat.timeRemaining') }}</span>
       <span class="timer" :class="{ urgent: isUrgent }">{{ formattedTime }}</span>
@@ -335,6 +349,14 @@ function onReject() {
 </template>
 
 <style scoped>
+.reconciliation-note {
+  padding: 10px 14px;
+  color: var(--n-text-color, #475569);
+}
+.reconciliation-note code {
+  display: block;
+  overflow-wrap: anywhere;
+}
 .tool-card {
   background: var(--n-color, #fff);
   border: 1px solid var(--n-border-color, #e5e7eb);
