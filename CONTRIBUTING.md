@@ -8,7 +8,7 @@
 
 SoybeanAdmin 继承代码的 MIT 许可与版权声明必须保留，详见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。引入其他第三方代码时也须保留适用的声明。DCO 不代表版权转让或上游作者的额外专利授权。
 
-外部贡献使用 `git commit -s` 添加 DCO `Signed-off-by`；维护者提交自己拥有版权的代码时可不添加该尾注。提交消息采用一句英文 `type(scope): description`，不附加版权或 `Co-Authored-By` 信息。
+提交规则统一见 [主贡献指南](https://github.com/aihohu/hohu-admin/blob/main/docs/CONTRIBUTING.md#提交规范与授权)。使用一句英文 `type(scope): description`；维护者自己的贡献默认不添加 `Signed-off-by`、`Co-Authored-By` 或版权尾注，外部贡献仍使用 `git commit -s`。逐文件暂存，不跳过钩子，不 amend 已推送提交；提交、推送须有明确授权。
 
 ## 许可文件维护
 
