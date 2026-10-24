@@ -9,6 +9,9 @@
 - 目标产品版本 / Web 版本：
 - 目标合入分支：
 - 本版本范围及配套后端 PR（如有）：
+- 完整用户旅程及首个可运行候选结果（纯文档填不适用）：
+- 凭据、唯一写者、网络前置检查的脱敏证据位置（无发布影响填不适用）：
+- 当前产品状态统一见 [Docs 更新说明](https://github.com/aihohu/hohu-admin-docs/blob/main/docs/zh/guide/reference/versions.md)；不要粘贴凭据或内部敏感记录。
 
 ### 这个变动的性质是
 

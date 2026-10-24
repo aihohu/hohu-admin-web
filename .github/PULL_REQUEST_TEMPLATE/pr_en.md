@@ -9,6 +9,9 @@ First confirm the target product and Web versions under the [versioning and comp
 - Target product / Web version:
 - Target branch:
 - Scope for this release and related Backend PRs (if any):
+- Complete user journeys and results from the first runnable candidate (N/A for prose-only changes):
+- Redacted evidence locations for credentials, exclusive-writer and network readiness (N/A without release impact):
+- Public product status: [Docs release notes](https://github.com/aihohu/hohu-admin-docs/blob/main/docs/guide/reference/versions.md). Do not paste credentials or sensitive internal records.
 
 ### This is a ...
 
