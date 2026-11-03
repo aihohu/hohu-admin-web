@@ -193,9 +193,9 @@ describe('AI runtime authorization revocation', () => {
     await sending;
 
     expect(abortedByDenial).toBe(true);
-    expect(store.chatAvailability).toBe('forbidden');
+    expect(store.chatAvailability).toBe(code.startsWith('FIELD_') ? 'error' : 'forbidden');
     expect(store.conversations).toEqual([]);
-    expect(store.currentConversationId).toBeNull();
+    expect(store.currentConversationId).toBe(code.startsWith('FIELD_') ? 'conversation-1' : null);
     expect(store.currentMessages).toEqual([]);
   });
 
@@ -277,6 +277,37 @@ describe('AI runtime authorization revocation', () => {
       expect(fetchAiConfirm).toHaveBeenCalledTimes(1);
     }
   );
+
+  it.each([false, true])('revalidates a changed field snapshot without replay, entry revoked=%s', async revoked => {
+    const store = useAiStore();
+    await Promise.all([store.loadModels(), store.loadAgents()]);
+    store.currentConversationId = 'conversation-1';
+    store.currentMessages = [message()];
+    vi.mocked(fetchGetConversationList).mockResolvedValue({ data: { records: [], total: 0 }, error: null } as never);
+    vi.mocked(fetchGetConversationDetail).mockResolvedValue({
+      data: { messages: [], pendingActions: [] },
+      error: null
+    } as never);
+    if (revoked) vi.mocked(fetchAiAgents).mockResolvedValue(failed('AI_CHAT_PERMISSION_DENIED'));
+    const read = vi
+      .fn()
+      .mockResolvedValueOnce({
+        done: false,
+        value: new TextEncoder().encode(
+          'data: {"type":"ai_error","errorCode":"FIELD_AUTHORIZATION_CHANGED","message":"changed"}\n\n'
+        )
+      })
+      .mockResolvedValue({ done: true });
+    const transport = vi.fn().mockResolvedValue({ ok: true, body: { getReader: () => ({ read }) } });
+    vi.stubGlobal('fetch', transport);
+    await store.sendMessage('hello');
+    await vi.waitFor(() => expect(store.chatAvailability).toBe(revoked ? 'forbidden' : 'ready'));
+    expect(store.currentMessages).toEqual([]);
+    expect(store.currentConversationId).toBe(revoked ? null : 'conversation-1');
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(fetchAiConfirm).not.toHaveBeenCalled();
+    expect(fetchGetChatModels).toHaveBeenCalledTimes(2);
+  });
 
   it('treats an explicit Agent denial as a fail-closed runtime state', async () => {
     const store = useAiStore();
