@@ -1,78 +1,12 @@
 import { request } from '../request';
 
-export interface PolicyRule {
-  fieldId: string;
-  operation: string;
-  purpose: string;
-  effect: 'allow' | 'deny';
-  read: 'plain' | 'masked';
-  maskId: string | null;
-}
-
-export interface PolicyField {
-  fieldId: string;
-  readable: boolean;
-  maskId: string | null;
-  options: Array<{ purpose: string; operation: string }>;
-}
-
-export interface PolicyState {
-  mode: 'legacy' | 'ready' | 'enforcing' | 'frozen';
-  epoch: number;
-  catalogDigest: string;
-  candidateManifestDigest: string | null;
-  activeManifestDigest: string | null;
-  everEnforced: boolean;
-  canActivate: boolean;
-  activationBlockers: string[];
-}
-
-export interface PolicyDocument {
-  roleId: string;
-  revisionId: string;
-  version: number;
-  archived: boolean;
-  rulesDigest: string;
-  createdAt: string;
-  rules: PolicyRule[];
-}
-
-export interface PolicyResponse {
-  catalogRevision: string;
-  catalogDigest: string;
-  fields: PolicyField[];
-  policy: PolicyDocument | null;
-  state: PolicyState;
-}
-
-export interface PolicyDraft {
-  expectedVersion: number;
-  catalogDigest: string;
-  rules: PolicyRule[];
-}
-
-export interface PolicyPreview {
-  effectiveSamples: Array<{
-    subjectUserId: string;
-    recordUserId: string;
-    fieldId: string;
-    operation: string;
-    purpose: string;
-    before: { allowed: boolean; read: string };
-    after: { allowed: boolean; read: string };
-  }>;
-  samplesTruncated: boolean;
-  queryCoverageVerified: false;
-  expectedVersion: number;
-  previewKind: 'rule-diff';
-  changes: Array<
-    Pick<PolicyRule, 'fieldId' | 'operation' | 'purpose'> & {
-      before: Pick<PolicyRule, 'effect' | 'read' | 'maskId'> | null;
-      after: Pick<PolicyRule, 'effect' | 'read' | 'maskId'> | null;
-    }
-  >;
-  state: PolicyState;
-}
+export type PolicyRule = Api.UserFieldPolicy.PolicyRule;
+export type PolicyField = Api.UserFieldPolicy.PolicyField;
+export type PolicyState = Api.UserFieldPolicy.PolicyState;
+export type PolicyDocument = Api.UserFieldPolicy.PolicyDocument;
+export type PolicyResponse = Api.UserFieldPolicy.PolicyResponse;
+export type PolicyDraft = Api.UserFieldPolicy.PolicyDraft;
+export type PolicyPreview = Api.UserFieldPolicy.PolicyPreview;
 
 export function fetchUserFieldPolicy(roleId: string) {
   return request<PolicyResponse>({ url: `/system/user-field-policy/${roleId}`, method: 'get' });
