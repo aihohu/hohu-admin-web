@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { jsonClone } from '@sa/utils';
 import { enableStatusOptions, userGenderOptions } from '@/constants/business';
 import {
   fetchGetAssignableRoles,
@@ -11,6 +10,14 @@ import {
   fetchUpdateUserRoles
 } from '@/service/api';
 import { useAuth } from '@/hooks/business/auth';
+import {
+  buildUserPatch,
+  completeRelation,
+  createUserDraft,
+  fieldCapability,
+  fieldRead,
+  userProfileFields
+} from '@/hooks/business/user-field-draft';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { getServerErrorMessage, useServerFieldErrors } from '@/hooks/common/server-field-errors';
 import { $t, localizedText } from '@/locales';
@@ -56,8 +63,32 @@ type UserFormModel = Api.SystemManage.UpdateUserParams & {
   roleIds: string[];
 };
 
-const canAssignRoles = computed(() => hasAuth('system:user:role-auth'));
-const canAssignDepartments = computed(() => hasAuth('system:dept:list'));
+const roleSetComplete = ref(false);
+const canAssignRoles = computed(
+  () => hasAuth('system:user:role-auth') && (props.operateType === 'add' || roleSetComplete.value)
+);
+const canAssignDepartments = computed(
+  () =>
+    hasAuth('system:dept:list') &&
+    (props.operateType === 'add' ||
+      (props.rowData &&
+        fieldRead(props.rowData, 'departments') === 'plain' &&
+        fieldCapability(props.rowData, 'departments', 'replace') &&
+        Array.isArray(props.rowData.userDepts)) ||
+      (props.rowData && !Object.hasOwn(props.rowData, 'fieldAccess') && Array.isArray(props.rowData.userDepts)))
+);
+
+function canEdit(field: string) {
+  return props.operateType === 'add' || Boolean(props.rowData && fieldCapability(props.rowData, field, 'update'));
+}
+
+function showField(field: string) {
+  return canEdit(field) || Boolean(props.rowData && fieldRead(props.rowData, field) !== 'hidden');
+}
+
+function replacement(field: string) {
+  return props.operateType === 'edit' && props.rowData && canEdit(field) && fieldRead(props.rowData, field) !== 'plain';
+}
 
 const model = ref<UserFormModel>(createDefaultModel());
 
@@ -77,8 +108,8 @@ function createDefaultModel(): UserFormModel {
 type RuleKey = Extract<keyof UserFormModel, 'userName' | 'nickname' | 'password' | 'roleIds' | 'status'>;
 
 const rules = computed<Record<RuleKey, App.Global.FormRule[]>>(() => ({
-  userName: formRules.userName,
-  nickname: [defaultRequiredRule],
+  userName: canEdit('userName') ? formRules.userName : [],
+  nickname: canEdit('nickname') && !replacement('nickname') ? [defaultRequiredRule] : [],
   password: formRules.pwd,
   roleIds: canAssignRoles.value
     ? [
@@ -89,7 +120,7 @@ const rules = computed<Record<RuleKey, App.Global.FormRule[]>>(() => ({
         }
       ]
     : [],
-  status: [defaultRequiredRule]
+  status: canEdit('status') ? [defaultRequiredRule] : []
 }));
 
 const loading = ref(false);
@@ -126,6 +157,14 @@ async function getRoleOptions(generation: number, currentRoleCodes: string[]) {
   if (generation !== initializationGeneration) return;
   const roles = [...new Map(resultSets.flat().map(role => [role.roleId, role])).values()];
   mergeRoleOptions(roles);
+  roleSetComplete.value = Boolean(
+    props.rowData &&
+    completeRelation(
+      props.rowData,
+      'roles',
+      roles.map(role => role.roleCode)
+    )
+  );
 
   if (currentRoleCodes.length > 0) {
     const roleIdByCode = new Map(roles.map(role => [role.roleCode, role.roleId]));
@@ -208,17 +247,10 @@ function handleInitModel() {
   candidateRoles.value = [];
   initialRoleIds.value = [];
   initialDeptAssignments.value = [];
+  roleSetComplete.value = false;
 
   if (props.operateType === 'edit' && props.rowData) {
-    const row = jsonClone(props.rowData);
-    Object.assign(model.value, {
-      userName: row.userName,
-      userGender: row.userGender,
-      nickname: row.nickname,
-      userPhone: row.userPhone,
-      userEmail: row.userEmail,
-      status: row.status
-    });
+    Object.assign(model.value, createUserDraft(props.rowData, userProfileFields));
     const userDepts = props.rowData.userDepts || [];
     checkedDeptKeys.value = userDepts.map(d => d.deptId);
     primaryDeptId.value = userDepts.find(d => d.isPrimary)?.deptId || userDepts[0]?.deptId || '';
@@ -237,7 +269,7 @@ function recoverFromPartialUpdate() {
 }
 
 async function handleSubmit() {
-  if (initializing.value) return;
+  if (initializing.value || loading.value) return;
   try {
     await validate();
   } catch {
@@ -285,9 +317,17 @@ async function handleSubmit() {
         }
         associationCommitted = true;
       }
-      res = await fetchUpdateUser(props.rowData.userId, profile);
-      if (res.error) {
-        if (associationCommitted) recoverFromPartialUpdate();
+      const patch = buildUserPatch(props.rowData, model.value, userProfileFields);
+      if (Object.keys(patch).length > 0) {
+        res = await fetchUpdateUser(props.rowData.userId, patch);
+        if (res.error) {
+          if (associationCommitted) recoverFromPartialUpdate();
+          else applyServerFieldErrors(res.error);
+          return;
+        }
+      } else {
+        closeDrawer();
+        if (associationCommitted) emit('submitted');
         return;
       }
     } else {
@@ -324,13 +364,17 @@ watch(visible, async isVisible => {
     return;
   }
   const generation = ++initializationGeneration;
-  const currentRoleCodes = props.operateType === 'edit' && props.rowData ? [...props.rowData.roles] : [];
+  const currentRoleCodes =
+    props.operateType === 'edit' && props.rowData && Array.isArray(props.rowData.roles) ? [...props.rowData.roles] : [];
   handleInitModel();
   restoreValidation();
   initializing.value = true;
   try {
     await Promise.all([
-      canAssignRoles.value ? getRoleOptions(generation, currentRoleCodes) : Promise.resolve(),
+      hasAuth('system:user:role-auth') &&
+      (props.operateType === 'add' || (props.rowData && fieldRead(props.rowData, 'roles') === 'plain'))
+        ? getRoleOptions(generation, currentRoleCodes)
+        : Promise.resolve(),
       canAssignDepartments.value ? loadDeptTree(generation) : Promise.resolve()
     ]);
   } finally {
@@ -343,11 +387,29 @@ watch(visible, async isVisible => {
   <NDrawer v-model:show="visible" display-directive="show" :width="360">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
       <NForm ref="formRef" :model="model" :rules="rules">
-        <NFormItem v-bind="fieldProps('userName')" :label="$t('page.system.user.userName')" path="userName">
-          <NInput v-model:value="model.userName" :placeholder="$t('page.system.user.form.userName')" />
+        <NFormItem
+          v-if="showField('userName')"
+          v-bind="fieldProps('userName')"
+          :label="$t('page.system.user.userName')"
+          path="userName"
+        >
+          <NInput
+            v-model:value="model.userName"
+            :disabled="!canEdit('userName')"
+            :placeholder="$t('page.system.user.form.userName')"
+          />
         </NFormItem>
-        <NFormItem v-bind="fieldProps('nickname')" :label="$t('page.system.user.nickname')" path="nickname">
-          <NInput v-model:value="model.nickname" :placeholder="$t('page.system.user.form.nickname')" />
+        <NFormItem
+          v-if="showField('nickname')"
+          v-bind="fieldProps('nickname')"
+          :label="$t('page.system.user.nickname')"
+          path="nickname"
+        >
+          <NInput
+            v-model:value="model.nickname"
+            :disabled="!canEdit('nickname')"
+            :placeholder="$t('page.system.user.form.nickname')"
+          />
         </NFormItem>
         <NFormItem
           v-if="props.operateType === 'add'"
@@ -363,19 +425,69 @@ watch(visible, async isVisible => {
             :placeholder="$t('page.system.user.form.password')"
           />
         </NFormItem>
-        <NFormItem :label="$t('page.system.user.userGender')" path="userGender">
-          <NRadioGroup v-model:value="model.userGender">
+        <NFormItem v-if="showField('userGender')" :label="$t('page.system.user.userGender')" path="userGender">
+          <NRadioGroup v-model:value="model.userGender" :disabled="!canEdit('userGender')">
             <NRadio v-for="item in userGenderOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
           </NRadioGroup>
         </NFormItem>
-        <NFormItem v-bind="fieldProps('userPhone')" :label="$t('page.system.user.userPhone')" path="userPhone">
-          <NInput v-model:value="model.userPhone" :placeholder="$t('page.system.user.form.userPhone')" />
+        <NFormItem
+          v-if="showField('userPhone')"
+          v-bind="fieldProps('userPhone')"
+          :label="$t('page.system.user.userPhone')"
+          path="userPhone"
+        >
+          <div class="w-full">
+            <p v-if="replacement('userPhone')" class="mb-2 text-sm text-muted-color">
+              {{ $t('page.system.user.form.replacementHint') }}
+            </p>
+            <p v-if="props.rowData && fieldRead(props.rowData, 'userPhone') === 'masked'" class="mb-2">
+              {{ props.rowData.userPhone }}
+            </p>
+            <NInput
+              v-model:value="model.userPhone"
+              :disabled="!canEdit('userPhone')"
+              :placeholder="$t('page.system.user.form.userPhone')"
+            />
+            <NButton
+              v-if="props.operateType === 'edit' && canEdit('userPhone')"
+              text
+              class="mt-2"
+              @click="model.userPhone = null"
+            >
+              {{ $t('fieldPolicy.clearValue') }}
+            </NButton>
+          </div>
         </NFormItem>
-        <NFormItem v-bind="fieldProps('userEmail')" :label="$t('page.system.user.userEmail')" path="email">
-          <NInput v-model:value="model.userEmail" :placeholder="$t('page.system.user.form.userEmail')" />
+        <NFormItem
+          v-if="showField('userEmail')"
+          v-bind="fieldProps('userEmail')"
+          :label="$t('page.system.user.userEmail')"
+          path="userEmail"
+        >
+          <div class="w-full">
+            <p v-if="replacement('userEmail')" class="mb-2 text-sm text-muted-color">
+              {{ $t('page.system.user.form.replacementHint') }}
+            </p>
+            <p v-if="props.rowData && fieldRead(props.rowData, 'userEmail') === 'masked'" class="mb-2">
+              {{ props.rowData.userEmail }}
+            </p>
+            <NInput
+              v-model:value="model.userEmail"
+              :disabled="!canEdit('userEmail')"
+              :placeholder="$t('page.system.user.form.userEmail')"
+            />
+            <NButton
+              v-if="props.operateType === 'edit' && canEdit('userEmail')"
+              text
+              class="mt-2"
+              @click="model.userEmail = null"
+            >
+              {{ $t('fieldPolicy.clearValue') }}
+            </NButton>
+          </div>
         </NFormItem>
-        <NFormItem :label="$t('page.system.user.userStatus')" path="status">
-          <NRadioGroup v-model:value="model.status">
+        <NFormItem v-if="showField('status')" :label="$t('page.system.user.userStatus')" path="status">
+          <NRadioGroup v-model:value="model.status" :disabled="!canEdit('status')">
             <NRadio v-for="item in enableStatusOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
           </NRadioGroup>
         </NFormItem>
@@ -407,7 +519,7 @@ watch(visible, async isVisible => {
           />
         </NFormItem>
         <NFormItem
-          v-if="allSelectedDeptIds.length > 0"
+          v-if="canAssignDepartments && allSelectedDeptIds.length > 0"
           :label="$t('page.system.user.primaryDept')"
           path="primaryDeptId"
         >

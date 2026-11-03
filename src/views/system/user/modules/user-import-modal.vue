@@ -39,7 +39,8 @@ const {
   uploadFile,
   confirmImport,
   cancelImport,
-  downloadTemplate
+  downloadTemplate,
+  downloadErrors
 } = useImportFlow({
   onCompleted: result => {
     emit('completed', result);
@@ -276,7 +277,7 @@ defineExpose({ open });
         <NText depth="2">{{ $t('common.importModal.downloadFailedRows') }}</NText>
         <NDataTable :columns="errorColumns" :data="failedRowsPreview" size="small" :max-height="240" class="mt-8px" />
         <NSpace v-if="executeResult?.failedRowsFile" justify="end" class="mt-8px">
-          <NButton tag="a" :href="executeResult.failedRowsFile" target="_blank" rel="noopener noreferrer">
+          <NButton :loading="loading" @click="downloadErrors">
             {{ $t('common.importModal.downloadFailedRows') }}
           </NButton>
         </NSpace>

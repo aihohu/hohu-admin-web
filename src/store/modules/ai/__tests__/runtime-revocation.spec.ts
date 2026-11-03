@@ -151,7 +151,12 @@ describe('AI runtime authorization revocation', () => {
     expect(store.chatAvailability).toBe('forbidden');
   });
 
-  it('aborts active producers and clears every cached projection on entry denial', async () => {
+  it.each([
+    'AI_CHAT_PERMISSION_DENIED',
+    'FIELD_AUTHORIZATION_CHANGED',
+    'FIELD_POLICY_UNAVAILABLE',
+    'FIELD_CONFIRMATION_LINEAGE_REQUIRED'
+  ])('aborts active producers and clears every cached projection on entry denial: %s', async code => {
     const store = useAiStore();
     await Promise.all([store.loadModels(), store.loadAgents()]);
     store.currentConversationId = 'conversation-1';
@@ -181,7 +186,7 @@ describe('AI runtime authorization revocation', () => {
 
     const sending = store.sendMessage('hello');
     await vi.waitFor(() => expect(requestSignal).toBeDefined());
-    vi.mocked(fetchGetChatModels).mockResolvedValue(failed('AI_CHAT_PERMISSION_DENIED'));
+    vi.mocked(fetchGetChatModels).mockResolvedValue(failed(code));
     await store.loadModels();
     const abortedByDenial = requestSignal.aborted;
     if (!abortedByDenial) store.stopStreaming();

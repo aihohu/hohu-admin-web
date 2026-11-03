@@ -72,7 +72,10 @@
     "ai_routing_feedback_list": "查询",
     "system_role_ai_agent_auth": "AI Agent 授权",
     "system_setting_list": "查看设置",
-    "system_setting_edit": "修改设置"
+    "system_setting_edit": "修改设置",
+    "system_user_field_policy_view": "查看用户字段策略",
+    "system_user_field_policy_edit": "发布用户字段策略",
+    "system_user_field_policy_activate": "激活/冻结用户字段策略"
   },
   "role": {
     "systemAdmin": {

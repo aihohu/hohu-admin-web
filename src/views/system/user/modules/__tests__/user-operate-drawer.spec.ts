@@ -71,6 +71,43 @@ async function mountDrawer(
 }
 
 describe('user-operate-drawer', () => {
+  it('submits only changed fields and never a masked display value', async () => {
+    const { fetchUpdateUser } = await import('@/service/api');
+    const row = {
+      userId: '203',
+      nickname: 'Alice',
+      userPhone: '138****1234',
+      roles: [],
+      userDepts: [],
+      fieldAccess: {
+        nickname: { read: 'plain', update: true },
+        userPhone: { read: 'masked', update: true, maskId: 'phone/v1' }
+      }
+    } as unknown as Api.SystemManage.User;
+    const wrapper = await mountDrawer('edit', row);
+    const vm = wrapper.vm as unknown as {
+      model: { nickname: string; userPhone: string };
+      handleSubmit: () => Promise<void>;
+    };
+    expect(vm.model.userPhone).toBe('');
+    vm.model.nickname = 'Changed';
+    await vm.handleSubmit();
+    expect(fetchUpdateUser).toHaveBeenCalledWith('203', { nickname: 'Changed' });
+  });
+
+  it('does not replace unresolved role sets', async () => {
+    const { fetchUpdateUserRoles } = await import('@/service/api');
+    const wrapper = await mountDrawer('edit', {
+      userId: '204',
+      nickname: 'Alice',
+      roles: ['R_USER', 'NOT_RESOLVED'],
+      userDepts: []
+    } as unknown as Api.SystemManage.User);
+    const vm = wrapper.vm as unknown as { model: { roleIds: string[] }; handleSubmit: () => Promise<void> };
+    vm.model.roleIds = [];
+    await vm.handleSubmit();
+    expect(fetchUpdateUserRoles).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     formMocks.validate.mockResolvedValue(undefined);
@@ -166,12 +203,13 @@ describe('user-operate-drawer', () => {
     } as unknown as Api.SystemManage.User;
     const wrapper = await mountDrawer('edit', row);
     const vm = wrapper.vm as unknown as {
-      model: { roleIds: string[] };
+      model: { roleIds: string[]; nickname: string };
       checkedDeptKeys: string[];
       primaryDeptId: string;
       handleSubmit: () => Promise<void>;
     };
     vm.model.roleIds = ['100'];
+    vm.model.nickname = 'Changed';
     vm.checkedDeptKeys = ['300'];
     vm.primaryDeptId = '300';
 
@@ -215,7 +253,7 @@ describe('user-operate-drawer', () => {
 
     expect(fetchUpdateUserRoles).not.toHaveBeenCalled();
     expect(fetchUpdateUserDepartments).not.toHaveBeenCalled();
-    expect(fetchUpdateUser).toHaveBeenCalledOnce();
+    expect(fetchUpdateUser).not.toHaveBeenCalled();
   });
 
   it('closes and reloads after a later writer fails following a committed role update', async () => {

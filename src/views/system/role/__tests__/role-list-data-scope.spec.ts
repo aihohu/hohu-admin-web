@@ -4,6 +4,8 @@ import { computed, defineComponent, ref } from 'vue';
 
 const routeHarness = vi.hoisted(() => ({ query: {} as Record<string, unknown> }));
 
+vi.mock('../modules/field-policy-drawer.vue', () => ({ default: { template: '<div />' } }));
+
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: routeHarness.query })
 }));

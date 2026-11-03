@@ -1,7 +1,9 @@
 import account from './account-zh-cn.json';
+import fieldPolicy from './field-policy-zh-cn.json';
 import builtin from './builtin-zh-cn.json';
 import settings from './settings-zh-cn.json';
 const local: App.I18n.Schema = {
+  fieldPolicy,
   settings,
   account,
   builtin,
@@ -572,6 +574,7 @@ const local: App.I18n.Schema = {
           userRole: '请选择用户角色',
           userRoleRequired: '请至少选择一个用户角色',
           primaryDeptRequired: '请选择主部门',
+          replacementHint: '原值不可读取。输入新值后替换，保持空白则不修改。',
           partialUpdateWarning: '部分修改已保存，但后续步骤失败；用户列表已刷新为服务端最新状态'
         },
         addUser: '新增用户',
@@ -1523,6 +1526,22 @@ const local: App.I18n.Schema = {
     }
   },
   errorCode: {
+    FIELD_AUTHORIZATION_CHANGED: '字段权限已变更，旧结果和确认已失效。请重新查询或预览，不要重复执行已完成的操作。',
+    FIELD_POLICY_UNAVAILABLE: '字段策略暂不可用，相关入口已停止。请联系管理员。',
+    FIELD_CONFIRMATION_LINEAGE_REQUIRED: '旧确认缺少当前授权依据，请重新预览。',
+    FIELD_CONFIRMATION_FACTS_REQUIRED: '无法核实确认依据，请重新查询操作状态，不要重复执行。',
+    FIELD_POLICY_VERSION_CONFLICT: '策略已被其他管理员更新，请重新加载并重新预览。',
+    FIELD_POLICY_CATALOG_CONFLICT: '字段目录已更新，请刷新页面后重新预览。',
+    FIELD_POLICY_MANAGEMENT_FORBIDDEN: '需要本租户超级管理员角色及显式字段策略管理权限。',
+    FIELD_POLICY_ACTIVATION_BLOCKED: '完整入口与配套客户端检查尚未通过，不能激活策略。',
+    FIELD_POLICY_INVALID: '策略规则无效或重复，请检查字段、用途与操作。',
+    FIELD_POLICY_STALE: '候选策略依据已变化，请重新加载并预览。',
+    FIELD_QUERY_DENIED: '当前范围不允许使用该字段查询，请移除对应筛选条件。',
+    FIELD_READ_DENIED: '当前权限不允许读取这些字段，请刷新权限后重试。',
+    FIELD_WRITE_DENIED: '当前权限不允许修改这些字段，请重新加载表单。',
+    FIELD_MASKED_INPUT_INVALID: '掩码不能作为输入值，请输入新的替换值。',
+    FIELD_TRANSFER_REGENERATE_REQUIRED: '文件依据已过期或权限已变更，请重新生成文件。',
+    AUTHORIZATION_COMMIT_UNKNOWN: '提交结果尚未确认，请先核对状态，不要重复提交。',
     MAIL_NOT_CONFIGURED: '邮件服务尚未启用或配置不完整，请联系系统管理员。',
     MAIL_SEND_FAILED: '邮件发送失败，请稍后重试或联系管理员。',
     ACCOUNT_SERVICE_DISABLED: '此账号服务已关闭，请返回登录页。',

@@ -6,6 +6,7 @@ import { enableStatusRecord, userGenderRecord } from '@/constants/business';
 import { REG_PWD } from '@/constants/reg';
 import { fetchChangePassword, fetchGetUserProfile, fetchUpdateUserProfile, fetchUploadFile } from '@/service/api';
 import { useAuthStore } from '@/store/modules/auth';
+import { buildUserPatch, createUserDraft, fieldCapability, fieldRead } from '@/hooks/business/user-field-draft';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { useRouterPush } from '@/hooks/common/router';
 import { $t } from '@/locales';
@@ -56,7 +57,7 @@ const profile = ref<Api.SystemManage.UserProfile>({
 const infoModel = reactive({
   nickname: '',
   userGender: null as Api.SystemManage.UserGender | null,
-  userPhone: '',
+  userPhone: '' as string | null,
   userEmail: ''
 });
 
@@ -73,8 +74,15 @@ const genderOptions = [
 ];
 
 const infoRules = computed(() => ({
-  nickname: defaultRequiredRule
+  nickname: fieldCapability(profile.value, 'nickname', 'update') ? defaultRequiredRule : []
 }));
+const infoFields = ['nickname', 'userGender', 'userPhone'] as const;
+function canEditInfo(field: string) {
+  return fieldCapability(profile.value, field, 'update');
+}
+function showInfo(field: string) {
+  return canEditInfo(field) || fieldRead(profile.value, field) !== 'hidden';
+}
 
 const pwdRules = computed(() => ({
   oldPassword: defaultRequiredRule,
@@ -104,25 +112,28 @@ async function loadProfile() {
   loading.value = false;
   if (!error && data) {
     profile.value = data;
-    infoModel.nickname = data.nickname || '';
-    infoModel.userGender = data.userGender;
-    infoModel.userPhone = data.userPhone || '';
-    infoModel.userEmail = data.userEmail || '';
+    Object.assign(
+      infoModel,
+      { nickname: '', userGender: null, userPhone: '', userEmail: '' },
+      createUserDraft(data, infoFields)
+    );
   }
 }
 
 async function handleSaveInfo() {
+  if (savingInfo.value || loading.value) return;
   await validateInfo();
+  const patch = buildUserPatch(profile.value, infoModel, infoFields);
+  if (!Object.keys(patch).length) return;
   savingInfo.value = true;
-  const { error } = await fetchUpdateUserProfile({
-    nickname: infoModel.nickname,
-    userGender: infoModel.userGender,
-    userPhone: infoModel.userPhone || null
-  });
-  savingInfo.value = false;
-  if (!error) {
-    window.$message?.success($t('common.updateSuccess'));
-    loadProfile();
+  try {
+    const { error } = await fetchUpdateUserProfile(patch);
+    if (!error) {
+      window.$message?.success($t('common.updateSuccess'));
+      await loadProfile();
+    }
+  } finally {
+    savingInfo.value = false;
   }
 }
 
@@ -151,6 +162,7 @@ function resetPwdForm() {
 const avatarModalVisible = ref(false);
 
 async function handleAvatarUpload({ file }: { file: any }) {
+  if (!canEditInfo('userAvatar')) return;
   const { data, error } = await fetchUploadFile(file.file as File, 'avatar');
   if (!error && data) {
     await saveAvatar(data.fileUrl);
@@ -158,6 +170,7 @@ async function handleAvatarUpload({ file }: { file: any }) {
 }
 
 async function saveAvatar(avatar: string) {
+  if (!canEditInfo('userAvatar')) return;
   const { error } = await fetchUpdateUserProfile({ userAvatar: avatar });
   if (!error) {
     window.$message?.success($t('common.updateSuccess'));
@@ -245,16 +258,30 @@ onMounted(() => {
                 <NFormItem :label="$t('page.system.user.userName')" path="userName">
                   <NInput :value="profile.userName" disabled />
                 </NFormItem>
-                <NFormItem :label="$t('page.system.user.nickname')" path="nickname">
-                  <NInput v-model:value="infoModel.nickname" :placeholder="$t('page.system.user.form.nickname')" />
+                <NFormItem v-if="showInfo('nickname')" :label="$t('page.system.user.nickname')" path="nickname">
+                  <NInput
+                    v-model:value="infoModel.nickname"
+                    :disabled="!canEditInfo('nickname')"
+                    :placeholder="$t('page.system.user.form.nickname')"
+                  />
                 </NFormItem>
-                <NFormItem :label="$t('page.system.user.userGender')" path="userGender">
-                  <NRadioGroup v-model:value="infoModel.userGender">
+                <NFormItem v-if="showInfo('userGender')" :label="$t('page.system.user.userGender')" path="userGender">
+                  <NRadioGroup v-model:value="infoModel.userGender" :disabled="!canEditInfo('userGender')">
                     <NRadio v-for="item in genderOptions" :key="item.value" :value="item.value" :label="item.label" />
                   </NRadioGroup>
                 </NFormItem>
-                <NFormItem :label="$t('page.system.user.userPhone')" path="userPhone">
-                  <NInput v-model:value="infoModel.userPhone" :placeholder="$t('page.system.user.form.userPhone')" />
+                <NFormItem v-if="showInfo('userPhone')" :label="$t('page.system.user.userPhone')" path="userPhone">
+                  <div class="w-full">
+                    <p v-if="canEditInfo('userPhone') && fieldRead(profile, 'userPhone') !== 'plain'" class="mb-2">
+                      {{ $t('page.system.user.form.replacementHint') }}
+                    </p>
+                    <p v-if="fieldRead(profile, 'userPhone') === 'masked'" class="mb-2">{{ profile.userPhone }}</p>
+                    <NInput
+                      v-model:value="infoModel.userPhone"
+                      :disabled="!canEditInfo('userPhone')"
+                      :placeholder="$t('page.system.user.form.userPhone')"
+                    />
+                  </div>
                 </NFormItem>
                 <NFormItem :label="$t('page.system.user.userEmail')" path="userEmail">
                   <NInput :value="profile.userEmail" disabled />

@@ -6,7 +6,8 @@ vi.mock('@/service/api', () => ({
   fetchDryRunImportUsers: vi.fn(),
   fetchExecuteImportUsers: vi.fn(),
   fetchCancelImportBatch: vi.fn(),
-  fetchDownloadImportTemplate: vi.fn()
+  fetchDownloadImportTemplate: vi.fn(),
+  fetchDownloadImportError: vi.fn()
 }));
 
 vi.mock('@/locales', () => ({
@@ -60,6 +61,31 @@ const FIXTURE_EXECUTE = {
 };
 
 describe('useImportFlow', () => {
+  it('downloads error files by batch identity and never follows the returned URL', async () => {
+    const { fetchDownloadImportError } = await import('@/service/api');
+    vi.mocked(fetchDownloadImportError).mockResolvedValue({ data: new Blob(['xlsx']), error: null } as never);
+    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const flow = useImportFlow();
+    flow.executeResult.value = { ...FIXTURE_EXECUTE, failedRowsFile: 'https://untrusted.invalid/raw' };
+    await flow.downloadErrors();
+    expect(fetchDownloadImportError).toHaveBeenCalledWith('batch-123');
+    expect(create).toHaveBeenCalledOnce();
+    expect(click).toHaveBeenCalledOnce();
+    create.mockRestore();
+    click.mockRestore();
+  });
+  it('does not download a JSON denial returned by a blob endpoint', async () => {
+    const { fetchDownloadImportError } = await import('@/service/api');
+    vi.mocked(fetchDownloadImportError).mockResolvedValue({ data: { code: 403, msg: 'denied' }, error: null } as never);
+    const create = vi.spyOn(URL, 'createObjectURL');
+    const flow = useImportFlow();
+    flow.executeResult.value = FIXTURE_EXECUTE;
+    await flow.downloadErrors();
+    expect(create).not.toHaveBeenCalled();
+    expect(flow.loading.value).toBe(false);
+    create.mockRestore();
+  });
   let messageSpy: any;
 
   beforeEach(() => {

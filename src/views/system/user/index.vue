@@ -73,7 +73,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       align: 'center',
       width: 100,
       render: row => {
-        if (row.userGender === null) {
+        if (row.userGender == null) {
           return null;
         }
 
@@ -130,7 +130,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       align: 'center',
       width: 100,
       render: row => {
-        if (row.status === null) {
+        if (row.status == null) {
           return null;
         }
 

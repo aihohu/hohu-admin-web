@@ -127,6 +127,15 @@ declare namespace Api {
      */
     type UserGender = '0' | '1' | '2';
 
+    type UserFieldAccess = {
+      read: 'plain' | 'masked' | 'hidden';
+      maskId: string | null;
+      create: boolean;
+      update: boolean;
+      replace: boolean;
+      queryOps: string[];
+    };
+
     /** user dept association item */
     type UserDeptItem = {
       /** dept id */
@@ -136,38 +145,45 @@ declare namespace Api {
     };
 
     /** user */
-    type User = Common.CommonRecord<{
-      userId: string;
-      /** user name */
-      userName: string;
-      password: string;
-      /** user gender */
-      userGender: UserGender | null;
-      /** user nick name */
-      nickname: string;
-      /** user phone */
-      userPhone: string;
-      /** user email */
-      userEmail: string;
-      /** user role code collection */
-      roles: string[];
-      /** user role name display */
-      roleNameKeys?: Array<string | null>;
-      roleNames: string[];
-      /** user dept id list (display) */
-      deptIds: string[];
-      /** user dept names joined string */
-      deptNames: string;
-      /** primary dept id */
-      primaryDept: string | null;
-      /** full user-dept associations */
-      userDepts: UserDeptItem[];
-    }>;
-
-    type UserProfileParams = Pick<
-      Api.SystemManage.User,
-      'userName' | 'userGender' | 'nickname' | 'userPhone' | 'userEmail' | 'status'
+    type User = { userId: string } & Partial<
+      Common.CommonRecord<{
+        fieldAccess?: Record<string, UserFieldAccess>;
+        userId: string;
+        /** user name */
+        userName: string;
+        password: string;
+        /** user gender */
+        userGender: UserGender | null;
+        /** user nick name */
+        nickname: string;
+        /** user phone */
+        userPhone: string | null;
+        /** user email */
+        userEmail: string | null;
+        /** user role code collection */
+        roles: string[];
+        /** user role name display */
+        roleNameKeys?: Array<string | null>;
+        roleNames: string[];
+        /** user dept id list (display) */
+        deptIds: string[];
+        /** user dept names joined string */
+        deptNames: string;
+        /** primary dept id */
+        primaryDept: string | null;
+        /** full user-dept associations */
+        userDepts: UserDeptItem[];
+      }>
     >;
+
+    type UserProfileParams = {
+      userName: string;
+      nickname: string;
+      userGender: UserGender | null;
+      userPhone: string | null;
+      userEmail: string | null;
+      status: Common.EnableStatus;
+    };
 
     type CreateUserParams = UserProfileParams & {
       password: string;
@@ -381,7 +397,8 @@ declare namespace Api {
     type UserExportTaskList = Common.PaginatingQueryRecord<UserExportTask>;
 
     /** user profile */
-    type UserProfile = {
+    type UserProfile = { userId: string } & Partial<{
+      fieldAccess?: Record<string, UserFieldAccess>;
       userId: string;
       userName: string;
       nickname: string;
@@ -392,7 +409,7 @@ declare namespace Api {
       status: string;
       roles: string[];
       createTime: string;
-    };
+    }>;
 
     /**
      * menu type
@@ -545,14 +562,15 @@ declare namespace Api {
     >;
 
     /** dept user item (for dept-users management) */
-    type DeptUserItem = {
+    type DeptUserItem = { userId: string } & Partial<{
+      fieldAccess?: Record<string, UserFieldAccess>;
       userId: string;
       userName: string;
       nickname: string | null;
       status: string;
       isMember: boolean;
       isPrimary: boolean;
-    };
+    }>;
 
     /** dept users management data */
     type DeptUsersOut = Common.PaginatingQueryRecord<DeptUserItem>;
