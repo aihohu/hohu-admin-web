@@ -281,6 +281,9 @@ onMounted(() => {
                       :disabled="!canEditInfo('userPhone')"
                       :placeholder="$t('page.system.user.form.userPhone')"
                     />
+                    <NButton v-if="canEditInfo('userPhone')" text class="mt-2" @click="infoModel.userPhone = null">
+                      {{ $t('fieldPolicy.clearValue') }}
+                    </NButton>
                   </div>
                 </NFormItem>
                 <NFormItem :label="$t('page.system.user.userEmail')" path="userEmail">

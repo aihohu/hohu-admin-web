@@ -20,7 +20,7 @@ vi.mock('@/hooks/common/form', () => ({
 vi.mock('@/locales', () => ({ $t: (key: string) => key }));
 
 describe('own profile field presence', () => {
-  it('does not send a masked phone or untouched nickname during a gender edit', async () => {
+  it('omits untouched masked values and allows explicit phone clearing', async () => {
     vi.mocked(fetchGetUserProfile).mockResolvedValue({
       data: {
         userId: '1',
@@ -38,6 +38,7 @@ describe('own profile field presence', () => {
     vi.mocked(fetchUpdateUserProfile).mockResolvedValue({ data: true, error: null } as never);
     const wrapper = shallowMount(Profile, {
       global: {
+        renderStubDefaultSlot: true,
         stubs: Object.fromEntries(
           [
             'NAvatar',
@@ -74,6 +75,11 @@ describe('own profile field presence', () => {
     vm.infoModel.userGender = '2';
     await vm.handleSaveInfo();
     expect(fetchUpdateUserProfile).toHaveBeenCalledWith({ userGender: '2' });
+    const clear = wrapper.findAll('n-button-stub').find(button => button.text() === 'fieldPolicy.clearValue');
+    expect(clear).toBeDefined();
+    await clear!.trigger('click');
+    await vm.handleSaveInfo();
+    expect(fetchUpdateUserProfile).toHaveBeenLastCalledWith({ userPhone: null });
     wrapper.unmount();
   });
 });
