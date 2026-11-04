@@ -98,7 +98,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("default: test", WORKFLOW)
         self.assertIn("needs: prepare", job("ci"))
         self.assertIn("uses: ./.github/workflows/ci.yml", job("ci"))
-        self.assertIn("needs: ci", job("tag"))
+        self.assertIn("needs: [prepare, ci]", job("tag"))
         self.assertIn("needs: [prepare, ci, tag]", job("docker"))
         self.assertIn("needs: [prepare, docker, acr]", job("github-release"))
         for status in ("failure", "cancelled", "skipped"):
@@ -147,10 +147,11 @@ class ReleaseWorkflowTests(unittest.TestCase):
             self.assertTrue(checkouts)
             for checkout in checkouts:
                 self.assertIn("persist-credentials: false", checkout)
-                self.assertRegex(
-                    checkout,
-                    r"ref: \$\{\{ (github.sha|needs.docker.outputs.commit) \}\}",
-                )
+                selected = re.search(r"ref: \$\{\{ (.*?) \}\}", checkout)[1]
+                self.assertIn(selected, {
+                    "github.sha", "inputs.source_sha || github.sha",
+                    "steps.selection.outputs.source_sha", "needs.prepare.outputs.source_sha",
+                })
         package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
         self.assertNotIn("release", package["scripts"])
 

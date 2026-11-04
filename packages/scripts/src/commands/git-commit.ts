@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { prompt } from 'enquirer';
 import { execCommand } from '../shared';
@@ -89,9 +88,7 @@ export async function gitCommit(lang: Lang = 'en-us') {
 
 /** Git commit message verify */
 export async function gitCommitVerify(lang: Lang = 'en-us', ignores: RegExp[] = []) {
-  const gitPath = await execCommand('git', ['rev-parse', '--show-toplevel']);
-
-  const gitMsgPath = path.join(gitPath, '.git', 'COMMIT_EDITMSG');
+  const gitMsgPath = await execCommand('git', ['rev-parse', '--path-format=absolute', '--git-path', 'COMMIT_EDITMSG']);
 
   const commitMsg = readFileSync(gitMsgPath, 'utf8').trim();
 
