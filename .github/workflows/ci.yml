@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main, 'release/*']
   workflow_call:
+    inputs:
+      source_sha:
+        description: Pinned application commit selected by the trusted release controller
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -21,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
 
       - uses: actions/setup-node@v6
