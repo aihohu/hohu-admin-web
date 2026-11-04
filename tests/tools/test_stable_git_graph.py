@@ -1,9 +1,11 @@
 """Exercise the failed-next-series window with real isolated Git histories."""
 
 import base64
+import contextlib
 import json
 import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -11,9 +13,31 @@ from unittest.mock import patch
 from tools.ops import release_build, stable_release
 
 
+@contextlib.contextmanager
+def git_directory():
+    directory = tempfile.TemporaryDirectory(prefix="stable-graph-")
+    try:
+        yield directory.name
+    finally:
+        # Windows scanners can briefly retain a completed Git process's files.
+        # Retry cleanup within the owned temporary root; never ignore failure.
+        assert (
+            Path(directory.name).resolve().parent
+            == Path(tempfile.gettempdir()).resolve()
+        )
+        for attempt in range(10):
+            try:
+                directory.cleanup()
+                break
+            except PermissionError:
+                if attempt == 9:
+                    raise
+                time.sleep(0.1)
+
+
 class StableGitGraphTests(unittest.TestCase):
     def test_hotfix_and_business_backport_preserve_both_series(self):
-        with tempfile.TemporaryDirectory(prefix="stable-graph-") as directory:
+        with git_directory() as directory:
             roots, anchors, sources, controllers, fixes = {}, {}, {}, {}, {}
 
             def git(repo, *arguments):
