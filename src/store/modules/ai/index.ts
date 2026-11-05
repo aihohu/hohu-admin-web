@@ -41,6 +41,10 @@ export type ChatAvailability =
   | 'error';
 
 const runtimeAvailabilityErrorCodes = new Set([
+  'FIELD_AUTHORIZATION_CHANGED',
+  'FIELD_POLICY_UNAVAILABLE',
+  'FIELD_CONFIRMATION_LINEAGE_REQUIRED',
+  'FIELD_CONFIRMATION_FACTS_REQUIRED',
   'AI_MODULE_DISABLED',
   'AI_CHAT_PERMISSION_DENIED',
   'AI_AGENT_FORBIDDEN',
@@ -673,9 +677,24 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       return true;
     }
 
+    const invalidatedConversationId = currentConversationId.value;
     clearCurrentConversation();
     attachedImages.value = [];
     attachedFiles.value = [];
+
+    if (errorCode.startsWith('FIELD_')) {
+      // Discard stale projections; only a new server read can restore access.
+      // Keeping the ID does not retain any message or confirmation content.
+      currentConversationId.value = invalidatedConversationId;
+      conversationProjectionState.value = 'error';
+      conversations.value = [];
+      hasMoreConversations.value = false;
+      availableModels.value = [];
+      availableAgents.value = [];
+      modelLoadState.value = 'error';
+      agentLoadState.value = 'error';
+      return true;
+    }
 
     if (errorCode === 'AI_AGENT_FORBIDDEN' || errorCode === 'AI_AGENT_NOT_AVAILABLE') {
       availableAgents.value = [];
@@ -795,6 +814,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
           reasoningText.value = '';
         }
         applyRuntimeAvailabilityError(event.errorCode);
+        if (event.errorCode === 'FIELD_AUTHORIZATION_CHANGED') void init();
         window.$message?.error(
           localizeErrorCode(
             event.errorCode,

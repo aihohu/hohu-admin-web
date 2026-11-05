@@ -15,6 +15,7 @@ import RoleOperateDrawer from './modules/role-operate-drawer.vue';
 import RoleSearch from './modules/role-search.vue';
 import MenuAuthModal from './modules/menu-auth-modal.vue';
 import AiAgentAuthModal from './modules/ai-agent-auth-modal.vue';
+import FieldPolicyDrawer from './modules/field-policy-drawer.vue';
 
 const appStore = useAppStore();
 const { hasAuth, hasSuperAdminAuth } = useAuth();
@@ -25,6 +26,8 @@ const { bool: aiAgentAuthVisible, setTrue: openAiAgentAuthModal } = useBoolean()
 const currentRoleId = shallowRef<string>('');
 const aiAgentAuthRoleId = shallowRef<string>('');
 const editingRole = shallowRef<Api.SystemManage.Role | null>(null);
+const fieldPolicyRoleId = shallowRef('');
+const fieldPolicyVisible = shallowRef(false);
 
 const searchParams: Api.SystemManage.RoleSearchParams = reactive({
   current: 1,
@@ -120,6 +123,11 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
               onClick={() => onAiAgentAuthClick(row.roleId)}
             >
               {$t('page.ai.aiAgentAuth.title')}
+            </NButton>
+          )}
+          {hasSuperAdminAuth('system:user:field-policy-view') && (
+            <NButton size="small" onClick={() => { fieldPolicyRoleId.value = row.roleId; fieldPolicyVisible.value = true; }}>
+              {$t('fieldPolicy.title')}
             </NButton>
           )}
           {row.delegable && hasAuth('system:role:edit') && (
@@ -256,6 +264,7 @@ async function onAgentMenuAuthClick(id: string) {
     </NCard>
 
     <MenuAuthModal v-model:visible="menuAuthVisible" :role-id="currentRoleId" />
+    <FieldPolicyDrawer v-model:visible="fieldPolicyVisible" :role-id="fieldPolicyRoleId" />
     <AiAgentAuthModal
       v-model:visible="aiAgentAuthVisible"
       :role-id="aiAgentAuthRoleId"

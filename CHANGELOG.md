@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.0]
+
+### User Field Policy Interaction
+
+- Add user field policy candidate management, validation, revision conflicts, explicit activation and freezing with permission-aware feedback.
+- Render user lists, filters, forms and PATCH payloads from the server's field capabilities. Hidden and write-only fields are not reconstructed from stale client state; authorization changes require current server decisions.
+- Clear private AI results after field authority becomes stale and recover the conversation through a read-only request without resending messages or confirmations.
+
+### Compatibility and Release
+
+- Pair Web 0.2.0 with Backend 0.2.0. The version entry prepares a candidate; the matching Backend product `release.json` determines the final image pair, verified platforms, CLI procedure and upgrade sources.
+- Existing tenants remain in legacy mode until explicit qualified activation. Upgrade cached clients and verify denied older submissions against the target backend before opening access.
+- Follow the 0.2 controlled installation and recovery procedure. A successful component build does not establish product installation or recovery qualification; mobile and desktop clients remain outside this release.
+
 ## [v0.1.6]
 
 ### Compatibility Fixes

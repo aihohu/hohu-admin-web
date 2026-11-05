@@ -99,7 +99,7 @@ export function useExportFlow(options: UseExportFlowOptions = {}) {
     errorCode.value = null;
     const { data, error } = await fetchExportUsers(payload);
     loading.value = false;
-    if (error || !data) {
+    if (error || !(data instanceof Blob) || data.type.includes('json')) {
       const errCode = (error as any)?.code ?? null;
       if (errCode === 'AI_EXPORT_ASYNC_REQUIRED') {
         notifyError('ASYNC_REQUIRED');
