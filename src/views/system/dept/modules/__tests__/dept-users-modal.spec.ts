@@ -58,6 +58,29 @@ const stubs = {
 };
 
 describe('dept-users-modal', () => {
+  it('refuses full replacement when a projected membership is missing', async () => {
+    serviceMocks.fetchGetDeptUsers.mockResolvedValue({
+      error: null,
+      data: {
+        current: 1,
+        size: 100,
+        total: 1,
+        records: [
+          { userId: '10', userName: 'hidden', fieldAccess: { departments: { read: 'hidden', replace: false } } }
+        ]
+      }
+    });
+    const wrapper = mount(DeptUsersModal, {
+      props: { visible: false, deptId: '500', deptName: 'Test' },
+      global: { stubs }
+    });
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    const vm = wrapper.vm as unknown as { handleSubmit: () => Promise<void> };
+    await vm.handleSubmit();
+    expect(serviceMocks.fetchUpdateDeptUsers).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
   beforeEach(() => {
     serviceMocks.fetchGetDeptUsers.mockReset();
     serviceMocks.fetchUpdateDeptUsers.mockReset();

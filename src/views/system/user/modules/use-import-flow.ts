@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import {
   fetchCancelImportBatch,
   fetchDownloadImportTemplate,
+  fetchDownloadImportError,
   fetchDryRunImportUsers,
   fetchExecuteImportUsers
 } from '@/service/api';
@@ -146,7 +147,7 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     errorCode.value = null;
     const { data, error } = await fetchDownloadImportTemplate();
     loading.value = false;
-    if (error || !data) {
+    if (error || !(data instanceof Blob) || data.type.includes('json')) {
       notifyError('TEMPLATE_FAILED');
       return;
     }
@@ -158,6 +159,32 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  async function downloadErrors(): Promise<void> {
+    const batchId = executeResult.value?.batchId;
+    if (!batchId || loading.value) return;
+    loading.value = true;
+    try {
+      const { data, error } = await fetchDownloadImportError(batchId);
+      if (error || !(data instanceof Blob) || data.type.includes('json')) {
+        notifyError('TEMPLATE_FAILED');
+        return;
+      }
+      const url = URL.createObjectURL(data);
+      const anchor = document.createElement('a');
+      try {
+        anchor.href = url;
+        anchor.download = 'user_import_errors.xlsx';
+        document.body.appendChild(anchor);
+        anchor.click();
+      } finally {
+        anchor.remove();
+        URL.revokeObjectURL(url);
+      }
+    } finally {
+      loading.value = false;
+    }
   }
 
   return {
@@ -178,6 +205,7 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     uploadFile,
     confirmImport,
     cancelImport,
-    downloadTemplate
+    downloadTemplate,
+    downloadErrors
   };
 }

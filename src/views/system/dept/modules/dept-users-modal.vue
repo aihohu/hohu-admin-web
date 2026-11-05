@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { fetchGetDeptUsers, fetchUpdateDeptUsers } from '@/service/api';
+import { fieldCapability, fieldRead } from '@/hooks/business/user-field-draft';
 import { $t } from '@/locales';
 
 defineOptions({
@@ -38,7 +39,7 @@ const memberIds = ref<string[]>([]);
 /** NTransfer options — all enabled users, members are moved to the right column */
 const transferOptions = computed(() =>
   users.value.map(u => ({
-    label: u.nickname ? `${u.userName} (${u.nickname})` : u.userName,
+    label: u.nickname ? `${u.userName ?? u.userId} (${u.nickname})` : (u.userName ?? u.userId),
     value: u.userId,
     disabled: u.isPrimary
   }))
@@ -60,6 +61,17 @@ async function loadData() {
         size: 100
       });
       if (error || !data || generation !== loadGeneration) return;
+      if (data.current !== current || data.size <= 0 || data.total > 10000 || current > 100) return;
+      if (
+        data.records.some(
+          user =>
+            typeof user.isMember !== 'boolean' ||
+            typeof user.isPrimary !== 'boolean' ||
+            (Object.hasOwn(user, 'fieldAccess') &&
+              (fieldRead(user, 'departments') !== 'plain' || !fieldCapability(user, 'departments', 'replace')))
+        )
+      )
+        return;
       records.push(...data.records);
       hasMore = data.current * data.size < data.total;
       current = data.current + 1;
@@ -115,6 +127,9 @@ watch(visible, val => {
     :mask-closable="false"
   >
     <NSpin :show="loading">
+      <NAlert v-if="!loading && !loadedSuccessfully" type="warning" class="mb-3">
+        {{ $t('fieldPolicy.relationUnavailable') }}
+      </NAlert>
       <div class="mb-8px text-gray-500">
         {{ $t('page.system.dept.manageUsersTip', { count: memberCount }) }}
       </div>

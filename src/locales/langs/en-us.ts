@@ -1,7 +1,9 @@
 import account from './account-en-us.json';
+import fieldPolicy from './field-policy-en-us.json';
 import builtin from './builtin-en-us.json';
 import settings from './settings-en-us.json';
 const local: App.I18n.Schema = {
+  fieldPolicy,
   settings,
   account,
   builtin,
@@ -581,6 +583,7 @@ const local: App.I18n.Schema = {
           userRole: 'Please select user role',
           userRoleRequired: 'Please select at least one user role',
           primaryDeptRequired: 'Please select a primary department',
+          replacementHint: 'The original value is unavailable. Enter a replacement, or leave blank to keep it.',
           partialUpdateWarning: 'Some changes were saved before a later step failed. The user list has been refreshed.'
         },
         addUser: 'Add User',
@@ -1544,6 +1547,25 @@ const local: App.I18n.Schema = {
     }
   },
   errorCode: {
+    FIELD_AUTHORIZATION_CHANGED:
+      'Field permissions changed. Old results and confirmations are unavailable. Query or preview again; do not repeat completed operations.',
+    FIELD_POLICY_UNAVAILABLE: 'Field policy is unavailable. Affected operations are blocked. Contact an administrator.',
+    FIELD_CONFIRMATION_LINEAGE_REQUIRED: 'This confirmation lacks current authorization evidence. Preview again.',
+    FIELD_CONFIRMATION_FACTS_REQUIRED:
+      'Confirmation facts could not be verified. Check operation status without repeating it.',
+    FIELD_POLICY_VERSION_CONFLICT: 'The policy was updated by another administrator. Reload and preview again.',
+    FIELD_POLICY_CATALOG_CONFLICT: 'The field catalog changed. Refresh the page and preview again.',
+    FIELD_POLICY_MANAGEMENT_FORBIDDEN:
+      'A tenant super administrator role and explicit field policy management permission are required.',
+    FIELD_POLICY_ACTIVATION_BLOCKED: 'Entry point and client checks are incomplete. The policy cannot be activated.',
+    FIELD_POLICY_INVALID: 'Policy rules are invalid or duplicated. Check fields, purposes and operations.',
+    FIELD_POLICY_STALE: 'Candidate policy sources changed. Reload and preview again.',
+    FIELD_QUERY_DENIED: 'This field cannot be queried across the current scope. Remove the corresponding filter.',
+    FIELD_READ_DENIED: 'These fields cannot be read with current permissions. Refresh permissions before continuing.',
+    FIELD_WRITE_DENIED: 'These fields cannot be changed with current permissions. Reload the form.',
+    FIELD_MASKED_INPUT_INVALID: 'A mask cannot be submitted as a value. Enter a replacement.',
+    FIELD_TRANSFER_REGENERATE_REQUIRED: 'File evidence is stale or permissions changed. Generate a new file.',
+    AUTHORIZATION_COMMIT_UNKNOWN: 'The commit outcome is unconfirmed. Check its status before submitting again.',
     MAIL_NOT_CONFIGURED: 'Mail service is disabled or incomplete. Contact your system administrator.',
     MAIL_SEND_FAILED: 'Unable to send email. Retry later or contact your administrator.',
     ACCOUNT_SERVICE_DISABLED: 'This account service is disabled. Return to sign in.',

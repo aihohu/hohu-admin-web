@@ -103,10 +103,10 @@ export function fetchSaveUser(data: Api.SystemManage.CreateUserParams) {
   });
 }
 
-export function fetchUpdateUser(userId: string, data: Api.SystemManage.UpdateUserParams) {
+export function fetchUpdateUser(userId: string, data: Partial<Api.SystemManage.UpdateUserParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/user/${userId}`,
-    method: 'put',
+    method: 'patch',
     data
   });
 }
@@ -204,6 +204,15 @@ export function fetchDownloadImportTemplate() {
     url: '/system/user/import/template',
     method: 'get',
     responseType: 'blob' as any
+  });
+}
+
+/** list import batches with status, operator and time filters */
+export function fetchDownloadImportError(batchId: string) {
+  return request<Blob, 'blob'>({
+    url: `/system/file/import-error/${encodeURIComponent(batchId)}.xlsx`,
+    method: 'get',
+    responseType: 'blob'
   });
 }
 
