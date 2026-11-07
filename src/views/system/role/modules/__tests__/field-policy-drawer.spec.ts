@@ -132,3 +132,43 @@ it('keeps read-only management controls disabled and clears on identity handoff'
   expect(page.findComponent(FieldPolicyRules).exists()).toBe(false);
   page.unmount();
 });
+it('invalidates a pending leave confirmation when identity changes', async () => {
+  const { page } = await render();
+  await page
+    .findAll('button')
+    .find(b => b.text() === 'fieldPolicy.recommend')!
+    .trigger('click');
+  const pending = page.vm.confirmLeave();
+  const confirmation = dialogs.warning.mock.calls[0][0];
+  await page.setProps({ identity: '0/102' });
+  await flushPromises();
+  confirmation.onPositiveClick();
+  expect(await pending).toBe(false);
+  page.unmount();
+});
+it('does not apply a bulk confirmation to replaced metadata with the same object ID', async () => {
+  const object = { objectId: 'system.user', fields: [field] } as Api.FieldManagement.Object;
+  const page = mount(FieldPolicyRules, {
+    props: { object, rules: [], disabled: false, complete: true },
+    global: {
+      stubs: {
+        Button: button,
+        Tabs: container,
+        TabPane: true,
+        Text: container,
+        Space: container,
+        Input: true,
+        DataTable: true
+      }
+    }
+  });
+  await page
+    .findAll('button')
+    .find(b => b.text() === 'fieldPolicy.bulkAllow')!
+    .trigger('click');
+  const confirmation = dialogs.warning.mock.calls[0][0];
+  await page.setProps({ object: { ...object, fields: [{ ...field, structural: true }] } });
+  confirmation.onPositiveClick();
+  expect(page.emitted('change')).toBeUndefined();
+  page.unmount();
+});

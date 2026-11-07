@@ -74,16 +74,23 @@ watch([visible, () => props.roleId, () => props.identity], ([open]) => {
   else model.reset();
 });
 
+function captureContext() {
+  const identity = props.identity;
+  const role = props.roleId;
+  const value = document.value;
+  return () => visible.value && props.identity === identity && props.roleId === role && document.value === value;
+}
 function confirmLeave(): Promise<boolean> {
   if (busy.value) return Promise.resolve(false);
   if (!dirty.value && !unknownRequest.value) return Promise.resolve(true);
+  const isCurrent = captureContext();
   return new Promise(resolve => {
     dialog.warning({
       title: label('discardTitle'),
       content: label(unknownRequest.value ? 'unknownHint' : 'discardHint'),
       positiveText: $t('common.confirm'),
       negativeText: $t('common.cancel'),
-      onPositiveClick: () => resolve(true),
+      onPositiveClick: () => resolve(isCurrent()),
       onNegativeClick: () => resolve(false),
       onClose: () => resolve(false),
       onAfterLeave: () => resolve(false)
@@ -123,23 +130,28 @@ async function save() {
   if (await model.publish()) message.success(label('candidateSaved'));
 }
 function confirmManifest() {
+  const isCurrent = captureContext();
+  const preview = manifestPreview.value;
   dialog.warning({
     title: label('sealManifest'),
     content: $t('fieldPolicy.tenantManifestHint', { count: manifestPreview.value?.items.length ?? 0 }),
     positiveText: $t('common.confirm'),
     negativeText: $t('common.cancel'),
     onPositiveClick: async () => {
+      if (!isCurrent() || manifestPreview.value !== preview) return;
       if (await model.buildManifest()) message.success(label('manifestSaved'));
     }
   });
 }
 function confirmFreeze() {
+  const isCurrent = captureContext();
   dialog.warning({
     title: label('freeze'),
     content: label('freezeClosureHint'),
     positiveText: $t('common.confirm'),
     negativeText: $t('common.cancel'),
     onPositiveClick: async () => {
+      if (!isCurrent()) return;
       await model.freeze();
     }
   });

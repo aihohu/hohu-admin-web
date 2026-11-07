@@ -83,12 +83,12 @@ function bulk(effect: 'allow' | 'deny') {
   if (props.disabled || !props.complete) return;
   const change = applyBulk(props.rules, props.object.fields, tab.value, effect);
   const before = fingerprint(props.rules);
-  const object = props.object.objectId;
+  const object = props.object;
   const selected = tab.value;
   dialog.warning({
     title: label(effect === 'allow' ? 'bulkAllow' : 'bulkDeny'),
     content: $t('fieldPolicy.bulkSummary', {
-      object: label(object),
+      object: label(object.objectId),
       tab: label(tab.value),
       changed: change.changed,
       skipped: change.skipped,
@@ -100,7 +100,7 @@ function bulk(effect: 'allow' | 'deny') {
       if (
         !props.disabled &&
         props.complete &&
-        props.object.objectId === object &&
+        props.object === object &&
         tab.value === selected &&
         fingerprint(props.rules) === before
       )
