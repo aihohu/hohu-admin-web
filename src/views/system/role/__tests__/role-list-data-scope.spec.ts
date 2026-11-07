@@ -7,8 +7,11 @@ const routeHarness = vi.hoisted(() => ({ query: {} as Record<string, unknown> })
 vi.mock('../modules/field-policy-drawer.vue', () => ({ default: { template: '<div />' } }));
 
 vi.mock('vue-router', () => ({
+  onBeforeRouteLeave: vi.fn(),
   useRoute: () => ({ query: routeHarness.query })
 }));
+vi.mock('@/service/api/field-policy', () => ({ fieldPolicyRepository: {} }));
+vi.mock('@/store/modules/auth', () => ({ useAuthStore: () => ({ userInfo: { userId: '101' }, token: 'test-token' }) }));
 
 vi.mock('@sa/hooks', () => ({
   useBoolean: () => ({ bool: ref(false), setTrue: vi.fn() })

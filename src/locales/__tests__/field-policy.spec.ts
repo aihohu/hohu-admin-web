@@ -6,6 +6,7 @@ describe('field policy purpose labels', () => {
     setLocale('zh-CN');
     expect($t('fieldPolicy.management_read')).toBe('管理读取');
     expect($t('fieldPolicy.management_query')).toBe('管理查询');
+    expect($t('fieldPolicy.system_user')).toBe('用户');
     setLocale('en-US');
     expect($t('fieldPolicy.management_read')).toBe('Management read');
     setLocale('zh-CN');
