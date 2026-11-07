@@ -20,6 +20,18 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
   await expect(page.getByText('fieldPolicy.system.user', { exact: true })).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath('drawer-desktop.png'), fullPage: true, animations: 'disabled' });
   await page.getByRole('button', { name: '默认推荐配置', exact: true }).click();
+  await page.getByRole('button', { name: '全部拒绝', exact: true }).click();
+  await page.getByRole('button', { name: '确认', exact: true }).click();
+  await expect(page.locator('.n-dialog')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.n-dialog')).toBeVisible();
+  await page.getByRole('button', { name: '取消', exact: true }).click();
+  await page.getByRole('button', { name: '撤回上次草稿修改', exact: true }).click();
+  await page.getByPlaceholder('搜索字段').fill('nickname');
+  await page.getByRole('button', { name: '全部允许', exact: true }).click();
+  await page.getByRole('button', { name: '确认', exact: true }).click();
+  await expect(page.locator('.n-dialog')).toHaveCount(0);
+  await page.getByPlaceholder('搜索字段').fill('');
   await page.getByRole('button', { name: '预览变更', exact: true }).click();
   await expect(page.getByText('以下仅显示权限规则差异', { exact: false })).toBeVisible();
   await page.locator('textarea').fill('Browser candidate acceptance');
@@ -29,6 +41,13 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
   await page.getByRole('button', { name: '保存候选', exact: true }).click();
   const saved = await published;
   expect(saved.status()).toBe(200);
+  const submitted = saved.request().postDataJSON();
+  expect(typeof submitted.expectedVersion).toBe('string');
+  expect(
+    submitted.rules.some(
+      (rule: { fieldId: string; level: string }) => rule.fieldId === 'user_phone' && rule.level === 'masked'
+    )
+  ).toBe(true);
   expect((await saved.json()).data.activeManifestDigest).toBeNull();
   await expect(page.getByText('候选已保存，当前生效策略未改变。')).toBeVisible();
   await page.getByRole('button', { name: '预览租户清单', exact: true }).click();
