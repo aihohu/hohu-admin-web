@@ -379,7 +379,7 @@ export function fetchSaveDictType(data: Api.SystemManage.DictTypeCreateParams) {
 }
 
 /** update dict type */
-export function fetchUpdateDictType(typeId: number, data: Api.SystemManage.DictTypeCreateParams) {
+export function fetchUpdateDictType(typeId: string, data: Partial<Api.SystemManage.DictTypeCreateParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/dict-type/${typeId}`,
     method: 'put',
@@ -388,7 +388,7 @@ export function fetchUpdateDictType(typeId: number, data: Api.SystemManage.DictT
 }
 
 /** delete dict type */
-export function fetchDeleteDictType(typeId: number) {
+export function fetchDeleteDictType(typeId: string) {
   return request({
     url: `/system/dict-type/${typeId}`,
     method: 'delete'
@@ -431,7 +431,7 @@ export function fetchSaveDictData(data: Api.SystemManage.DictDataCreateParams) {
 }
 
 /** update dict data */
-export function fetchUpdateDictData(dictCode: string, data: Api.SystemManage.DictDataCreateParams) {
+export function fetchUpdateDictData(dictCode: string, data: Partial<Api.SystemManage.DictDataCreateParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/dict-data/${dictCode}`,
     method: 'put',

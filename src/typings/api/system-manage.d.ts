@@ -7,67 +7,49 @@ declare namespace Api {
   namespace SystemManage {
     type CommonSearchParams = Pick<Common.PaginatingCommonParams, 'current' | 'size'>;
 
-    /** dict type */
-    type DictType = Common.CommonRecord<{
-      /** dict type id */
-      dictTypeId: number;
-      /** dict name */
+    type OrdinaryCapabilities = {
+      read?: string[];
+      query?: string[];
+      create?: string[];
+      update?: string[];
+      canCreate?: boolean;
+    };
+    type OrdinaryPage<T> = Common.PaginatingQueryRecord<T> & { fieldPolicy: OrdinaryCapabilities };
+    type DictTypeCreateParams = {
       dictName: string;
-      /** dict type code */
       dictType: string;
-      /** status */
-      status: Api.Common.EnableStatus;
-      /** remark */
+      status: Common.EnableStatus;
       remark: string | null;
-    }>;
-
-    /** dict type search params */
+    };
+    type DictType = Partial<DictTypeCreateParams> & {
+      dictTypeId: string;
+      createTime?: string;
+      fieldPolicy?: OrdinaryCapabilities;
+    };
     type DictTypeSearchParams = CommonType.RecordNullable<
-      Pick<Api.SystemManage.DictType, 'dictName' | 'dictType' | 'status'> & CommonSearchParams
+      Pick<DictTypeCreateParams, 'dictName' | 'dictType' | 'status'> & CommonSearchParams
     >;
-
-    /** dict type list */
-    type DictTypeList = Common.PaginatingQueryRecord<DictType>;
-
-    /** dict type simple output */
-    type DictTypeSimple = Pick<DictType, 'dictTypeId' | 'dictName' | 'dictType' | 'status'>;
-
-    /** dict type create params */
-    type DictTypeCreateParams = Pick<Api.SystemManage.DictType, 'dictName' | 'dictType' | 'status' | 'remark'>;
-
-    /** dict data */
-    type DictData = Common.CommonRecord<{
-      /** dict code (主键) */
-      dictCode: string;
-      /** dict type */
+    type DictTypeList = OrdinaryPage<DictType>;
+    type DictTypeSimple = Pick<DictType, 'dictTypeId' | 'status'> & Required<Pick<DictType, 'dictName' | 'dictType'>>;
+    type DictDataCreateParams = {
       dictType: string;
-      /** dict label */
       dictLabel: string;
-      /** dict value */
       dictValue: string;
-      /** dict sort */
       dictSort: number;
-      /** css class */
       cssClass: string | null;
-      /** list class */
       listClass: string | null;
-      /** is default */
       isDefault: 'Y' | 'N';
-    }>;
-
-    /** dict data search params */
+      status: Common.EnableStatus;
+    };
+    type DictData = Partial<DictDataCreateParams> & {
+      dictCode: string;
+      createTime?: string;
+      fieldPolicy?: OrdinaryCapabilities;
+    };
     type DictDataSearchParams = CommonType.RecordNullable<
-      Pick<Api.SystemManage.DictData, 'dictType' | 'dictLabel' | 'dictValue' | 'status'> & CommonSearchParams
+      Pick<DictDataCreateParams, 'dictType' | 'dictLabel' | 'dictValue' | 'status'> & CommonSearchParams
     >;
-
-    /** dict data list */
-    type DictDataList = Common.PaginatingQueryRecord<DictData>;
-
-    /** dict data create params */
-    type DictDataCreateParams = Pick<
-      Api.SystemManage.DictData,
-      'dictType' | 'dictLabel' | 'dictValue' | 'dictSort' | 'cssClass' | 'listClass' | 'isDefault' | 'status'
-    >;
+    type DictDataList = OrdinaryPage<DictData>;
 
     /** role */
     type Role = Common.CommonRecord<{
@@ -795,35 +777,19 @@ declare namespace Api {
     /** login log list */
     type LoginLogList = Common.PaginatingQueryRecord<LoginLog>;
 
-    /** data scope demo record */
-    type DataScopeDemo = Common.CommonRecord<{
-      /** demo id */
+    type DataScopeDemoCreateParams = { title: string; content: string | null; status: Common.EnableStatus };
+    type DataScopeDemo = Partial<DataScopeDemoCreateParams> & {
       demoId: string;
-      /** title */
-      title: string;
-      /** content */
-      content: string | null;
-      /** dept id (data scope anchor) */
-      deptId: string;
-      /** create by user id (SELF scope anchor) */
-      createBy: string;
-    }> & {
-      createTime: string | null;
-      updateTime: string | null;
+      deptId?: string;
+      createBy?: string;
+      createTime?: string | null;
+      updateTime?: string | null;
+      fieldPolicy?: OrdinaryCapabilities;
     };
-
-    /** data scope demo search params */
     type DataScopeDemoSearchParams = CommonType.RecordNullable<
-      Pick<DataScopeDemo, 'title' | 'status'> & CommonSearchParams
+      Pick<DataScopeDemoCreateParams, 'title' | 'status'> & CommonSearchParams
     >;
-
-    /** data scope demo list */
-    type DataScopeDemoList = Common.PaginatingQueryRecord<DataScopeDemo>;
-
-    /** data scope demo create params */
-    type DataScopeDemoCreateParams = Pick<DataScopeDemo, 'title' | 'content' | 'status'>;
-
-    /** data scope demo update params */
+    type DataScopeDemoList = OrdinaryPage<DataScopeDemo>;
     type DataScopeDemoUpdateParams = Partial<DataScopeDemoCreateParams>;
   }
 }
