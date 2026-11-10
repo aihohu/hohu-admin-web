@@ -24,10 +24,11 @@ const dialog = useDialog();
 const tab = shallowRef<PolicyTab>('reading');
 const search = shallowRef('');
 const label = (key: string) => $t(`fieldPolicy.${key.replaceAll('.', '_')}`);
+const fieldLabel = (key: string) => label(key === 'title' ? 'data_title' : key);
 const purposes = computed(() => policyGroups.find(g => g.id === tab.value)?.uses ?? []);
 const fields = computed(() =>
   props.object.fields.filter(f =>
-    (f.fieldId + ' ' + label(f.fieldId)).toLowerCase().includes(search.value.toLowerCase())
+    (f.fieldId + ' ' + fieldLabel(f.fieldId)).toLowerCase().includes(search.value.toLowerCase())
   )
 );
 const columns = computed<DataTableColumns<Api.FieldManagement.Field>>(() => [
@@ -36,7 +37,7 @@ const columns = computed<DataTableColumns<Api.FieldManagement.Field>>(() => [
     title: label('field'),
     width: 150,
     fixed: 'left',
-    render: f => h('div', {}, [h('div', {}, label(f.fieldId)), h(NText, { depth: 3 }, () => f.fieldId)])
+    render: f => h('div', {}, [h('div', {}, fieldLabel(f.fieldId)), h(NText, { depth: 3 }, () => f.fieldId)])
   },
   ...purposes.value.map(use => ({
     key: use,
@@ -62,7 +63,7 @@ const columns = computed<DataTableColumns<Api.FieldManagement.Field>>(() => [
               value: ruleValue(props.rules, field.fieldId, choice.access),
               disabled: props.disabled,
               'aria-label': [
-                label(field.fieldId),
+                fieldLabel(field.fieldId),
                 label(use),
                 choice.access.purpose,
                 choice.access.operation,

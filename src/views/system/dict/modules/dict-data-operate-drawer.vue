@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { jsonClone } from '@sa/utils';
 import { enableStatusOptions, yesNoOptions } from '@/constants/business';
 import { fetchSaveDictData, fetchUpdateDictData } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
+import { editablePayload, fieldAllowed } from '@/hooks/business/ordinary-fields';
 
 defineOptions({
   name: 'DictDataOperateDrawer'
 });
 
 interface Props {
+  capabilities?: Api.SystemManage.OrdinaryCapabilities;
   /** type of operation */
   operateType: NaiveUI.TableOperateType;
   /** edit row data */
@@ -42,10 +43,7 @@ const title = computed(() => {
   return titles[props.operateType];
 });
 
-type Model = Pick<
-  Api.SystemManage.DictData,
-  'dictType' | 'dictLabel' | 'dictValue' | 'dictSort' | 'cssClass' | 'listClass' | 'isDefault' | 'status'
->;
+type Model = Api.SystemManage.DictDataCreateParams;
 
 const model = ref(createDefaultModel());
 
@@ -66,21 +64,36 @@ function createDefaultModel(): Model {
 
 type RuleKey = Exclude<keyof Model, 'dictSort' | 'cssClass' | 'listClass' | 'isDefault'>;
 
-const rules: Record<RuleKey, App.Global.FormRule> = {
+const baseRules: Record<RuleKey, App.Global.FormRule> = {
   dictType: defaultRequiredRule,
   dictLabel: defaultRequiredRule,
   dictValue: defaultRequiredRule,
   status: defaultRequiredRule
 };
 
+const touched = ref(new Set<string>());
+const rules = computed(() =>
+  Object.fromEntries(Object.entries(baseRules).filter(([key]) => props.operateType === 'add' || touched.value.has(key)))
+);
+
 function handleInitModel() {
+  touched.value = new Set();
   model.value = createDefaultModel();
 
   if (props.operateType === 'edit' && props.rowData) {
-    Object.assign(model.value, jsonClone(props.rowData));
+    for (const key of Object.keys(model.value) as (keyof Model)[]) {
+      if (Object.hasOwn(props.rowData, key)) Object.assign(model.value, { [key]: props.rowData[key] });
+    }
   } else if (props.dictType) {
     model.value.dictType = props.dictType;
   }
+}
+
+const allowed = computed(() =>
+  props.operateType === 'edit' ? props.rowData?.fieldPolicy?.update : props.capabilities?.create
+);
+function canEdit(key: keyof Model) {
+  return fieldAllowed(allowed.value, key);
 }
 
 function closeDrawer() {
@@ -88,12 +101,16 @@ function closeDrawer() {
 }
 
 async function handleSubmit() {
+  if (loading.value || (props.operateType === 'add' && !props.capabilities?.canCreate)) return;
   await validate();
   loading.value = true;
   try {
     let res;
     if (props.operateType === 'edit' && props.rowData) {
-      res = await fetchUpdateDictData(props.rowData.dictCode, model.value);
+      res = await fetchUpdateDictData(
+        props.rowData.dictCode,
+        editablePayload(model.value, props.rowData, allowed.value, false, touched.value)
+      );
     } else {
       res = await fetchSaveDictData(model.value);
     }
@@ -122,37 +139,50 @@ watch(visible, () => {
   <NDrawer v-model:show="visible" display-directive="show" :width="360">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
       <NForm ref="formRef" :model="model" :rules="rules">
-        <NFormItem :label="$t('page.system.dict.dictTypeCode')" path="dictType">
+        <NFormItem v-if="canEdit('dictType')" :label="$t('page.system.dict.dictTypeCode')" path="dictType">
           <NInput
             v-model:value="model.dictType"
             :placeholder="$t('page.system.dict.dataForm.dictType')"
-            :disabled="operateType === 'edit'"
+            @update:value="touched.add('dictType')"
           />
         </NFormItem>
-        <NFormItem :label="$t('page.system.dict.dictLabel')" path="dictLabel">
-          <NInput v-model:value="model.dictLabel" :placeholder="$t('page.system.dict.dataForm.dictLabel')" />
+        <NFormItem v-if="canEdit('dictLabel')" :label="$t('page.system.dict.dictLabel')" path="dictLabel">
+          <NInput
+            v-model:value="model.dictLabel"
+            :placeholder="$t('page.system.dict.dataForm.dictLabel')"
+            @update:value="touched.add('dictLabel')"
+          />
         </NFormItem>
-        <NFormItem :label="$t('page.system.dict.dictValue')" path="dictValue">
-          <NInput v-model:value="model.dictValue" :placeholder="$t('page.system.dict.dataForm.dictValue')" />
+        <NFormItem v-if="canEdit('dictValue')" :label="$t('page.system.dict.dictValue')" path="dictValue">
+          <NInput
+            v-model:value="model.dictValue"
+            :placeholder="$t('page.system.dict.dataForm.dictValue')"
+            @update:value="touched.add('dictValue')"
+          />
         </NFormItem>
-        <NFormItem :label="$t('page.system.dict.dictSort')" path="dictSort">
-          <NInputNumber v-model:value="model.dictSort" :min="0" class="w-full" />
+        <NFormItem v-if="canEdit('dictSort')" :label="$t('page.system.dict.dictSort')" path="dictSort">
+          <NInputNumber
+            v-model:value="model.dictSort"
+            :min="0"
+            class="w-full"
+            @update:value="touched.add('dictSort')"
+          />
         </NFormItem>
         <!--
- <NFormItem :label="$t('page.system.dict.cssClass')" path="cssClass">
-          <NInput v-model:value="model.cssClass" :placeholder="$t('page.system.dict.dataForm.cssClass')" />
+ <NFormItem v-if="canEdit('cssClass')" :label="$t('page.system.dict.cssClass')" path="cssClass">
+          <NInput v-model:value="model.cssClass" @update:value="touched.add('cssClass')" :placeholder="$t('page.system.dict.dataForm.cssClass')" />
         </NFormItem>
-        <NFormItem :label="$t('page.system.dict.listClass')" path="listClass">
-          <NInput v-model:value="model.listClass" :placeholder="$t('page.system.dict.dataForm.listClass')" />
+        <NFormItem v-if="canEdit('listClass')" :label="$t('page.system.dict.listClass')" path="listClass">
+          <NInput v-model:value="model.listClass" @update:value="touched.add('listClass')" :placeholder="$t('page.system.dict.dataForm.listClass')" />
         </NFormItem> 
 -->
-        <NFormItem :label="$t('page.system.dict.isDefault')" path="isDefault">
-          <NRadioGroup v-model:value="model.isDefault">
+        <NFormItem v-if="canEdit('isDefault')" :label="$t('page.system.dict.isDefault')" path="isDefault">
+          <NRadioGroup v-model:value="model.isDefault" @update:value="touched.add('isDefault')">
             <NRadio v-for="item in yesNoOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
           </NRadioGroup>
         </NFormItem>
-        <NFormItem :label="$t('page.system.dict.status')" path="status">
-          <NRadioGroup v-model:value="model.status">
+        <NFormItem v-if="canEdit('status')" :label="$t('page.system.dict.status')" path="status">
+          <NRadioGroup v-model:value="model.status" @update:value="touched.add('status')">
             <NRadio v-for="item in enableStatusOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
           </NRadioGroup>
         </NFormItem>
@@ -160,7 +190,9 @@ watch(visible, () => {
       <template #footer>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
-          <NButton type="primary" :loading="loading" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
+          <NButton type="primary" :loading="loading" :disabled="!allowed?.length" @click="handleSubmit">
+            {{ $t('common.confirm') }}
+          </NButton>
         </NSpace>
       </template>
     </NDrawerContent>
