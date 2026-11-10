@@ -143,10 +143,10 @@ declare namespace Api {
         /** user email */
         userEmail: string | null;
         /** user role code collection */
-        roles: string[];
+        roles: Array<string | null>;
         /** user role name display */
         roleNameKeys?: Array<string | null>;
-        roleNames: string[];
+        roleNames: Array<string | null>;
         /** user dept id list (display) */
         deptIds: string[];
         /** user dept names joined string */
@@ -389,7 +389,7 @@ declare namespace Api {
       userEmail: string;
       userAvatar: string;
       status: string;
-      roles: string[];
+      roles: Array<string | null>;
       createTime: string;
     }>;
 

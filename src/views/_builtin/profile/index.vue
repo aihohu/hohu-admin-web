@@ -212,8 +212,8 @@ onMounted(() => {
             </div>
             <NText class="text-18px font-bold mb-4px">{{ profile.userName }}</NText>
             <NSpace :size="8" class="mb-16px">
-              <NTag v-for="role in profile.roles" :key="role" type="primary" size="small">
-                {{ role }}
+              <NTag v-for="(role, index) in profile.roles" :key="index" type="primary" size="small">
+                {{ role ?? '-' }}
               </NTag>
             </NSpace>
           </div>
