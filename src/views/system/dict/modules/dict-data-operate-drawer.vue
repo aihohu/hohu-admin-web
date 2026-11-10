@@ -168,14 +168,20 @@ watch(visible, () => {
             @update:value="touched.add('dictSort')"
           />
         </NFormItem>
-        <!--
- <NFormItem v-if="canEdit('cssClass')" :label="$t('page.system.dict.cssClass')" path="cssClass">
-          <NInput v-model:value="model.cssClass" @update:value="touched.add('cssClass')" :placeholder="$t('page.system.dict.dataForm.cssClass')" />
+        <NFormItem v-if="canEdit('cssClass')" :label="$t('page.system.dict.cssClass')" path="cssClass">
+          <NInput
+            v-model:value="model.cssClass"
+            :placeholder="$t('page.system.dict.dataForm.cssClass')"
+            @update:value="touched.add('cssClass')"
+          />
         </NFormItem>
         <NFormItem v-if="canEdit('listClass')" :label="$t('page.system.dict.listClass')" path="listClass">
-          <NInput v-model:value="model.listClass" @update:value="touched.add('listClass')" :placeholder="$t('page.system.dict.dataForm.listClass')" />
-        </NFormItem> 
--->
+          <NInput
+            v-model:value="model.listClass"
+            :placeholder="$t('page.system.dict.dataForm.listClass')"
+            @update:value="touched.add('listClass')"
+          />
+        </NFormItem>
         <NFormItem v-if="canEdit('isDefault')" :label="$t('page.system.dict.isDefault')" path="isDefault">
           <NRadioGroup v-model:value="model.isDefault" @update:value="touched.add('isDefault')">
             <NRadio v-for="item in yesNoOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />

@@ -72,13 +72,17 @@ describe('ordinary drawers and search', () => {
     await (wrapper.vm as unknown as { handleSubmit(): Promise<void> }).handleSubmit();
     expect(api.fetchUpdateDictType).toHaveBeenCalledWith('9007199254740997', { dictType: 'new' });
   });
-  it('allows an explicit write-only item edit without sending defaults or anchors', async () => {
+  it.each([
+    ['dict_value', 'dictValue'],
+    ['css_class', 'cssClass'],
+    ['list_class', 'listClass']
+  ])('allows an explicit write-only %s edit without sending defaults or anchors', async (field, key) => {
     const wrapper = mount(DictDataDrawer, {
       global,
       props: {
         visible: false,
         operateType: 'edit',
-        rowData: { dictCode: '99', fieldPolicy: { update: ['dict_value'] } }
+        rowData: { dictCode: '99', fieldPolicy: { update: [field] } }
       }
     });
     await wrapper.setProps({ visible: true });
@@ -86,7 +90,7 @@ describe('ordinary drawers and search', () => {
     wrapper.findComponent(Input).vm.$emit('update:value', 'replacement');
     await flushPromises();
     await (wrapper.vm as unknown as { handleSubmit(): Promise<void> }).handleSubmit();
-    expect(api.fetchUpdateDictData).toHaveBeenCalledWith('99', { dictValue: 'replacement' });
+    expect(api.fetchUpdateDictData).toHaveBeenCalledWith('99', { [key]: 'replacement' });
   });
   it('never requests dictionary-type options for hidden or unauthorized filters', async () => {
     const wrapper = mount(DictDataSearch, { global, props: { model: { current: 1, size: 10 } } });

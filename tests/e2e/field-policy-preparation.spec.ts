@@ -16,12 +16,12 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
   await expect(page.getByRole('button', { name: '退出准备会话' })).toBeVisible();
   await page.getByRole('button', { name: '字段权限', exact: true }).first().click();
   await expect(page.getByRole('button', { name: '默认推荐配置', exact: true })).toBeEnabled();
-  await expect(page.locator('.n-spin-body')).toHaveCSS('opacity', '1');
+  await expect(page.locator('.n-spin-body')).toHaveCount(0);
   await expect(page.getByText('fieldPolicy.system.user', { exact: true })).toHaveCount(0);
   for (const object of ['字典类型', '字典项', '数据范围演示', '用户']) {
     await page.locator('.n-drawer .n-select').first().click();
     await page.locator('.n-base-select-option').filter({ hasText: object }).click();
-    await expect(page.locator('.n-spin-body')).toHaveCSS('opacity', '1');
+    await expect(page.locator('.n-spin-body')).toHaveCount(0);
     await expect(page.getByRole('button', { name: '默认推荐配置', exact: true })).toBeEnabled();
     await expect(page.getByText('fieldPolicy.system.', { exact: false })).toHaveCount(0);
     if (object !== '用户') {
