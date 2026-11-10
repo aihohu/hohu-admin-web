@@ -12,6 +12,7 @@ describe('field policy purpose labels', () => {
     expect($t('fieldPolicy.data_title')).toBe('标题');
     expect($t('fieldPolicy.title')).toBe('字段权限');
     expect($t('fieldPolicy.sort')).toBe('排序');
+    expect($t('fieldPolicy.remark')).toBe('备注');
     setLocale('en-US');
     expect($t('fieldPolicy.management_read')).toBe('Management read');
     setLocale('zh-CN');
