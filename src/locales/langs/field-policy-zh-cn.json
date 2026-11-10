@@ -155,5 +155,6 @@
   "content": "内容",
   "dept_id": "所属部门",
   "create_by": "创建人",
-  "data_title": "标题"
+  "data_title": "标题",
+  "sort": "排序"
 }

@@ -155,5 +155,6 @@
   "content": "Content",
   "dept_id": "Department",
   "create_by": "Creator",
-  "data_title": "Title"
+  "data_title": "Title",
+  "sort": "Sort"
 }

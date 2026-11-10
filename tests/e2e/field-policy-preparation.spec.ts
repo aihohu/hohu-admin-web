@@ -23,7 +23,7 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
     await page.locator('.n-base-select-option').filter({ hasText: object }).click();
     await expect(page.locator('.n-spin-body')).toHaveCount(0);
     await expect(page.getByRole('button', { name: '默认推荐配置', exact: true })).toBeEnabled();
-    await expect(page.getByText('fieldPolicy.system.', { exact: false })).toHaveCount(0);
+    await expect(page.getByText(/fieldPolicy\./)).toHaveCount(0);
     if (object !== '用户') {
       await page.screenshot({
         path: testInfo.outputPath(`object-${object}.png`),
