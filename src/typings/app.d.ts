@@ -931,6 +931,7 @@ declare namespace App {
             };
           };
           dept: {
+            rootDept: string;
             title: string;
             deptName: string;
             parentId: string;

@@ -2,6 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { $t, setLocale } from '@/locales';
 
 describe('field policy purpose labels', () => {
+  it.each([
+    'system_role',
+    'system_dept',
+    'system_menu',
+    'role_name',
+    'leader',
+    'menu_name',
+    'role_names',
+    'dept_names'
+  ])('labels relation catalog key %s in both languages', key => {
+    for (const locale of ['zh-CN', 'en-US'] as const) {
+      setLocale(locale);
+      expect($t(`fieldPolicy.${key}`)).not.toBe(`fieldPolicy.${key}`);
+    }
+    setLocale('zh-CN');
+  });
   it('resolves Chinese and English management purposes', () => {
     setLocale('zh-CN');
     expect($t('fieldPolicy.management_read')).toBe('管理读取');

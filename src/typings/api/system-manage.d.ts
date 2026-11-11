@@ -15,6 +15,14 @@ declare namespace Api {
       canCreate?: boolean;
     };
     type OrdinaryPage<T> = Common.PaginatingQueryRecord<T> & { fieldPolicy: OrdinaryCapabilities };
+    type RelationFormQuery = { mode: 'create' | 'update'; recordId?: string; parentId?: string };
+    type RelationCapabilities = Required<OrdinaryCapabilities> & {
+      readLevels: Record<string, 'plain' | 'masked' | 'hidden'>;
+      specialCreate: string[];
+      specialUpdate: string[];
+      complete: Record<string, boolean>;
+    };
+    type RelationFormContext<T> = { record: Partial<T> | null; fieldPolicy: RelationCapabilities };
     type DictTypeCreateParams = {
       dictName: string;
       dictType: string;
@@ -51,42 +59,27 @@ declare namespace Api {
     >;
     type DictDataList = OrdinaryPage<DictData>;
 
-    /** role */
-    type Role = Common.CommonRecord<{
-      /** role id */
-      roleId: string;
-      /** role name */
+    type CreateRoleParams = {
       roleName: string;
-      i18nKeys?: Record<string, string> | null;
-      /** role code */
       roleCode: string;
-      /** role description */
-      roleDesc: string;
-      /** data scope: 1-all, 2-custom, 3-dept, 4-dept and sub, 5-self */
+      roleDesc: string | null;
       dataScope: '1' | '2' | '3' | '4' | '5';
-      /** dept ids for custom data scope */
-      deptIds: string[];
-    }>;
-
-    /** minimal role metadata returned by tenant-wide role reads */
-    type RoleSummary = Pick<Role, 'roleId' | 'roleName' | 'roleCode' | 'dataScope' | 'status' | 'i18nKeys'> & {
+      status: Common.EnableStatus;
+      deptIds?: string[];
+    };
+    type UpdateRoleParams = Partial<Omit<CreateRoleParams, 'roleCode'>>;
+    type Role = Partial<CreateRoleParams> & {
+      roleId: string;
+      i18nKeys?: Record<string, string> | null;
+      createTime?: string;
+      fieldPolicy?: RelationCapabilities;
+    };
+    type RoleSummary = Pick<
+      Role,
+      'roleId' | 'roleName' | 'roleCode' | 'dataScope' | 'status' | 'i18nKeys' | 'fieldPolicy'
+    > & {
       delegable: boolean;
       blockedReasonCode: string | null;
-    };
-
-    /** role model params */
-    type CreateRoleParams = Pick<
-      Api.SystemManage.Role,
-      'roleName' | 'roleCode' | 'dataScope' | 'status' | 'i18nKeys'
-    > & {
-      roleDesc: string | null;
-      deptIds?: string[];
-    };
-
-    /** mutable role definition fields; roleCode is immutable */
-    type UpdateRoleParams = Pick<Api.SystemManage.Role, 'roleName' | 'dataScope' | 'status' | 'i18nKeys'> & {
-      roleDesc: string | null;
-      deptIds?: string[];
     };
 
     /** role search params */
@@ -95,7 +88,7 @@ declare namespace Api {
     >;
 
     /** role list */
-    type RoleList = Common.PaginatingQueryRecord<RoleSummary>;
+    type RoleList = OrdinaryPage<RoleSummary>;
 
     /** all role */
     type AllRole = RoleSummary;
@@ -435,7 +428,7 @@ declare namespace Api {
       | 'query'
     >;
 
-    type Menu = Common.CommonRecord<{
+    type MenuRecord = Common.CommonRecord<{
       menuId: string;
       /** parent menu id */
       parentId: string;
@@ -460,8 +453,9 @@ declare namespace Api {
     }> &
       MenuPropsOfRoute;
 
+    type Menu = Partial<Omit<MenuRecord, 'menuId'>> & { menuId: string; fieldPolicy?: RelationCapabilities };
     /** menu list */
-    type MenuList = Common.PaginatingQueryRecord<Menu>;
+    type MenuList = OrdinaryPage<Menu>;
 
     type MenuTree = {
       id: string;
@@ -472,7 +466,7 @@ declare namespace Api {
     };
 
     type CreateMenuParams = Pick<
-      Api.SystemManage.Menu,
+      MenuRecord,
       | 'menuType'
       | 'menuName'
       | 'routeName'
@@ -495,25 +489,21 @@ declare namespace Api {
       | 'buttons'
     >;
 
-    /** dept */
-    type Dept = Common.CommonRecord<{
-      /** dept id */
-      deptId: string;
-      /** parent dept id */
+    type DeptCreateParams = {
       parentId: string | null;
-      /** ancestors */
-      ancestors: string | null;
-      /** dept name */
       deptName: string;
-      /** order num */
       orderNum: number;
-      /** leader */
       leader: string | null;
-      /** phone */
       phone: string | null;
-      /** email */
       email: string | null;
-    }>;
+      status: Common.EnableStatus;
+    };
+    type Dept = Partial<DeptCreateParams> & {
+      deptId: string;
+      ancestors?: string | null;
+      createTime?: string;
+      fieldPolicy?: RelationCapabilities;
+    };
 
     /** dept tree node */
     type DeptTree = Dept & {
@@ -532,16 +522,7 @@ declare namespace Api {
     /** dept search params */
     type DeptSearchParams = CommonType.RecordNullable<Pick<Api.SystemManage.Dept, 'deptName' | 'status' | 'leader'>>;
 
-    /** dept create params */
-    type DeptCreateParams = Pick<
-      Api.SystemManage.Dept,
-      'parentId' | 'deptName' | 'orderNum' | 'leader' | 'phone' | 'email' | 'status'
-    >;
-
-    type DeptUpdateParams = Pick<
-      Api.SystemManage.Dept,
-      'deptName' | 'orderNum' | 'leader' | 'phone' | 'email' | 'status'
-    >;
+    type DeptUpdateParams = Partial<Omit<DeptCreateParams, 'parentId'>>;
 
     /** dept user item (for dept-users management) */
     type DeptUserItem = { userId: string } & Partial<{
@@ -555,7 +536,7 @@ declare namespace Api {
     }>;
 
     /** dept users management data */
-    type DeptUsersOut = Common.PaginatingQueryRecord<DeptUserItem>;
+    type DeptUsersOut = Common.PaginatingQueryRecord<DeptUserItem> & { authorizationEpoch: string };
 
     type DeptUsersQuery = Pick<CommonSearchParams, 'current' | 'size'> & {
       query?: string;

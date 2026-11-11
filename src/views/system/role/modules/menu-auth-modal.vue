@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue';
+import { computed, onScopeDispose, shallowRef, watch } from 'vue';
 import { fetchGetAllPages, fetchGetMenuTree, fetchGetRoleMenuList, fetchUpdateRoleMenu } from '@/service/api';
+import { completeTreeIds } from '@/hooks/business/relation-tree';
 import { $t, localizedText } from '@/locales';
 
 defineOptions({
@@ -25,6 +26,13 @@ function closeModal() {
 const title = computed(() => $t('common.edit') + $t('page.system.role.menuAuth'));
 
 const showSpin = shallowRef<boolean>(false);
+const loaded = shallowRef(false);
+const saving = shallowRef(false);
+let generation = 0;
+onScopeDispose(() => {
+  generation += 1;
+});
+let availableIds = new Set<string>();
 
 const home = shallowRef('');
 
@@ -39,14 +47,6 @@ async function getHome() {
 // }
 
 const pages = shallowRef<string[]>([]);
-
-async function getPages() {
-  const { error, data } = await fetchGetAllPages();
-
-  if (!error) {
-    pages.value = data;
-  }
-}
 
 // const pageSelectOptions = computed(() => {
 //   const opts: CommonType.Option[] = pages.value.map(page => ({
@@ -67,14 +67,6 @@ function translateTree(nodes: Api.SystemManage.MenuTree[]): Api.SystemManage.Men
 
 const tree = shallowRef<Api.SystemManage.MenuTree[]>([]);
 const localizedTree = computed(() => translateTree(tree.value));
-
-async function getTree() {
-  const { error, data } = await fetchGetMenuTree();
-
-  if (!error) {
-    tree.value = data;
-  }
-}
 
 const checks = shallowRef<string[]>([]);
 const indeterminateKeys = shallowRef<Array<string | number>>([]);
@@ -115,44 +107,73 @@ function recomputeIndeterminate() {
   indeterminateKeys.value = result;
 }
 
-async function getChecks() {
-  const { error, data } = await fetchGetRoleMenuList(props.roleId);
-  if (!error) {
-    checks.value = data;
-    recomputeIndeterminate();
-  }
-  showSpin.value = false;
-}
-
 const handleIndeterminateKeysCheck = (keys: Array<string | number>) => {
   indeterminateKeys.value = keys;
 };
 
 async function handleSubmit() {
-  const allCheckedKeys = [...checks.value, ...indeterminateKeys.value];
-
-  const { error } = await fetchUpdateRoleMenu(props.roleId, allCheckedKeys);
-  if (!error) {
-    window.$message?.success?.($t('common.modifySuccess'));
-    closeModal();
+  if (!visible.value || showSpin.value || saving.value || !loaded.value) return;
+  const token = generation;
+  const roleId = props.roleId;
+  const allCheckedKeys = [...new Set([...checks.value, ...indeterminateKeys.value])];
+  if (allCheckedKeys.some(key => typeof key !== 'string' || !availableIds.has(key))) return;
+  saving.value = true;
+  try {
+    const { error } = await fetchUpdateRoleMenu(roleId, allCheckedKeys);
+    if (token !== generation || !visible.value) return;
+    if (!error) {
+      window.$message?.success?.($t('common.modifySuccess'));
+      closeModal();
+    }
+  } finally {
+    if (token === generation) saving.value = false;
   }
 }
 
-async function init() {
+async function init(token: number) {
   showSpin.value = true;
-  checks.value = [];
-  indeterminateKeys.value = [];
   getHome();
-  getPages();
-  await getTree();
-  await getChecks();
+  const roleId = props.roleId;
+  try {
+    const [pageResult, treeResult, checkResult] = await Promise.all([
+      fetchGetAllPages(),
+      fetchGetMenuTree(),
+      fetchGetRoleMenuList(roleId)
+    ]);
+    if (token !== generation || !visible.value) return;
+    if (!pageResult.error && pageResult.data) pages.value = pageResult.data;
+    if (treeResult.error || checkResult.error || !Array.isArray(checkResult.data)) return;
+    const ids = completeTreeIds(treeResult.data);
+    if (!ids || new Set(checkResult.data).size !== checkResult.data.length || checkResult.data.some(id => !ids.has(id)))
+      return;
+    availableIds = ids;
+    tree.value = treeResult.data;
+    checks.value = checkResult.data;
+    recomputeIndeterminate();
+    loaded.value = true;
+  } catch {
+    // No partial or failed collection becomes an empty replacement.
+  } finally {
+    if (token === generation) showSpin.value = false;
+  }
 }
 
-watch(visible, val => {
-  if (val) {
-    init();
-  }
-});
+watch(
+  [visible, () => props.roleId],
+  () => {
+    const token = ++generation;
+    loaded.value = false;
+    saving.value = false;
+    showSpin.value = false;
+    checks.value = [];
+    tree.value = [];
+    pages.value = [];
+    indeterminateKeys.value = [];
+    availableIds = new Set();
+    if (visible.value && props.roleId) init(token);
+  },
+  { immediate: true, flush: 'sync' }
+);
 </script>
 
 <template>
@@ -166,8 +187,12 @@ watch(visible, val => {
     </div> 
 -->
 
+        <NAlert v-if="!showSpin && !loaded" type="warning" class="mb-3">
+          {{ $t('fieldPolicy.relationUnavailable') }}
+        </NAlert>
         <NTree
           v-model:checked-keys="checks"
+          :disabled="!loaded || saving"
           :data="localizedTree"
           key-field="id"
           checkable
@@ -187,7 +212,14 @@ watch(visible, val => {
         <NButton size="small" class="mt-16px" @click="closeModal">
           {{ $t('common.cancel') }}
         </NButton>
-        <NButton type="primary" size="small" class="mt-16px" @click="handleSubmit">
+        <NButton
+          :disabled="!loaded || showSpin"
+          :loading="saving"
+          type="primary"
+          size="small"
+          class="mt-16px"
+          @click="handleSubmit"
+        >
           {{ $t('common.confirm') }}
         </NButton>
       </NSpace>

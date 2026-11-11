@@ -7,7 +7,7 @@ export const enableStatusRecord: Record<Api.Common.EnableStatus, App.I18n.I18nKe
 
 export const enableStatusOptions = transformRecordToOption(enableStatusRecord);
 
-export const roleDataScopeRecord: Record<Api.SystemManage.Role['dataScope'], App.I18n.I18nKey> = {
+export const roleDataScopeRecord: Record<Api.SystemManage.CreateRoleParams['dataScope'], App.I18n.I18nKey> = {
   '1': 'page.system.role.dataScope.all',
   '2': 'page.system.role.dataScope.custom',
   '3': 'page.system.role.dataScope.dept',

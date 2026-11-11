@@ -19,3 +19,31 @@ describe('ordinary field boundaries', () => {
     expect(editablePayload({ content: '' }, { content: null }, ['content'], false, new Set())).toEqual({});
   });
 });
+
+describe('relation draft equality', () => {
+  it('does not replace an unchanged array cloned from a server snapshot', () => {
+    expect(
+      editablePayload(
+        { buttons: [{ code: 'system:user:list', desc: 'List' }] },
+        { buttons: [{ code: 'system:user:list', desc: 'List' }] },
+        ['buttons'],
+        false,
+        new Set(['buttons'])
+      )
+    ).toEqual({});
+  });
+  it('compares JSON object keys structurally while preserving array order', () => {
+    expect(
+      editablePayload(
+        { query: [{ value: '1', key: 'mode' }] },
+        { query: [{ key: 'mode', value: '1' }] },
+        ['query'],
+        false,
+        new Set(['query'])
+      )
+    ).toEqual({});
+    expect(
+      editablePayload({ deptIds: ['2', '1'] }, { deptIds: ['1', '2'] }, ['dept_ids'], false, new Set(['deptIds']))
+    ).toEqual({ deptIds: ['2', '1'] });
+  });
+});

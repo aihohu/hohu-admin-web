@@ -85,11 +85,11 @@ describe('role menu authorization modal', () => {
       handleSubmit: () => Promise<void>;
       indeterminateKeys: string[];
     };
-    vm.handleIndeterminateKeysCheck(['manual-parent']);
+    vm.handleIndeterminateKeysCheck(['root']);
     await vm.handleSubmit();
 
-    expect(vm.indeterminateKeys).toEqual(['manual-parent']);
-    expect(updateMenus).toHaveBeenCalledWith('role-1', ['leaf-a', 'manual-parent']);
+    expect(vm.indeterminateKeys).toEqual(['root']);
+    expect(updateMenus).toHaveBeenCalledWith('role-1', ['leaf-a', 'root']);
     expect(wrapper.emitted('update:visible')).toBeUndefined();
   });
 
@@ -109,5 +109,45 @@ describe('role menu authorization modal', () => {
     expect(vm.tree).toEqual([]);
     expect(vm.checks).toEqual([]);
     expect(vm.showSpin).toBe(false);
+    await (wrapper.vm as unknown as { handleSubmit: () => Promise<void> }).handleSubmit();
+    expect(updateMenus).not.toHaveBeenCalled();
+  });
+
+  it('cannot replace bindings that are absent from the readable tree', async () => {
+    getChecks.mockResolvedValue({ data: ['hidden-binding'], error: null });
+    const wrapper = await render();
+    await (wrapper.vm as unknown as { handleSubmit: () => Promise<void> }).handleSubmit();
+    expect(updateMenus).not.toHaveBeenCalled();
+  });
+
+  it('ignores a late load and save after switching roles', async () => {
+    let resolveLoad!: (result: unknown) => void;
+    getChecks
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            resolveLoad = resolve;
+          })
+      )
+      .mockResolvedValue({ data: ['leaf-b'], error: null });
+    const wrapper = await render();
+    await wrapper.setProps({ roleId: 'role-2' });
+    await flushPromises();
+    resolveLoad({ data: ['leaf-a'], error: null });
+    await flushPromises();
+    expect((wrapper.vm as unknown as { checks: string[] }).checks).toEqual(['leaf-b']);
+    let resolveSave!: (result: unknown) => void;
+    updateMenus.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          resolveSave = resolve;
+        })
+    );
+    const save = (wrapper.vm as unknown as { handleSubmit: () => Promise<void> }).handleSubmit();
+    await wrapper.setProps({ roleId: 'role-3' });
+    await flushPromises();
+    resolveSave({ error: null });
+    await save;
+    expect(wrapper.emitted('update:visible')).toBeUndefined();
   });
 });

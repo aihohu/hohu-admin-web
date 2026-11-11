@@ -2,6 +2,17 @@ import { runtimeSettings, uploadScenario, validateUploadPolicy } from '@/utils/r
 import { $t } from '@/locales';
 import { request } from '../request';
 
+export function fetchRelationForm<T extends object>(
+  surface: 'role' | 'dept' | 'menu',
+  params: Api.SystemManage.RelationFormQuery
+) {
+  return request<Api.SystemManage.RelationFormContext<T>>({
+    url: `/system/${surface}/form-context`,
+    method: 'get',
+    params
+  });
+}
+
 /** get role list */
 export function fetchGetRoleList(params?: Api.SystemManage.RoleSearchParams) {
   return request<Api.SystemManage.RoleList>({
@@ -34,7 +45,7 @@ export function fetchSaveRole(data: Api.SystemManage.CreateRoleParams) {
   });
 }
 
-export function fetchUpdateRole(roleId: string, data: Api.SystemManage.UpdateRoleParams) {
+export function fetchUpdateRole(roleId: string, data: Partial<Api.SystemManage.UpdateRoleParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/role/${roleId}`,
     method: 'put',
@@ -325,7 +336,7 @@ export function fetchSaveMenu(data: Api.SystemManage.CreateMenuParams) {
   });
 }
 
-export function fetchUpdateMenu(menuId: string, data: Api.SystemManage.CreateMenuParams) {
+export function fetchUpdateMenu(menuId: string, data: Partial<Api.SystemManage.CreateMenuParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/menu/${menuId}`,
     method: 'put',
@@ -457,6 +468,14 @@ export function fetchBatchDeleteDictData(data: string[]) {
 }
 
 /** get dept tree */
+export function fetchGetDeptTreePage(params?: Api.SystemManage.DeptSearchParams) {
+  return request<Api.SystemManage.OrdinaryPage<Api.SystemManage.DeptTree>>({
+    url: '/system/dept/tree-list',
+    method: 'get',
+    params
+  });
+}
+
 export function fetchGetDeptTree(params?: Api.SystemManage.DeptSearchParams) {
   return request<Api.SystemManage.DeptTree[]>({
     url: '/system/dept/tree',
@@ -483,7 +502,7 @@ export function fetchSaveDept(data: Api.SystemManage.DeptCreateParams) {
 }
 
 /** update dept */
-export function fetchUpdateDept(deptId: string, data: Api.SystemManage.DeptUpdateParams) {
+export function fetchUpdateDept(deptId: string, data: Partial<Api.SystemManage.DeptUpdateParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/dept/${deptId}`,
     method: 'put',
