@@ -58,6 +58,40 @@ function setup(repo = repository()) {
 }
 
 describe('real policy management draft lifecycle', () => {
+  it('loads all ten catalog objects without inheriting a grant for a new control object', async () => {
+    const { model, repo, scope } = setup();
+    const ids = [
+      'system.user',
+      'system.dict_type',
+      'system.dict_data',
+      'system.data_scope_demo',
+      'system.role',
+      'system.dept',
+      'system.menu',
+      'system.config',
+      'system.setting',
+      'job.definition'
+    ];
+    repo.catalog.mockResolvedValue({
+      ...context,
+      objects: ids.map(objectId => ({ objectId, fields: [] })),
+      complete: true,
+      nextCursor: null
+    });
+    await model.load();
+    expect(model.catalog.value?.objects.map(object => object.objectId)).toEqual(ids);
+    repo.object.mockResolvedValue({
+      ...context,
+      objectId: 'system.setting',
+      role: { roleId: '201' },
+      bindingVersion: '0',
+      rules: []
+    });
+    await model.load('system.setting');
+    expect(model.rules.value).toEqual([]);
+    expect(model.manifest.value?.canActivate).toBe(false);
+    scope.stop();
+  });
   it('rejects a manifest returned for another tenant', async () => {
     const { model, repo, scope } = setup();
     repo.manifest.mockResolvedValue({ ...context, tenantId: '1' });

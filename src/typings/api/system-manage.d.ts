@@ -23,6 +23,16 @@ declare namespace Api {
       complete: Record<string, boolean>;
     };
     type RelationFormContext<T> = { record: Partial<T> | null; fieldPolicy: RelationCapabilities };
+    type ControlCapabilities = RelationCapabilities & {
+      controlActions: { canImport: boolean; canExport: boolean; canRun: boolean };
+    };
+    type ControlFormQuery = { mode: 'create' | 'update'; recordId?: string };
+    type ControlFormContext<T> = Omit<RelationFormContext<T>, 'fieldPolicy'> & {
+      fieldPolicy: ControlCapabilities;
+      formReceipt: string;
+      publicationRevision?: string;
+      revocationRevision?: string;
+    };
     type DictTypeCreateParams = {
       dictName: string;
       dictType: string;
@@ -589,7 +599,7 @@ declare namespace Api {
     type JobConcurrent = '1' | '2';
 
     /** scheduled job */
-    type Job = {
+    type JobRecord = {
       jobId: string;
       jobName: string;
       jobKey: string;
@@ -615,15 +625,17 @@ declare namespace Api {
       nextRunTime: string | null;
     };
 
+    type Job = Partial<Omit<JobRecord, 'jobId'>> & { jobId: string; fieldPolicy?: ControlCapabilities };
+
     /** job search params */
     type JobSearchParams = CommonType.RecordNullable<Pick<Job, 'jobName' | 'jobKey' | 'status'> & CommonSearchParams>;
 
     /** job list */
-    type JobList = Common.PaginatingQueryRecord<Job>;
+    type JobList = Common.PaginatingQueryRecord<Job> & { fieldPolicy: ControlCapabilities };
 
     /** job create params */
     type JobCreateParams = Pick<
-      Job,
+      JobRecord,
       | 'jobName'
       | 'jobKey'
       | 'cronExpression'
@@ -638,11 +650,17 @@ declare namespace Api {
       | 'runOnEnable'
       | 'remark'
     >;
+    type JobMetadataParams = Partial<Pick<JobRecord, 'jobName' | 'remark'>> & { jobId: string; formReceipt: string };
+    type JobScheduleParams = Partial<Omit<JobCreateParams, 'jobName' | 'jobKey' | 'status' | 'remark'>> & {
+      jobId: string;
+    };
+    type JobDelivery = { notificationStatus: 'notified' | 'unconfirmed' } | null;
 
     /** registered task */
     type RegisteredTask = {
       key: string;
-      name: string;
+      labelKey: string;
+      parameters: Record<string, unknown>;
     };
 
     /** job log */
@@ -671,7 +689,7 @@ declare namespace Api {
     type JobLogList = Common.PaginatingQueryRecord<JobLog>;
 
     /** system config */
-    type Config = Common.CommonRecord<{
+    type ConfigRecord = Common.CommonRecord<{
       /** config id */
       configId: string;
       /** config name */
@@ -689,6 +707,7 @@ declare namespace Api {
       /** remark */
       remark: string | null;
     }>;
+    type Config = Partial<Omit<ConfigRecord, 'configId'>> & { configId: string; fieldPolicy?: ControlCapabilities };
 
     /** config search params */
     type ConfigSearchParams = CommonType.RecordNullable<
@@ -696,12 +715,12 @@ declare namespace Api {
     >;
 
     /** config list */
-    type ConfigList = Common.PaginatingQueryRecord<Config>;
+    type ConfigList = Common.PaginatingQueryRecord<Config> & { fieldPolicy: ControlCapabilities };
 
     /** config create params */
     type ConfigCreateParams = Pick<
-      Api.SystemManage.Config,
-      'configName' | 'configKey' | 'configValue' | 'configType' | 'configGroup' | 'status' | 'isPublic' | 'remark'
+      Api.SystemManage.ConfigRecord,
+      'configName' | 'configKey' | 'configValue' | 'configType' | 'configGroup' | 'status' | 'remark'
     >;
 
     /** operation log */

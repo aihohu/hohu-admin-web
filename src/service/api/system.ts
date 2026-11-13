@@ -637,8 +637,8 @@ export function fetchGetRegisteredTasks() {
 }
 
 /** save job */
-export function fetchSaveJob(data: Api.SystemManage.JobCreateParams) {
-  return request<App.Service.Response<any>>({
+export function fetchSaveJob(data: Api.SystemManage.JobCreateParams & { formReceipt: string }) {
+  return request<Api.SystemManage.JobDelivery>({
     url: '/system/job/add',
     method: 'post',
     data
@@ -646,8 +646,8 @@ export function fetchSaveJob(data: Api.SystemManage.JobCreateParams) {
 }
 
 /** update job */
-export function fetchUpdateJob(data: Api.SystemManage.JobCreateParams & { jobId: string }) {
-  return request<App.Service.Response<any>>({
+export function fetchUpdateJob(data: Api.SystemManage.JobMetadataParams) {
+  return request<null>({
     url: '/system/job/update',
     method: 'put',
     data
@@ -656,7 +656,7 @@ export function fetchUpdateJob(data: Api.SystemManage.JobCreateParams & { jobId:
 
 /** update job status */
 export function fetchUpdateJobStatus(jobId: string, status: string) {
-  return request<App.Service.Response<any>>({
+  return request<Api.SystemManage.JobDelivery>({
     url: '/system/job/status',
     method: 'put',
     params: { jobId, status }
@@ -682,7 +682,7 @@ export function fetchBatchDeleteJob(data: string[]) {
 
 /** run job now */
 export function fetchRunJobNow(jobId: string) {
-  return request<App.Service.Response<any>>({
+  return request<Api.SystemManage.JobDelivery>({
     url: `/system/job/run/${jobId}`,
     method: 'post'
   });
@@ -725,8 +725,8 @@ export function fetchGetConfigList(params?: Api.SystemManage.ConfigSearchParams)
 }
 
 /** save config */
-export function fetchSaveConfig(data: Api.SystemManage.ConfigCreateParams) {
-  return request<App.Service.Response<any>>({
+export function fetchSaveConfig(data: Api.SystemManage.ConfigCreateParams & { formReceipt: string }) {
+  return request<null>({
     url: '/system/config/add',
     method: 'post',
     data
@@ -734,8 +734,11 @@ export function fetchSaveConfig(data: Api.SystemManage.ConfigCreateParams) {
 }
 
 /** update config */
-export function fetchUpdateConfig(configId: string, data: Api.SystemManage.ConfigCreateParams) {
-  return request<App.Service.Response<any>>({
+export function fetchUpdateConfig(
+  configId: string,
+  data: Partial<Api.SystemManage.ConfigCreateParams> & { formReceipt: string }
+) {
+  return request<null>({
     url: `/system/config/${configId}`,
     method: 'put',
     data
@@ -761,11 +764,11 @@ export function fetchBatchDeleteConfig(data: string[]) {
 
 /** export config to excel */
 export function fetchExportConfig(params?: Api.SystemManage.ConfigSearchParams) {
-  return request<Blob>({
+  return request<Blob, 'blob'>({
     url: '/system/config/export',
     method: 'get',
     params,
-    responseType: 'blob' as any
+    responseType: 'blob'
   });
 }
 

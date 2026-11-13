@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
 import type { FormInst } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import { jsonClone } from '@sa/utils';
@@ -13,6 +13,7 @@ import {
   fetchDeleteProviderModel
 } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
+import { sameDraftValue } from '@/hooks/business/ordinary-fields';
 
 const { t } = useI18n();
 
@@ -53,6 +54,13 @@ type Model = Api.Ai.ProviderCreateParams;
 const model = ref<Model>(createDefaultModel());
 const loading = ref(false);
 const savedProviderFingerprint = ref('');
+const initialProvider = ref<Model | null>(null);
+let initialGeneration: { maxTokens: number | null; temperature: number | null } | null = null;
+let generation = 0;
+const current = (token: number) => token === generation && visible.value;
+onScopeDispose(() => {
+  generation += 1;
+});
 
 function providerFingerprint(value: Model): string {
   return JSON.stringify({
@@ -95,16 +103,25 @@ const modelMaxTokens = ref<number | null>(null);
 const modelTemperature = ref<number | null>(null);
 
 function currentModelPayload(): Api.Ai.AiModelCreateParams {
-  return {
-    ...newModel.value,
-    config: {
-      ...newModel.value.config,
+  const payload: Api.Ai.AiModelCreateParams = {
+    name: newModel.value.name,
+    capabilities: [...newModel.value.capabilities],
+    baseUrl: newModel.value.baseUrl,
+    isEnabled: newModel.value.isEnabled,
+    sortOrder: newModel.value.sortOrder
+  };
+  if (
+    !editingModel.value ||
+    !sameDraftValue(initialGeneration, { maxTokens: modelMaxTokens.value, temperature: modelTemperature.value })
+  ) {
+    payload.config = {
       generation: {
         ...(modelMaxTokens.value === null ? {} : { max_tokens: modelMaxTokens.value }),
         ...(modelTemperature.value === null ? {} : { temperature: modelTemperature.value })
       }
-    }
-  };
+    };
+  }
+  return payload;
 }
 
 function currentTestFingerprint(): string {
@@ -165,20 +182,23 @@ function createEmptyModelForm(): Api.Ai.AiModelCreateParams {
 
 async function loadProviderModels() {
   if (props.operateType !== 'edit' || !props.rowData) return;
+  const token = generation;
+  const providerId = props.rowData.providerId;
   modelsLoading.value = true;
   try {
-    const { data, error } = await fetchGetProviderModels(props.rowData.providerId);
-    if (!error && data) {
+    const { data, error } = await fetchGetProviderModels(providerId);
+    if (current(token) && !error && data) {
       providerModels.value = data;
     }
   } finally {
-    modelsLoading.value = false;
+    if (current(token)) modelsLoading.value = false;
   }
 }
 
 function openAddModel() {
   if (loading.value || modelSaving.value || testingModel.value) return;
   editingModel.value = null;
+  initialGeneration = null;
   modelMaxTokens.value = null;
   modelTemperature.value = null;
   newModel.value = createEmptyModelForm();
@@ -190,9 +210,10 @@ function openAddModel() {
 function openEditModel(m: Api.Ai.AiModel) {
   if (loading.value || modelSaving.value || testingModel.value) return;
   editingModel.value = m;
-  const generation = m.config?.generation as { max_tokens?: number; temperature?: number } | undefined;
-  modelMaxTokens.value = generation?.max_tokens ?? null;
-  modelTemperature.value = generation?.temperature ?? null;
+  const savedGeneration = m.config?.generation as { max_tokens?: number; temperature?: number } | undefined;
+  modelMaxTokens.value = savedGeneration?.max_tokens ?? null;
+  modelTemperature.value = savedGeneration?.temperature ?? null;
+  initialGeneration = { maxTokens: modelMaxTokens.value, temperature: modelTemperature.value };
   newModel.value = {
     name: m.name,
     capabilities: [...m.capabilities],
@@ -213,6 +234,7 @@ function cancelModelForm() {
 
 async function saveModel() {
   if (loading.value || modelSaving.value || testingModel.value) return;
+  const token = generation;
   modelSaving.value = true;
   try {
     const payload = currentModelPayload();
@@ -221,6 +243,7 @@ async function saveModel() {
     } catch {
       return;
     }
+    if (!current(token)) return;
 
     if (props.operateType === 'add') {
       // 新增模式：暂存到本地列表
@@ -234,12 +257,12 @@ async function saveModel() {
     const { error } = editingModel.value
       ? await fetchUpdateProviderModel(providerId, editingModel.value.modelId, payload)
       : await fetchAddProviderModel(providerId, payload);
-    if (error) return;
+    if (!current(token) || error) return;
     window.$message?.success(t(editingModel.value ? 'common.updateSuccess' : 'common.addSuccess'));
     showModelForm.value = false;
     await loadProviderModels();
   } finally {
-    modelSaving.value = false;
+    if (current(token)) modelSaving.value = false;
   }
 }
 
@@ -248,22 +271,32 @@ function removePendingModel(index: number) {
 }
 
 async function deleteModel(m: Api.Ai.AiModel) {
-  if (!props.rowData) return;
-  const { error } = await fetchDeleteProviderModel(props.rowData.providerId, m.modelId);
-  if (!error) {
-    window.$message?.success(t('common.deleteSuccess'));
-    await loadProviderModels();
+  if (!props.rowData || loading.value || modelSaving.value || testingModel.value) return;
+  const token = generation;
+  modelSaving.value = true;
+  try {
+    const { error } = await fetchDeleteProviderModel(props.rowData.providerId, m.modelId);
+    if (current(token) && !error) {
+      window.$message?.success(t('common.deleteSuccess'));
+      await loadProviderModels();
+    }
+  } finally {
+    if (current(token)) modelSaving.value = false;
   }
 }
 
 async function handleTestModel() {
   if (!showModelForm.value || testingModel.value || loading.value || modelSaving.value) return;
+  const token = generation;
+  testingModel.value = true;
   try {
     await validate();
     await modelFormRef.value?.validate();
   } catch {
+    if (current(token)) testingModel.value = false;
     return;
   }
+  if (!current(token)) return;
   const payload: Api.Ai.ProviderModelTestRequest = {
     ...(props.rowData ? { providerId: props.rowData.providerId } : {}),
     providerCode: model.value.providerCode,
@@ -277,17 +310,19 @@ async function handleTestModel() {
   testResult.value = null;
   try {
     const { error } = await fetchTestProviderModel(payload);
+    if (!current(token)) return;
     testResult.value = error ? 'failed' : 'passed';
     testedFingerprint.value = fingerprint;
     if (!error) {
       window.$message?.success(t('page.ai.provider.modelTestSuccess', { name: payload.model.name }));
     }
   } catch {
+    if (!current(token)) return;
     testResult.value = 'failed';
     testedFingerprint.value = fingerprint;
     window.$message?.error(t('page.ai.provider.testFailed'));
   } finally {
-    testingModel.value = false;
+    if (current(token)) testingModel.value = false;
   }
 }
 
@@ -317,9 +352,11 @@ function handleInitModel() {
       config: cloned.config
     });
     savedProviderFingerprint.value = providerFingerprint(model.value);
+    initialProvider.value = jsonClone(model.value);
     loadProviderModels();
   } else {
     savedProviderFingerprint.value = providerFingerprint(model.value);
+    initialProvider.value = null;
   }
 }
 
@@ -330,6 +367,7 @@ function closeDrawer() {
 
 async function handleSubmit() {
   if (showModelForm.value || loading.value || modelSaving.value || testingModel.value) return;
+  const token = generation;
   loading.value = true;
   try {
     try {
@@ -337,36 +375,58 @@ async function handleSubmit() {
     } catch {
       return;
     }
+    if (!current(token)) return;
     let res;
     if (props.operateType === 'edit' && props.rowData) {
-      res = await fetchUpdateProvider(props.rowData.providerId, model.value);
+      const before = initialProvider.value;
+      const payload = Object.fromEntries(
+        Object.entries(model.value).filter(
+          ([key, value]) =>
+            key !== 'config' &&
+            (key !== 'apiKey' || value !== '') &&
+            !sameDraftValue(value, before?.[key as keyof Model])
+        )
+      );
+      res = await fetchUpdateProvider(props.rowData.providerId, payload);
     } else {
       res = await fetchSaveProvider(model.value);
     }
     const { error, data } = res;
+    if (!current(token)) return;
     if (!error) {
       // 新增模式：批量保存待处理的模型
       if (props.operateType === 'add' && data?.providerId && pendingModels.value.length > 0) {
         const providerId = data.providerId;
         for (const pm of pendingModels.value) {
+          if (!current(token)) return;
           await fetchAddProviderModel(providerId, pm);
         }
       }
+      if (!current(token)) return;
       window.$message?.success(props.operateType === 'edit' ? t('common.updateSuccess') : t('common.addSuccess'));
       visible.value = false;
       emit('submitted');
     }
   } finally {
-    loading.value = false;
+    if (current(token)) loading.value = false;
   }
 }
 
-watch(visible, () => {
-  if (visible.value) {
-    handleInitModel();
-    restoreValidation();
-  }
-});
+watch(
+  [visible, () => props.operateType, () => props.rowData?.providerId],
+  () => {
+    generation += 1;
+    loading.value = false;
+    modelSaving.value = false;
+    modelsLoading.value = false;
+    testingModel.value = false;
+    if (visible.value) {
+      handleInitModel();
+      restoreValidation();
+    }
+  },
+  { immediate: true, flush: 'sync' }
+);
 
 defineExpose({ handleTestModel, model, providerFormDirty, providerModels });
 </script>

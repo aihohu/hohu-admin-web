@@ -2,10 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { $t, setLocale } from '@/locales';
 
 describe('field policy purpose labels', () => {
+  it('compiles the task argument hint in both real locale messages', () => {
+    for (const locale of ['zh-CN', 'en-US'] as const) {
+      setLocale(locale);
+      expect(() => $t('fieldPolicy.emptyTaskArgs')).not.toThrow();
+      expect($t('fieldPolicy.emptyTaskArgs')).not.toBe('fieldPolicy.emptyTaskArgs');
+    }
+    setLocale('zh-CN');
+  });
   it.each([
     'system_role',
     'system_dept',
     'system_menu',
+    'system_config',
+    'system_setting',
+    'job_definition',
+    'config_value',
+    'job_args',
+    'next_run_time',
+    'default_avatar',
+    'upload:max_bytes',
+    'auth:default_password',
     'role_name',
     'leader',
     'menu_name',
