@@ -100,6 +100,23 @@ beforeEach(() => {
 });
 
 describe('real control drawer requests', () => {
+  it('explains an empty form when only the structural anchor is readable', async () => {
+    mocks.configForm.mockResolvedValueOnce({
+      data: {
+        record: { configId: '1' },
+        formReceipt: 'receipt',
+        fieldPolicy: { ...policy, read: ['config_id'], readLevels: { config_id: 'plain' }, update: [] }
+      }
+    });
+    const wrapper = mount(ConfigDrawer, {
+      props: { visible: true, operateType: 'edit', rowData: { configId: '1' } },
+      global: { stubs }
+    });
+    await flushPromises();
+    expect(wrapper.find('n-empty-stub').exists()).toBe(true);
+    expect(wrapper.findAll('footer button')).toHaveLength(1);
+    wrapper.unmount();
+  });
   it('requires a new snapshot after a rejected configuration save', async () => {
     mocks.configUpdate.mockResolvedValueOnce({ error: new Error('stale receipt') });
     const wrapper = mount(ConfigDrawer, {

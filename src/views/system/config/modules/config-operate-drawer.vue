@@ -237,7 +237,7 @@ watch([visible, () => props.rowData?.configId, () => props.operateType], () => {
           </NFormItem>
         </NForm>
         <NEmpty
-          v-if="ready && !Object.keys(model).length && !form.policy.value?.update.length"
+          v-if="ready && !Object.keys(createDefaultModel()).some(present)"
           :description="$t('fieldPolicy.noVisibleFields')"
         />
         <ConfigPublication
