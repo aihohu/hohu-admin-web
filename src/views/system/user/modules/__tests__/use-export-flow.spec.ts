@@ -80,6 +80,46 @@ describe('summarizeFilter', () => {
 });
 
 describe('useExportFlow', () => {
+  it.each(['empty', 'html'])('rejects %s export responses without downloading', async kind => {
+    const blob = kind === 'empty' ? new Blob([]) : new Blob(['denied'], { type: 'text/html' });
+    vi.mocked(fetchExportUsers).mockResolvedValue(ok(blob));
+    const create = vi.spyOn(URL, 'createObjectURL');
+    const flow = useExportFlow();
+    flow.reason.value = 'owned export';
+    expect(await flow.confirmExport()).toBe(false);
+    expect(create).not.toHaveBeenCalled();
+    expect(flow.loading.value).toBe(false);
+    create.mockRestore();
+  });
+  it('does not silently broaden an export with unsupported list filters', async () => {
+    const flow = useExportFlow();
+    flow.reason.value = 'audit';
+    flow.setFilter({ userGender: '1', roleCode: 'R_EDITOR' } as Api.SystemManage.UserSearchParams);
+    expect(flow.canExport.value).toBe(false);
+    expect(await flow.confirmExport()).toBe(false);
+    expect(fetchExportUsers).not.toHaveBeenCalled();
+    expect(flow.errorCode.value).toBe('FILTER_UNSUPPORTED');
+  });
+  it('ignores a completed request after reset and prevents double submission', async () => {
+    let complete!: (value: ApiResult<Blob>) => void;
+    vi.mocked(fetchExportUsers).mockImplementation(
+      () =>
+        new Promise(resolve => {
+          complete = resolve;
+        })
+    );
+    const create = vi.spyOn(URL, 'createObjectURL');
+    const flow = useExportFlow();
+    flow.reason.value = 'audit';
+    const first = flow.confirmExport();
+    await flow.confirmExport();
+    expect(fetchExportUsers).toHaveBeenCalledOnce();
+    flow.reset();
+    complete(ok(new Blob(['xlsx'])));
+    expect(await first).toBe(false);
+    expect(create).not.toHaveBeenCalled();
+    create.mockRestore();
+  });
   let messageSpy: any;
 
   beforeEach(() => {
@@ -110,7 +150,7 @@ describe('useExportFlow', () => {
     const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:export-url');
     const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
     const clickSpy = vi.fn();
-    const anchorEl = { click: clickSpy, href: '', download: '' } as any;
+    const anchorEl = { click: clickSpy, remove: vi.fn(), href: '', download: '' } as any;
     const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(anchorEl);
     const appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => anchorEl);
     const removeSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => anchorEl);
@@ -133,6 +173,7 @@ describe('useExportFlow', () => {
     expect(createObjectURLSpy).toHaveBeenCalledWith(blob);
     expect(anchorEl.download).toMatch(/^hohu_users_\d{8}_\d{6}\.xlsx$/);
     expect(clickSpy).toHaveBeenCalled();
+    expect(anchorEl.remove).toHaveBeenCalled();
     expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:export-url');
     expect(messageSpy.success).toHaveBeenCalledWith('common.exportModal.exportSuccess');
     expect(onExported).toHaveBeenCalled();

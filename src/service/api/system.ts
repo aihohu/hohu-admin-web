@@ -561,7 +561,7 @@ export async function fetchUploadFile(file: File, businessType?: string, busines
   if (businessId) {
     formData.append('business_id', businessId);
   }
-  return request<Api.SystemManage.FileRecord>({
+  return request<Api.SystemManage.FileUploadReceipt>({
     url: '/system/file/upload',
     method: 'post',
     data: formData
@@ -586,7 +586,7 @@ export async function fetchBatchUploadFiles(files: File[], businessType?: string
   if (businessId) {
     formData.append('business_id', businessId);
   }
-  return request<Api.SystemManage.FileRecord[]>({
+  return request<Api.SystemManage.FileUploadReceipt[]>({
     url: '/system/file/batch-upload',
     method: 'post',
     data: formData
@@ -599,6 +599,15 @@ export function fetchGetFileList(params?: Api.SystemManage.FileSearchParams) {
     url: '/system/file/list',
     method: 'get',
     params
+  });
+}
+
+/** delete file */
+export function fetchDownloadFile(fileId: string) {
+  return request<Blob>({
+    url: `/system/file/${encodeURIComponent(fileId)}/download`,
+    method: 'get',
+    responseType: 'blob' as any
   });
 }
 

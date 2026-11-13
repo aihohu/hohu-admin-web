@@ -284,7 +284,8 @@ declare namespace Api {
       | 'CANCELLED';
 
     /** import batch summary returned by list and detail endpoints */
-    type UserImportBatch = {
+    type TransferCapabilities = { read: string[]; query: string[]; canDownload: boolean; canCancel: boolean };
+    type UserImportBatch = { batchId: string; fieldPolicy?: TransferCapabilities } & Partial<{
       batchId: string;
       status: UserImportBatchStatus;
       filename: string | null;
@@ -306,7 +307,7 @@ declare namespace Api {
       startedAt: string | null;
       finishedAt: string | null;
       expiresAt: string | null;
-    };
+    }>;
 
     /** import batch list filters */
     type UserImportBatchQuery = CommonSearchParams & {
@@ -317,20 +318,21 @@ declare namespace Api {
     };
 
     /** paginated import batch list */
-    type UserImportBatchList = Common.PaginatingQueryRecord<UserImportBatch>;
+    type UserImportBatchList = Common.PaginatingQueryRecord<UserImportBatch> & { fieldPolicy?: TransferCapabilities };
 
     /** audited import batch transition or action */
-    type UserImportBatchLog = {
+    type UserImportBatchLog = { logId: string; fieldPolicy?: TransferCapabilities } & Partial<{
       logId: string;
       batchId: string;
       event: string;
       fromStatus: UserImportBatchStatus | null;
       toStatus: UserImportBatchStatus | null;
       detail: Record<string, unknown> | null;
+      counts: Record<string, number> | null;
       operatorId: string | null;
       operatorName: string | null;
       createdAt: string;
-    };
+    }>;
 
     /** import batch log filters */
     type UserImportBatchLogQuery = CommonSearchParams & {
@@ -338,7 +340,9 @@ declare namespace Api {
     };
 
     /** paginated batch log list */
-    type UserImportBatchLogList = Common.PaginatingQueryRecord<UserImportBatchLog>;
+    type UserImportBatchLogList = Common.PaginatingQueryRecord<UserImportBatchLog> & {
+      fieldPolicy?: TransferCapabilities;
+    };
 
     /** user export filters and mandatory audit reason */
     type UserExportRequest = {
@@ -357,7 +361,7 @@ declare namespace Api {
     type UserExportTaskStatus = 'CREATED' | 'SUCCESS' | 'FAILED';
 
     /** persisted user export task */
-    type UserExportTask = {
+    type UserExportTask = { exportId: string; fieldPolicy?: TransferCapabilities } & Partial<{
       exportId: string;
       operatorId: string;
       operatorName: string | null;
@@ -370,7 +374,7 @@ declare namespace Api {
       createdAt: string;
       finishedAt: string | null;
       expiresAt: string | null;
-    };
+    }>;
 
     /** export task list filters */
     type UserExportTaskQuery = CommonSearchParams & {
@@ -379,7 +383,7 @@ declare namespace Api {
     };
 
     /** paginated export task list */
-    type UserExportTaskList = Common.PaginatingQueryRecord<UserExportTask>;
+    type UserExportTaskList = Common.PaginatingQueryRecord<UserExportTask> & { fieldPolicy?: TransferCapabilities };
 
     /** user profile */
     type UserProfile = { userId: string } & Partial<{
@@ -558,13 +562,11 @@ declare namespace Api {
     };
 
     /** file record */
-    type FileRecord = {
+    type FileRecord = { fileId: string; fieldPolicy: FileCapabilities } & Partial<{
       /** file id */
-      fileId: string;
       /** original filename */
       originalName: string;
       /** access url */
-      fileUrl: string;
       /** file size in bytes */
       fileSize: number;
       /** file extension */
@@ -577,9 +579,13 @@ declare namespace Api {
       businessId: string | null;
       /** uploader */
       createBy: string | null;
+      ownerName: string | null;
       /** upload time */
       createTime: string;
-    };
+    }>;
+
+    type FileCapabilities = RelationCapabilities & { canDownload: boolean };
+    type FileUploadReceipt = Omit<FileRecord, 'fieldPolicy'> & { fileUrl: string };
 
     /** file search params */
     type FileSearchParams = CommonType.RecordNullable<
@@ -587,7 +593,7 @@ declare namespace Api {
     >;
 
     /** file list */
-    type FileList = Common.PaginatingQueryRecord<FileRecord>;
+    type FileList = Common.PaginatingQueryRecord<FileRecord> & { fieldPolicy: FileCapabilities };
 
     /** job status */
     type JobStatus = Api.Common.EnableStatus;

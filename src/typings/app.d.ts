@@ -462,6 +462,7 @@ declare namespace App {
             REASON_REQUIRED: string;
             ASYNC_REQUIRED: string;
             EXPORT_FAILED: string;
+            FILTER_UNSUPPORTED: string;
           };
         };
         importHistoryDrawer: {
@@ -971,6 +972,8 @@ declare namespace App {
             uploader: string;
             uploadTime: string;
             copyLink: string;
+            downloadFile: string;
+            downloadFailed: string;
             confirmDelete: string;
             linkCopied: string;
             linkCopyFailed: string;
