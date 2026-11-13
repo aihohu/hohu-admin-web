@@ -1,4 +1,4 @@
-import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
+import { computed, onScopeDispose, reactive, ref, shallowRef, watch } from 'vue';
 import type { Ref } from 'vue';
 import { editablePayload, fieldAllowed, sameDraftValue } from './ordinary-fields';
 
@@ -34,7 +34,7 @@ export function useControlForm<T extends object>(options: Options<T>) {
   let generation = 0;
   let before: Partial<T> | null = null;
   let observed: Partial<T> = {};
-  const touched = new Set<string>();
+  const touched = reactive(new Set<string>());
   function session() {
     return generation;
   }

@@ -1,4 +1,4 @@
-import { effectScope, ref } from 'vue';
+import { computed, effectScope, ref } from 'vue';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { useControlForm } from '../control-form';
@@ -38,6 +38,15 @@ async function setup(load = vi.fn().mockResolvedValue({ data: structuredClone(co
   return { visible, target, scope, form, load };
 }
 describe('control form receipts and sparse drafts', () => {
+  it('enables saving when an existing readable value changes', async () => {
+    const { form, scope } = await setup();
+    const dirty = computed(() => Object.keys(form.payload()).length > 0);
+    expect(dirty.value).toBe(false);
+    form.model.value.remark = 'Changed readable metadata';
+    expect(dirty.value).toBe(true);
+    expect(form.payload()).toEqual({ remark: 'Changed readable metadata' });
+    scope.stop();
+  });
   it('omits untouched blind inputs and special commands from ordinary metadata', async () => {
     const { form, scope } = await setup();
     expect(form.payload()).toEqual({});
