@@ -10,6 +10,9 @@ export interface SettingField {
 export interface SettingGroup {
   mailReady?: boolean;
   roleOptions?: { label: string; value: string }[];
+  roleOptionsComplete?: boolean;
+  fieldPolicy: Api.SystemManage.RelationCapabilities;
+  formReceipt?: string;
   group: string;
   values: Record<string, string | number | boolean>;
   revision: string;
@@ -62,7 +65,7 @@ export function fetchSettingGroups() {
 export function fetchSettingGroup(group: string) {
   return request<SettingGroup>({ url: `/system/setting/${group}`, method: 'get' });
 }
-export function saveSettingGroup(group: string, data: Pick<SettingGroup, 'values' | 'revision'>) {
+export function saveSettingGroup(group: string, data: Pick<SettingGroup, 'values' | 'revision' | 'formReceipt'>) {
   return request<SettingGroup>({ url: `/system/setting/${group}`, method: 'put', data });
 }
 export function fetchPublicSettings() {

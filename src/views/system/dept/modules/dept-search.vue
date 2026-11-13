@@ -4,6 +4,8 @@ import { jsonClone } from '@sa/utils';
 import { enableStatusOptions } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+const props = defineProps<{ allowedFields?: string[] }>();
 
 defineOptions({
   name: 'DeptSearch'
@@ -34,13 +36,31 @@ function search() {
       <NCollapseItem :title="$t('common.search')" name="dept-search">
         <NForm :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.dept.deptName')" path="deptName" class="pr-24px">
+            <NFormItemGi
+              v-if="fieldAllowed(props.allowedFields, 'deptName')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.dept.deptName')"
+              path="deptName"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.deptName" :placeholder="$t('page.system.dept.form.deptName')" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.dept.leader')" path="leader" class="pr-24px">
+            <NFormItemGi
+              v-if="fieldAllowed(props.allowedFields, 'leader')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.dept.leader')"
+              path="leader"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.leader" :placeholder="$t('page.system.dept.form.leader')" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.dept.deptStatus')" path="status" class="pr-24px">
+            <NFormItemGi
+              v-if="fieldAllowed(props.allowedFields, 'status')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.dept.deptStatus')"
+              path="status"
+              class="pr-24px"
+            >
               <NSelect
                 v-model:value="model.status"
                 :placeholder="$t('page.system.dept.form.deptStatus')"

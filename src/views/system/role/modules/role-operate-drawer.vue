@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { jsonClone } from '@sa/utils';
 import { enableStatusOptions, roleDataScopeOptions } from '@/constants/business';
-import { fetchGetDeptTreeOption, fetchSaveRole, fetchUpdateRole } from '@/service/api';
+import { fetchGetDeptTreeOption, fetchRelationForm, fetchSaveRole, fetchUpdateRole } from '@/service/api';
+import { useRelationForm } from '@/hooks/business/relation-form';
+import { completeTreeIds } from '@/hooks/business/relation-tree';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { getServerErrorMessage, useServerFieldErrors } from '@/hooks/common/server-field-errors';
 import { $t } from '@/locales';
@@ -43,11 +44,21 @@ const title = computed(() => {
   return titles[props.operateType];
 });
 
-type Model = Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'roleDesc' | 'dataScope' | 'status'> & {
+type Model = Omit<Api.SystemManage.CreateRoleParams, 'deptIds'> & {
   deptIds: string[];
 };
 
-const model = ref(createDefaultModel());
+const form = useRelationForm<Model>({
+  visible,
+  mode: () => (props.operateType === 'edit' ? 'update' : 'create'),
+  target: () => props.rowData?.roleId,
+
+  defaults: createDefaultModel,
+  load: query => fetchRelationForm<Model>('role', query)
+});
+const { model, ready, editable, present } = form;
+
+const treeReady = ref(false);
 
 function createDefaultModel(): Model {
   return {
@@ -68,29 +79,35 @@ const rules: Record<RuleKey, App.Global.FormRule> = {
   status: defaultRequiredRule
 };
 
+const activeRules = computed(() =>
+  Object.fromEntries(
+    Object.entries(rules).filter(([key]) =>
+      props.operateType === 'add' ? editable(key) : Object.hasOwn(form.payload(), key)
+    )
+  )
+);
+
 const loading = ref(false);
 
 const showDeptTree = computed(() => model.value.dataScope === '2');
 
 const deptTreeData = ref<Api.SystemManage.DeptTreeOption[]>([]);
+const treeComplete = computed(() => {
+  if (!ready.value || !treeReady.value) return false;
+  const ids = completeTreeIds(deptTreeData.value);
+  if (!ids) return false;
+  if (props.operateType === 'add') return true;
+  const original = form.initial()?.deptIds;
+  return Array.isArray(original) && original.every(id => ids.has(id));
+});
 
 async function loadDeptTree() {
-  const { data } = await fetchGetDeptTreeOption();
-  if (data) {
+  const token = form.session();
+  treeReady.value = false;
+  const { data, error } = await fetchGetDeptTreeOption();
+  if (form.current(token) && !error && data) {
+    treeReady.value = true;
     deptTreeData.value = data;
-  }
-}
-
-function handleInitModel() {
-  model.value = createDefaultModel();
-
-  if (props.operateType === 'edit' && props.rowData) {
-    const cloned = jsonClone(props.rowData);
-    Object.assign(model.value, {
-      ...cloned,
-      dataScope: cloned.dataScope || '1',
-      deptIds: cloned.deptIds || []
-    });
   }
 }
 
@@ -98,32 +115,23 @@ function closeDrawer() {
   visible.value = false;
 }
 
-function buildUpdatePayload(): Api.SystemManage.UpdateRoleParams {
-  const payload: Api.SystemManage.UpdateRoleParams = {
-    roleName: model.value.roleName || '',
-    roleDesc: model.value.roleDesc,
-    dataScope: model.value.dataScope || '1',
-    status: model.value.status || '1'
-  };
-  if (payload.dataScope === '2') {
-    payload.deptIds = model.value.deptIds;
-  }
-  return payload;
-}
-
 async function handleSubmit() {
+  if (!ready.value || loading.value) return;
+  const token = form.session();
   await validate();
+  if (!form.current(token)) return;
+  const payload = form.payload();
+  if (!Object.keys(payload).length) return;
+  if ((Object.hasOwn(payload, 'deptIds') || payload.dataScope === '2') && !treeComplete.value) return;
   loading.value = true;
   try {
     let res;
     if (props.operateType === 'edit' && props.rowData) {
-      res = await fetchUpdateRole(props.rowData.roleId, buildUpdatePayload());
+      res = await fetchUpdateRole(props.rowData.roleId, payload);
     } else {
-      const { deptIds, ...basePayload } = model.value;
-      const submitData: Api.SystemManage.CreateRoleParams =
-        model.value.dataScope === '2' ? { ...basePayload, deptIds } : basePayload;
-      res = await fetchSaveRole(submitData);
+      res = await fetchSaveRole(payload as Api.SystemManage.CreateRoleParams);
     }
+    if (!form.current(token)) return;
     const { error, response } = res;
     if (!error) {
       const successMsg =
@@ -135,15 +143,15 @@ async function handleSubmit() {
       window.$message?.error(getServerErrorMessage(error) || $t('common.modifyFailed'));
     }
   } finally {
-    loading.value = false;
+    if (form.current(token)) loading.value = false;
   }
 }
 
 watch(model, () => clearServerFieldErrors(), { deep: true });
 
-watch(visible, () => {
+watch([visible, () => props.rowData?.roleId, () => props.operateType], () => {
+  loading.value = false;
   if (visible.value) {
-    handleInitModel();
     restoreValidation();
     loadDeptTree();
   }
@@ -153,30 +161,53 @@ watch(visible, () => {
 <template>
   <NDrawer v-model:show="visible" display-directive="show" :width="360">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
-      <NForm ref="formRef" :model="model" :rules="rules">
-        <NFormItem v-bind="fieldProps('roleName')" :label="$t('page.system.role.roleName')" path="roleName">
-          <NInput v-model:value="model.roleName" :placeholder="$t('page.system.role.form.roleName')" />
+      <NAlert v-if="!form.loading.value && !ready" type="warning" class="mb-3">
+        {{ $t('fieldPolicy.relationUnavailable') }}
+      </NAlert>
+      <NForm ref="formRef" :model="model" :rules="activeRules" :disabled="loading || form.loading.value">
+        <NFormItem
+          v-if="present('roleName')"
+          v-bind="fieldProps('roleName')"
+          :label="$t('page.system.role.roleName')"
+          path="roleName"
+          :feedback="form.replacement('roleName') ? $t('fieldPolicy.replacementHint') : undefined"
+        >
+          <NInput
+            v-model:value="model.roleName"
+            :disabled="!editable('roleName')"
+            :placeholder="$t('page.system.role.form.roleName')"
+          />
         </NFormItem>
-        <NFormItem v-bind="fieldProps('roleCode')" :label="$t('page.system.role.roleCode')" path="roleCode">
+        <NFormItem
+          v-if="present('roleCode')"
+          v-bind="fieldProps('roleCode')"
+          :label="$t('page.system.role.roleCode')"
+          path="roleCode"
+        >
           <NInput
             v-model:value="model.roleCode"
             data-testid="role-code-input"
-            :disabled="props.operateType === 'edit'"
+            :disabled="props.operateType === 'edit' || !editable('roleCode')"
             :placeholder="$t('page.system.role.form.roleCode')"
             @input="(val: string) => (model.roleCode = val.toUpperCase())"
           />
         </NFormItem>
-        <NFormItem :label="$t('page.system.role.roleStatus')" path="status">
-          <NRadioGroup v-model:value="model.status">
+        <NFormItem v-if="present('status')" :label="$t('page.system.role.roleStatus')" path="status">
+          <NRadioGroup v-model:value="model.status" :disabled="!editable('status')">
             <NRadio v-for="item in enableStatusOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
           </NRadioGroup>
         </NFormItem>
-        <NFormItem :label="$t('page.system.role.dataScope.label')" path="dataScope">
-          <NSelect v-model:value="model.dataScope" :options="translateOptions(roleDataScopeOptions)" />
+        <NFormItem v-if="present('dataScope')" :label="$t('page.system.role.dataScope.label')" path="dataScope">
+          <NSelect
+            v-model:value="model.dataScope"
+            :disabled="!editable('dataScope')"
+            :options="translateOptions(roleDataScopeOptions)"
+          />
         </NFormItem>
-        <NFormItem v-if="showDeptTree" :label="$t('page.system.role.dataScope.selectDept')">
+        <NFormItem v-if="showDeptTree && present('deptIds')" :label="$t('page.system.role.dataScope.selectDept')">
           <NTree
             v-model:checked-keys="model.deptIds"
+            :disabled="!editable('deptIds') || !treeComplete"
             :data="deptTreeData"
             key-field="id"
             label-field="label"
@@ -187,14 +218,33 @@ watch(visible, () => {
             style="width: 100%"
           />
         </NFormItem>
-        <NFormItem v-bind="fieldProps('roleDesc')" :label="$t('page.system.role.roleDesc')" path="roleDesc">
-          <NInput v-model:value="model.roleDesc" :placeholder="$t('page.system.role.form.roleDesc')" />
+        <NFormItem
+          v-if="present('roleDesc')"
+          v-bind="fieldProps('roleDesc')"
+          :label="$t('page.system.role.roleDesc')"
+          path="roleDesc"
+          :feedback="form.replacement('roleDesc') ? $t('fieldPolicy.replacementHint') : undefined"
+        >
+          <NInput
+            v-model:value="model.roleDesc"
+            clearable
+            :disabled="!editable('roleDesc')"
+            :placeholder="$t('page.system.role.form.roleDesc')"
+            @clear="model.roleDesc = null"
+          />
         </NFormItem>
       </NForm>
       <template #footer>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
-          <NButton type="primary" :loading="loading" @click="handleSubmit">{{ $t('common.confirm') }}</NButton>
+          <NButton
+            type="primary"
+            :loading="loading || form.loading.value"
+            :disabled="!ready || (props.operateType === 'add' && !form.policy.value?.canCreate)"
+            @click="handleSubmit"
+          >
+            {{ $t('common.confirm') }}
+          </NButton>
         </NSpace>
       </template>
     </NDrawerContent>

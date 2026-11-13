@@ -865,6 +865,7 @@ const local: App.I18n.Schema = {
         typeFile: '文件'
       },
       dept: {
+        rootDept: '顶级部门',
         title: '部门列表',
         deptName: '部门名称',
         parentId: '上级部门',

@@ -875,6 +875,7 @@ const local: App.I18n.Schema = {
         typeFile: 'File'
       },
       dept: {
+        rootDept: 'Root department',
         title: 'Dept List',
         deptName: 'Dept Name',
         parentId: 'Parent Dept',

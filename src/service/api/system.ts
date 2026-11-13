@@ -2,6 +2,17 @@ import { runtimeSettings, uploadScenario, validateUploadPolicy } from '@/utils/r
 import { $t } from '@/locales';
 import { request } from '../request';
 
+export function fetchRelationForm<T extends object>(
+  surface: 'role' | 'dept' | 'menu',
+  params: Api.SystemManage.RelationFormQuery
+) {
+  return request<Api.SystemManage.RelationFormContext<T>>({
+    url: `/system/${surface}/form-context`,
+    method: 'get',
+    params
+  });
+}
+
 /** get role list */
 export function fetchGetRoleList(params?: Api.SystemManage.RoleSearchParams) {
   return request<Api.SystemManage.RoleList>({
@@ -34,7 +45,7 @@ export function fetchSaveRole(data: Api.SystemManage.CreateRoleParams) {
   });
 }
 
-export function fetchUpdateRole(roleId: string, data: Api.SystemManage.UpdateRoleParams) {
+export function fetchUpdateRole(roleId: string, data: Partial<Api.SystemManage.UpdateRoleParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/role/${roleId}`,
     method: 'put',
@@ -325,7 +336,7 @@ export function fetchSaveMenu(data: Api.SystemManage.CreateMenuParams) {
   });
 }
 
-export function fetchUpdateMenu(menuId: string, data: Api.SystemManage.CreateMenuParams) {
+export function fetchUpdateMenu(menuId: string, data: Partial<Api.SystemManage.CreateMenuParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/menu/${menuId}`,
     method: 'put',
@@ -379,7 +390,7 @@ export function fetchSaveDictType(data: Api.SystemManage.DictTypeCreateParams) {
 }
 
 /** update dict type */
-export function fetchUpdateDictType(typeId: number, data: Api.SystemManage.DictTypeCreateParams) {
+export function fetchUpdateDictType(typeId: string, data: Partial<Api.SystemManage.DictTypeCreateParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/dict-type/${typeId}`,
     method: 'put',
@@ -388,7 +399,7 @@ export function fetchUpdateDictType(typeId: number, data: Api.SystemManage.DictT
 }
 
 /** delete dict type */
-export function fetchDeleteDictType(typeId: number) {
+export function fetchDeleteDictType(typeId: string) {
   return request({
     url: `/system/dict-type/${typeId}`,
     method: 'delete'
@@ -431,7 +442,7 @@ export function fetchSaveDictData(data: Api.SystemManage.DictDataCreateParams) {
 }
 
 /** update dict data */
-export function fetchUpdateDictData(dictCode: string, data: Api.SystemManage.DictDataCreateParams) {
+export function fetchUpdateDictData(dictCode: string, data: Partial<Api.SystemManage.DictDataCreateParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/dict-data/${dictCode}`,
     method: 'put',
@@ -457,6 +468,14 @@ export function fetchBatchDeleteDictData(data: string[]) {
 }
 
 /** get dept tree */
+export function fetchGetDeptTreePage(params?: Api.SystemManage.DeptSearchParams) {
+  return request<Api.SystemManage.OrdinaryPage<Api.SystemManage.DeptTree>>({
+    url: '/system/dept/tree-list',
+    method: 'get',
+    params
+  });
+}
+
 export function fetchGetDeptTree(params?: Api.SystemManage.DeptSearchParams) {
   return request<Api.SystemManage.DeptTree[]>({
     url: '/system/dept/tree',
@@ -483,7 +502,7 @@ export function fetchSaveDept(data: Api.SystemManage.DeptCreateParams) {
 }
 
 /** update dept */
-export function fetchUpdateDept(deptId: string, data: Api.SystemManage.DeptUpdateParams) {
+export function fetchUpdateDept(deptId: string, data: Partial<Api.SystemManage.DeptUpdateParams>) {
   return request<App.Service.Response<any>>({
     url: `/system/dept/${deptId}`,
     method: 'put',
@@ -618,8 +637,8 @@ export function fetchGetRegisteredTasks() {
 }
 
 /** save job */
-export function fetchSaveJob(data: Api.SystemManage.JobCreateParams) {
-  return request<App.Service.Response<any>>({
+export function fetchSaveJob(data: Api.SystemManage.JobCreateParams & { formReceipt: string }) {
+  return request<Api.SystemManage.JobDelivery>({
     url: '/system/job/add',
     method: 'post',
     data
@@ -627,8 +646,8 @@ export function fetchSaveJob(data: Api.SystemManage.JobCreateParams) {
 }
 
 /** update job */
-export function fetchUpdateJob(data: Api.SystemManage.JobCreateParams & { jobId: string }) {
-  return request<App.Service.Response<any>>({
+export function fetchUpdateJob(data: Api.SystemManage.JobMetadataParams) {
+  return request<null>({
     url: '/system/job/update',
     method: 'put',
     data
@@ -637,7 +656,7 @@ export function fetchUpdateJob(data: Api.SystemManage.JobCreateParams & { jobId:
 
 /** update job status */
 export function fetchUpdateJobStatus(jobId: string, status: string) {
-  return request<App.Service.Response<any>>({
+  return request<Api.SystemManage.JobDelivery>({
     url: '/system/job/status',
     method: 'put',
     params: { jobId, status }
@@ -663,7 +682,7 @@ export function fetchBatchDeleteJob(data: string[]) {
 
 /** run job now */
 export function fetchRunJobNow(jobId: string) {
-  return request<App.Service.Response<any>>({
+  return request<Api.SystemManage.JobDelivery>({
     url: `/system/job/run/${jobId}`,
     method: 'post'
   });
@@ -706,8 +725,8 @@ export function fetchGetConfigList(params?: Api.SystemManage.ConfigSearchParams)
 }
 
 /** save config */
-export function fetchSaveConfig(data: Api.SystemManage.ConfigCreateParams) {
-  return request<App.Service.Response<any>>({
+export function fetchSaveConfig(data: Api.SystemManage.ConfigCreateParams & { formReceipt: string }) {
+  return request<null>({
     url: '/system/config/add',
     method: 'post',
     data
@@ -715,8 +734,11 @@ export function fetchSaveConfig(data: Api.SystemManage.ConfigCreateParams) {
 }
 
 /** update config */
-export function fetchUpdateConfig(configId: string, data: Api.SystemManage.ConfigCreateParams) {
-  return request<App.Service.Response<any>>({
+export function fetchUpdateConfig(
+  configId: string,
+  data: Partial<Api.SystemManage.ConfigCreateParams> & { formReceipt: string }
+) {
+  return request<null>({
     url: `/system/config/${configId}`,
     method: 'put',
     data
@@ -742,11 +764,11 @@ export function fetchBatchDeleteConfig(data: string[]) {
 
 /** export config to excel */
 export function fetchExportConfig(params?: Api.SystemManage.ConfigSearchParams) {
-  return request<Blob>({
+  return request<Blob, 'blob'>({
     url: '/system/config/export',
     method: 'get',
     params,
-    responseType: 'blob' as any
+    responseType: 'blob'
   });
 }
 

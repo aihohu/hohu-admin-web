@@ -59,10 +59,9 @@ declare namespace Api {
     };
 
     /** model create params */
-    type AiModelCreateParams = Pick<
-      AiModel,
-      'name' | 'capabilities' | 'baseUrl' | 'isEnabled' | 'sortOrder' | 'config'
-    >;
+    type AiModelCreateParams = Pick<AiModel, 'name' | 'capabilities' | 'baseUrl' | 'isEnabled' | 'sortOrder'> & {
+      config?: Record<string, unknown> | null;
+    };
 
     /** model update params */
     type AiModelUpdateParams = Partial<AiModelCreateParams>;
