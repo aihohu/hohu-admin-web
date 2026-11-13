@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { reactive, onMounted, computed } from 'vue';
+import { reactive, onMounted, computed, shallowRef } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord } from '@/constants/business';
 import {
@@ -11,6 +11,7 @@ import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 import { useRoute } from 'vue-router';
 import DictDataOperateDrawer from '../modules/dict-data-operate-drawer.vue';
 import DictDataSearch from '../modules/dict-data-search.vue';
@@ -25,6 +26,8 @@ const { hasAuth } = useAuth();
 
 const dictType = computed(() => route.query.dictType as string);
 
+const fieldPolicy = shallowRef<Api.SystemManage.OrdinaryCapabilities>();
+
 const searchParams: Api.SystemManage.DictDataSearchParams = reactive({
   current: 1,
   size: 10,
@@ -37,7 +40,10 @@ const searchParams: Api.SystemManage.DictDataSearchParams = reactive({
 const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagination } =
   useNaivePaginatedTable({
     api: () => fetchGetDictDataList(searchParams),
-    transform: response => defaultTransform(response),
+    transform: response => {
+      fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
+      return defaultTransform(response);
+    },
     onPaginationParamsChange: params => {
       searchParams.current = params.page;
       searchParams.size = params.pageSize;
@@ -99,7 +105,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         align: 'center',
         width: 100,
         render: row => {
-          if (row.status === null) {
+          if (!row.status) {
             return null;
           }
 
@@ -120,7 +126,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         width: 160,
         render: row => (
           <div class="flex-center gap-8px">
-            {hasAuth('system:dict-data:edit') && (
+            {hasAuth('system:dict-data:edit') && Boolean(row.fieldPolicy?.update?.length) && (
               <NButton type="primary" ghost size="small" onClick={() => edit(row.dictCode)}>
                 {$t('common.edit')}
               </NButton>
@@ -142,6 +148,9 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       }
     ]
   });
+
+const visibleColumns = computed(() => columns.value.filter(column => !('key' in column) ||
+  ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
 
 const {
   drawerVisible,
@@ -180,7 +189,7 @@ onMounted(() => {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <DictDataSearch v-model:model="searchParams" @search="getDataByPage" />
+    <DictDataSearch v-model:model="searchParams" :allowed-fields="fieldPolicy?.query" @search="getDataByPage" />
     <NCard
       :title="$t('page.system.dict.dictDataTitle')"
       :bordered="false"
@@ -190,6 +199,7 @@ onMounted(() => {
       <template #header-extra>
         <TableHeaderOperation
           v-model:columns="columnChecks"
+          :show-add="fieldPolicy?.canCreate === true"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
           add-auth="system:dict-data:add"
@@ -201,7 +211,7 @@ onMounted(() => {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
@@ -216,6 +226,7 @@ onMounted(() => {
         v-model:visible="drawerVisible"
         :operate-type="operateType"
         :row-data="editingData"
+        :capabilities="fieldPolicy"
         :dict-type="dictType"
         @submitted="getDataByPage"
       />

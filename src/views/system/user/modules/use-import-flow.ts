@@ -1,5 +1,6 @@
 import { runtimeSettings, validateUploadPolicy } from '@/utils/runtime-settings';
-import { computed, ref } from 'vue';
+import { downloadBlob } from '@/utils/download-blob';
+import { computed, ref, watch } from 'vue';
 import {
   fetchCancelImportBatch,
   fetchDownloadImportTemplate,
@@ -28,6 +29,8 @@ export interface UseImportFlowOptions {
 }
 
 export function useImportFlow(options: UseImportFlowOptions = {}) {
+  let generation = 0;
+  let previewInput: { file: File; reason: string; onConflict: string } | null = null;
   const step = ref<1 | 2 | 3>(1);
   const file = ref<File | null>(null);
   const reason = ref<string>('');
@@ -38,13 +41,35 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
   const loading = ref<boolean>(false);
   const errorCode = ref<ImportFlowErrorCode | null>(null);
 
-  const canCancel = computed<boolean>(() => !!dryRunResult.value?.batchId);
-  const canConfirm = computed<boolean>(() => !!file.value && !!dryRunResult.value?.previewToken && !loading.value);
+  const canCancel = computed<boolean>(() => !!dryRunResult.value?.batchId && !loading.value);
+  const canConfirm = computed<boolean>(
+    () =>
+      !!file.value &&
+      !!dryRunResult.value?.previewToken &&
+      !loading.value &&
+      previewInput?.file === file.value &&
+      previewInput.reason === reason.value.trim() &&
+      previewInput.onConflict === onConflict.value
+  );
+  watch(
+    [reason, onConflict],
+    () => {
+      generation += 1;
+      previewInput = null;
+      dryRunResult.value = null;
+      executeResult.value = null;
+      step.value = 1;
+      loading.value = false;
+    },
+    { flush: 'sync' }
+  );
   const previewTokenShort = computed<string>(() =>
     dryRunResult.value?.previewToken ? dryRunResult.value.previewToken.slice(0, 8) : ''
   );
 
   function reset(): void {
+    generation += 1;
+    previewInput = null;
     step.value = 1;
     file.value = null;
     reason.value = '';
@@ -78,6 +103,7 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
   }
 
   async function uploadFile(f: File): Promise<void> {
+    if (loading.value) return;
     if (!reason.value.trim()) {
       notifyError('REASON_REQUIRED');
       return;
@@ -88,43 +114,62 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
       return;
     }
     file.value = f;
+    dryRunResult.value = null;
+    previewInput = null;
     loading.value = true;
     errorCode.value = null;
-    const { data, error } = await fetchDryRunImportUsers(f, reason.value, onConflict.value);
-    loading.value = false;
-    if (error || !data) {
-      notifyError('DRY_RUN_FAILED');
-      return;
+    const requestGeneration = ++generation;
+    const input = { file: f, reason: reason.value.trim(), onConflict: onConflict.value };
+    try {
+      const { data, error } = await fetchDryRunImportUsers(f, input.reason, onConflict.value);
+      if (requestGeneration !== generation) return;
+      if (error || !data) {
+        notifyError('DRY_RUN_FAILED');
+        return;
+      }
+      previewInput = input;
+      dryRunResult.value = data;
+      step.value = 2;
+    } catch {
+      if (requestGeneration === generation) notifyError('DRY_RUN_FAILED');
+    } finally {
+      if (requestGeneration === generation) loading.value = false;
     }
-    dryRunResult.value = data;
-    step.value = 2;
   }
 
   async function confirmImport(): Promise<void> {
-    if (!file.value || !dryRunResult.value) return;
+    if (!canConfirm.value || !file.value || !dryRunResult.value) return;
     loading.value = true;
     errorCode.value = null;
-    const { data, error } = await fetchExecuteImportUsers(
-      file.value,
-      reason.value,
-      dryRunResult.value.previewToken,
-      onConflict.value,
-      syncMode.value
-    );
-    loading.value = false;
-    if (error || !data) {
-      notifyError('EXECUTE_FAILED');
-      return;
+    const requestGeneration = generation;
+    try {
+      const { data, error } = await fetchExecuteImportUsers(
+        file.value,
+        reason.value,
+        dryRunResult.value.previewToken,
+        onConflict.value,
+        syncMode.value
+      );
+      if (requestGeneration !== generation) return;
+      if (error || !data) {
+        notifyError('EXECUTE_FAILED');
+        return;
+      }
+      executeResult.value = data;
+      step.value = 3;
+      if (data.idempotentReplay) {
+        window.$message?.info($t('common.importModal.idempotentReplayHint'));
+      }
+      options.onCompleted?.(data);
+    } catch {
+      if (requestGeneration === generation) notifyError('EXECUTE_FAILED');
+    } finally {
+      if (requestGeneration === generation) loading.value = false;
     }
-    executeResult.value = data;
-    step.value = 3;
-    if (data.idempotentReplay) {
-      window.$message?.info($t('common.importModal.idempotentReplayHint'));
-    }
-    options.onCompleted?.(data);
   }
 
   async function cancelImport(): Promise<boolean> {
+    if (loading.value) return false;
     const batchId = dryRunResult.value?.batchId;
     if (!batchId) {
       notifyError('NO_BATCH_ID');
@@ -132,58 +177,59 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     }
     loading.value = true;
     errorCode.value = null;
-    const { error } = await fetchCancelImportBatch(batchId);
-    loading.value = false;
-    if (error) {
-      notifyError('CANCEL_FAILED');
+    const requestGeneration = generation;
+    try {
+      const { error } = await fetchCancelImportBatch(batchId);
+      if (requestGeneration !== generation) return false;
+      if (error) {
+        notifyError('CANCEL_FAILED');
+        return false;
+      }
+      options.onCancelled?.();
+      return true;
+    } catch {
+      if (requestGeneration === generation) notifyError('CANCEL_FAILED');
       return false;
+    } finally {
+      if (requestGeneration === generation) loading.value = false;
     }
-    options.onCancelled?.();
-    return true;
   }
 
   async function downloadTemplate(): Promise<void> {
+    if (loading.value) return;
     loading.value = true;
     errorCode.value = null;
-    const { data, error } = await fetchDownloadImportTemplate();
-    loading.value = false;
-    if (error || !(data instanceof Blob) || data.type.includes('json')) {
-      notifyError('TEMPLATE_FAILED');
-      return;
+    const requestGeneration = generation;
+    try {
+      const { data, error } = await fetchDownloadImportTemplate();
+      if (requestGeneration !== generation) return;
+      if (error || !downloadBlob(data, TEMPLATE_DOWNLOAD_FILENAME)) {
+        notifyError('TEMPLATE_FAILED');
+        return;
+      }
+    } catch {
+      if (requestGeneration === generation) notifyError('TEMPLATE_FAILED');
+    } finally {
+      if (requestGeneration === generation) loading.value = false;
     }
-    const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = TEMPLATE_DOWNLOAD_FILENAME;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   }
 
   async function downloadErrors(): Promise<void> {
     const batchId = executeResult.value?.batchId;
     if (!batchId || loading.value) return;
     loading.value = true;
+    const requestGeneration = generation;
     try {
       const { data, error } = await fetchDownloadImportError(batchId);
-      if (error || !(data instanceof Blob) || data.type.includes('json')) {
+      if (requestGeneration !== generation) return;
+      if (error || !downloadBlob(data, 'user_import_errors.xlsx')) {
         notifyError('TEMPLATE_FAILED');
         return;
       }
-      const url = URL.createObjectURL(data);
-      const anchor = document.createElement('a');
-      try {
-        anchor.href = url;
-        anchor.download = 'user_import_errors.xlsx';
-        document.body.appendChild(anchor);
-        anchor.click();
-      } finally {
-        anchor.remove();
-        URL.revokeObjectURL(url);
-      }
+    } catch {
+      if (requestGeneration === generation) notifyError('TEMPLATE_FAILED');
     } finally {
-      loading.value = false;
+      if (requestGeneration === generation) loading.value = false;
     }
   }
 

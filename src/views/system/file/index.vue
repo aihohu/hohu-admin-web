@@ -1,8 +1,12 @@
 <script setup lang="tsx">
-import { reactive, ref } from 'vue';
+import { reactive, ref, computed, shallowRef } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
-import { fetchBatchDeleteFile, fetchDeleteFile, fetchGetFileList } from '@/service/api';
+import { fetchBatchDeleteFile, fetchDeleteFile, fetchGetFileList, fetchDownloadFile } from '@/service/api';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+import { controlQuery } from '@/hooks/business/control-fields';
+import { useControlAction } from '@/hooks/business/control-action';
+import { downloadBlob } from '@/utils/download-blob';
 import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
@@ -12,8 +16,11 @@ const { t } = useI18n();
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
 const uploadModalRef = ref<InstanceType<typeof FileUploadModal>>();
+const fieldPolicy = shallowRef<Api.SystemManage.FileCapabilities>();
+const { busy: actionBusy, run: runAction } = useControlAction();
 
-function formatFileSize(bytes: number): string {
+function formatFileSize(bytes?: number | null): string {
+  if (bytes === undefined || bytes === null) return '';
   if (bytes === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
@@ -29,8 +36,14 @@ const searchParams: Api.SystemManage.FileSearchParams = reactive({
 });
 
 const { columns, columnChecks, data, loading, getData, mobilePagination } = useNaivePaginatedTable({
-  api: () => fetchGetFileList(searchParams),
-  transform: response => defaultTransform(response),
+  api: () => fetchGetFileList(controlQuery(searchParams, fieldPolicy.value?.query)),
+  transform: response => {
+    fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
+    for (const key of ['originalName', 'businessType', 'fileExt'] as const) {
+      if (!fieldAllowed(fieldPolicy.value?.query, key)) searchParams[key] = null;
+    }
+    return defaultTransform(response);
+  },
   onPaginationParamsChange: params => {
     searchParams.current = params.page;
     searchParams.size = params.pageSize;
@@ -59,7 +72,7 @@ const { columns, columnChecks, data, loading, getData, mobilePagination } = useN
       title: t('page.system.file.fileType'),
       width: 100,
       align: 'center',
-      render: row => <NTag size="small">{row.fileExt}</NTag>
+      render: row => row.fileExt ? <NTag size="small">{row.fileExt}</NTag> : null
     },
     {
       key: 'fileSize',
@@ -69,7 +82,7 @@ const { columns, columnChecks, data, loading, getData, mobilePagination } = useN
       render: row => formatFileSize(row.fileSize)
     },
     {
-      key: 'createBy',
+      key: 'ownerName',
       title: t('page.system.file.uploader'),
       width: 100,
       align: 'center'
@@ -87,9 +100,11 @@ const { columns, columnChecks, data, loading, getData, mobilePagination } = useN
       width: 180,
       render: row => (
         <div class="flex-center gap-8px">
-          <NButton type="info" ghost size="small" onClick={() => handleCopyUrl(row.fileUrl)}>
-            {t('page.system.file.copyLink')}
-          </NButton>
+          {row.fieldPolicy.canDownload && hasAuth('system:file:list') && (
+            <NButton type="info" ghost size="small" disabled={actionBusy.value} onClick={() => handleDownload(row)}>
+              {t('page.system.file.downloadFile')}
+            </NButton>
+          )}
           {hasAuth('system:file:delete') && (
             <NPopconfirm onPositiveClick={() => handleDelete(row.fileId)}>
               {{
@@ -109,6 +124,8 @@ const { columns, columnChecks, data, loading, getData, mobilePagination } = useN
 });
 
 const { checkedRowKeys, onBatchDeleted, onDeleted } = useTableOperate(data, 'fileId', getData);
+const visibleColumns = computed(() => columns.value.filter(column => !('key' in column) ||
+  ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
 
 async function handleBatchDelete() {
   const { error } = await fetchBatchDeleteFile(checkedRowKeys.value);
@@ -124,13 +141,12 @@ async function handleDelete(id: string) {
   }
 }
 
-async function handleCopyUrl(url: string) {
-  try {
-    await navigator.clipboard.writeText(url);
-    window.$message?.success(t('page.system.file.linkCopied'));
-  } catch {
-    window.$message?.error(t('page.system.file.linkCopyFailed'));
-  }
+async function handleDownload(row: Api.SystemManage.FileRecord) {
+  await runAction(async current => {
+    const { data: blob, error } = await fetchDownloadFile(row.fileId);
+    if (!current()) return;
+    if (error || !downloadBlob(blob, row.originalName || 'download.bin')) window.$message?.error(t('page.system.file.downloadFailed'));
+  });
 }
 
 function handleSearch() {
@@ -152,7 +168,7 @@ function handleReset() {
     <!-- 搜索栏 -->
     <NCard :bordered="false" size="small">
       <NForm inline label-placement="left" :show-feedback="false">
-        <NFormItem :label="$t('page.system.file.fileName')">
+        <NFormItem v-if="fieldAllowed(fieldPolicy?.query, 'originalName')" :label="$t('page.system.file.fileName')">
           <NInput
             v-model:value="searchParams.originalName"
             :placeholder="$t('page.system.file.fileNamePlaceholder')"
@@ -160,7 +176,7 @@ function handleReset() {
             class="w-200px"
           />
         </NFormItem>
-        <NFormItem :label="$t('page.system.file.fileType')">
+        <NFormItem v-if="fieldAllowed(fieldPolicy?.query, 'fileExt')" :label="$t('page.system.file.fileType')">
           <NInput
             v-model:value="searchParams.fileExt"
             :placeholder="$t('page.system.file.fileTypePlaceholder')"
@@ -200,7 +216,13 @@ function handleReset() {
           @refresh="getData"
         >
           <template #prefix>
-            <NButton v-permission="'system:file:upload'" type="primary" size="small" @click="uploadModalRef?.open()">
+            <NButton
+              v-if="fieldPolicy?.canCreate"
+              v-permission="'system:file:upload'"
+              type="primary"
+              size="small"
+              @click="uploadModalRef?.open()"
+            >
               <template #icon>
                 <IconIcRoundCloudUpload class="align-sub text-icon" />
               </template>
@@ -211,7 +233,7 @@ function handleReset() {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"

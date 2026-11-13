@@ -106,7 +106,8 @@ const local: App.I18n.Schema = {
       errorCode: {
         REASON_REQUIRED: 'Please fill in the reason',
         ASYNC_REQUIRED: 'Too many rows, narrow your filters',
-        EXPORT_FAILED: 'Export failed, please retry'
+        EXPORT_FAILED: 'Export failed, please retry',
+        FILTER_UNSUPPORTED: 'Export does not support gender or role filters. Clear these filters before exporting.'
       }
     },
     importHistoryDrawer: {
@@ -875,6 +876,7 @@ const local: App.I18n.Schema = {
         typeFile: 'File'
       },
       dept: {
+        rootDept: 'Root department',
         title: 'Dept List',
         deptName: 'Dept Name',
         parentId: 'Parent Dept',
@@ -914,6 +916,8 @@ const local: App.I18n.Schema = {
         uploader: 'Uploader',
         uploadTime: 'Upload Time',
         copyLink: 'Copy Link',
+        downloadFile: 'Download file',
+        downloadFailed: 'File unavailable. Refresh and try again.',
         confirmDelete: 'Are you sure you want to delete this file?',
         linkCopied: 'Link copied',
         linkCopyFailed: 'Copy failed. Check the browser clipboard permission.',

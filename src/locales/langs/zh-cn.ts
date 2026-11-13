@@ -103,7 +103,8 @@ const local: App.I18n.Schema = {
       errorCode: {
         REASON_REQUIRED: '请填写业务理由',
         ASYNC_REQUIRED: '行数过多，请缩窄筛选条件',
-        EXPORT_FAILED: '导出失败，请重试'
+        EXPORT_FAILED: '导出失败，请重试',
+        FILTER_UNSUPPORTED: '当前导出不支持性别或角色筛选，请先清除这些条件后重试'
       }
     },
     importHistoryDrawer: {
@@ -865,6 +866,7 @@ const local: App.I18n.Schema = {
         typeFile: '文件'
       },
       dept: {
+        rootDept: '顶级部门',
         title: '部门列表',
         deptName: '部门名称',
         parentId: '上级部门',
@@ -904,6 +906,8 @@ const local: App.I18n.Schema = {
         uploader: '上传者',
         uploadTime: '上传时间',
         copyLink: '复制链接',
+        downloadFile: '下载文件',
+        downloadFailed: '文件不可下载，请刷新后重试',
         confirmDelete: '确认删除该文件？',
         linkCopied: '链接已复制',
         linkCopyFailed: '复制失败，请检查浏览器剪贴板权限',

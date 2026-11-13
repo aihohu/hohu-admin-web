@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { toRaw } from 'vue';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+const props = defineProps<{ queryFields?: string[] }>();
 import { jsonClone } from '@sa/utils';
 import { enableStatusOptions } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
@@ -34,15 +36,33 @@ function search() {
       <NCollapseItem :title="$t('common.search')" name="job-search">
         <NForm :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.job.jobName')" path="jobName" class="pr-24px">
+            <NFormItemGi
+              v-if="fieldAllowed(props.queryFields, 'jobName')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.job.jobName')"
+              path="jobName"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.jobName" clearable />
             </NFormItemGi>
 
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.job.jobKey')" path="jobKey" class="pr-24px">
+            <NFormItemGi
+              v-if="fieldAllowed(props.queryFields, 'jobKey')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.job.jobKey')"
+              path="jobKey"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.jobKey" clearable />
             </NFormItemGi>
 
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.job.status')" path="status" class="pr-24px">
+            <NFormItemGi
+              v-if="fieldAllowed(props.queryFields, 'status')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.job.status')"
+              path="status"
+              class="pr-24px"
+            >
               <NSelect
                 v-model:value="model.status"
                 :placeholder="$t('page.system.job.form.status')"

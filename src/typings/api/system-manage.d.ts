@@ -7,104 +7,89 @@ declare namespace Api {
   namespace SystemManage {
     type CommonSearchParams = Pick<Common.PaginatingCommonParams, 'current' | 'size'>;
 
-    /** dict type */
-    type DictType = Common.CommonRecord<{
-      /** dict type id */
-      dictTypeId: number;
-      /** dict name */
+    type OrdinaryCapabilities = {
+      read?: string[];
+      query?: string[];
+      create?: string[];
+      update?: string[];
+      canCreate?: boolean;
+    };
+    type OrdinaryPage<T> = Common.PaginatingQueryRecord<T> & { fieldPolicy: OrdinaryCapabilities };
+    type RelationFormQuery = { mode: 'create' | 'update'; recordId?: string; parentId?: string };
+    type RelationCapabilities = Required<OrdinaryCapabilities> & {
+      readLevels: Record<string, 'plain' | 'masked' | 'hidden'>;
+      specialCreate: string[];
+      specialUpdate: string[];
+      complete: Record<string, boolean>;
+    };
+    type RelationFormContext<T> = { record: Partial<T> | null; fieldPolicy: RelationCapabilities };
+    type ControlCapabilities = RelationCapabilities & {
+      controlActions: { canImport: boolean; canExport: boolean; canRun: boolean };
+    };
+    type ControlFormQuery = { mode: 'create' | 'update'; recordId?: string };
+    type ControlFormContext<T> = Omit<RelationFormContext<T>, 'fieldPolicy'> & {
+      fieldPolicy: ControlCapabilities;
+      formReceipt: string;
+      publicationRevision?: string;
+      revocationRevision?: string;
+    };
+    type DictTypeCreateParams = {
       dictName: string;
-      /** dict type code */
       dictType: string;
-      /** status */
-      status: Api.Common.EnableStatus;
-      /** remark */
+      status: Common.EnableStatus;
       remark: string | null;
-    }>;
-
-    /** dict type search params */
+    };
+    type DictType = Partial<DictTypeCreateParams> & {
+      dictTypeId: string;
+      createTime?: string;
+      fieldPolicy?: OrdinaryCapabilities;
+    };
     type DictTypeSearchParams = CommonType.RecordNullable<
-      Pick<Api.SystemManage.DictType, 'dictName' | 'dictType' | 'status'> & CommonSearchParams
+      Pick<DictTypeCreateParams, 'dictName' | 'dictType' | 'status'> & CommonSearchParams
     >;
-
-    /** dict type list */
-    type DictTypeList = Common.PaginatingQueryRecord<DictType>;
-
-    /** dict type simple output */
-    type DictTypeSimple = Pick<DictType, 'dictTypeId' | 'dictName' | 'dictType' | 'status'>;
-
-    /** dict type create params */
-    type DictTypeCreateParams = Pick<Api.SystemManage.DictType, 'dictName' | 'dictType' | 'status' | 'remark'>;
-
-    /** dict data */
-    type DictData = Common.CommonRecord<{
-      /** dict code (主键) */
-      dictCode: string;
-      /** dict type */
+    type DictTypeList = OrdinaryPage<DictType>;
+    type DictTypeSimple = Pick<DictType, 'dictTypeId' | 'status'> & Required<Pick<DictType, 'dictName' | 'dictType'>>;
+    type DictDataCreateParams = {
       dictType: string;
-      /** dict label */
       dictLabel: string;
-      /** dict value */
       dictValue: string;
-      /** dict sort */
       dictSort: number;
-      /** css class */
       cssClass: string | null;
-      /** list class */
       listClass: string | null;
-      /** is default */
       isDefault: 'Y' | 'N';
-    }>;
-
-    /** dict data search params */
+      status: Common.EnableStatus;
+    };
+    type DictData = Partial<DictDataCreateParams> & {
+      dictCode: string;
+      createTime?: string;
+      fieldPolicy?: OrdinaryCapabilities;
+    };
     type DictDataSearchParams = CommonType.RecordNullable<
-      Pick<Api.SystemManage.DictData, 'dictType' | 'dictLabel' | 'dictValue' | 'status'> & CommonSearchParams
+      Pick<DictDataCreateParams, 'dictType' | 'dictLabel' | 'dictValue' | 'status'> & CommonSearchParams
     >;
+    type DictDataList = OrdinaryPage<DictData>;
 
-    /** dict data list */
-    type DictDataList = Common.PaginatingQueryRecord<DictData>;
-
-    /** dict data create params */
-    type DictDataCreateParams = Pick<
-      Api.SystemManage.DictData,
-      'dictType' | 'dictLabel' | 'dictValue' | 'dictSort' | 'cssClass' | 'listClass' | 'isDefault' | 'status'
-    >;
-
-    /** role */
-    type Role = Common.CommonRecord<{
-      /** role id */
-      roleId: string;
-      /** role name */
+    type CreateRoleParams = {
       roleName: string;
-      i18nKeys?: Record<string, string> | null;
-      /** role code */
       roleCode: string;
-      /** role description */
-      roleDesc: string;
-      /** data scope: 1-all, 2-custom, 3-dept, 4-dept and sub, 5-self */
+      roleDesc: string | null;
       dataScope: '1' | '2' | '3' | '4' | '5';
-      /** dept ids for custom data scope */
-      deptIds: string[];
-    }>;
-
-    /** minimal role metadata returned by tenant-wide role reads */
-    type RoleSummary = Pick<Role, 'roleId' | 'roleName' | 'roleCode' | 'dataScope' | 'status' | 'i18nKeys'> & {
+      status: Common.EnableStatus;
+      deptIds?: string[];
+    };
+    type UpdateRoleParams = Partial<Omit<CreateRoleParams, 'roleCode'>>;
+    type Role = Partial<CreateRoleParams> & {
+      roleId: string;
+      i18nKeys?: Record<string, string> | null;
+      createTime?: string;
+      fieldPolicy?: RelationCapabilities;
+    };
+    type RoleSummary = Pick<
+      Role,
+      'roleId' | 'roleName' | 'roleCode' | 'dataScope' | 'status' | 'i18nKeys' | 'fieldPolicy'
+    > & {
       delegable: boolean;
       blockedReasonCode: string | null;
-    };
-
-    /** role model params */
-    type CreateRoleParams = Pick<
-      Api.SystemManage.Role,
-      'roleName' | 'roleCode' | 'dataScope' | 'status' | 'i18nKeys'
-    > & {
-      roleDesc: string | null;
-      deptIds?: string[];
-    };
-
-    /** mutable role definition fields; roleCode is immutable */
-    type UpdateRoleParams = Pick<Api.SystemManage.Role, 'roleName' | 'dataScope' | 'status' | 'i18nKeys'> & {
-      roleDesc: string | null;
-      deptIds?: string[];
     };
 
     /** role search params */
@@ -113,7 +98,7 @@ declare namespace Api {
     >;
 
     /** role list */
-    type RoleList = Common.PaginatingQueryRecord<RoleSummary>;
+    type RoleList = OrdinaryPage<RoleSummary>;
 
     /** all role */
     type AllRole = RoleSummary;
@@ -161,10 +146,10 @@ declare namespace Api {
         /** user email */
         userEmail: string | null;
         /** user role code collection */
-        roles: string[];
+        roles: Array<string | null>;
         /** user role name display */
         roleNameKeys?: Array<string | null>;
-        roleNames: string[];
+        roleNames: Array<string | null>;
         /** user dept id list (display) */
         deptIds: string[];
         /** user dept names joined string */
@@ -299,7 +284,8 @@ declare namespace Api {
       | 'CANCELLED';
 
     /** import batch summary returned by list and detail endpoints */
-    type UserImportBatch = {
+    type TransferCapabilities = { read: string[]; query: string[]; canDownload: boolean; canCancel: boolean };
+    type UserImportBatch = { batchId: string; fieldPolicy?: TransferCapabilities } & Partial<{
       batchId: string;
       status: UserImportBatchStatus;
       filename: string | null;
@@ -321,7 +307,7 @@ declare namespace Api {
       startedAt: string | null;
       finishedAt: string | null;
       expiresAt: string | null;
-    };
+    }>;
 
     /** import batch list filters */
     type UserImportBatchQuery = CommonSearchParams & {
@@ -332,20 +318,21 @@ declare namespace Api {
     };
 
     /** paginated import batch list */
-    type UserImportBatchList = Common.PaginatingQueryRecord<UserImportBatch>;
+    type UserImportBatchList = Common.PaginatingQueryRecord<UserImportBatch> & { fieldPolicy?: TransferCapabilities };
 
     /** audited import batch transition or action */
-    type UserImportBatchLog = {
+    type UserImportBatchLog = { logId: string; fieldPolicy?: TransferCapabilities } & Partial<{
       logId: string;
       batchId: string;
       event: string;
       fromStatus: UserImportBatchStatus | null;
       toStatus: UserImportBatchStatus | null;
       detail: Record<string, unknown> | null;
+      counts: Record<string, number> | null;
       operatorId: string | null;
       operatorName: string | null;
       createdAt: string;
-    };
+    }>;
 
     /** import batch log filters */
     type UserImportBatchLogQuery = CommonSearchParams & {
@@ -353,7 +340,9 @@ declare namespace Api {
     };
 
     /** paginated batch log list */
-    type UserImportBatchLogList = Common.PaginatingQueryRecord<UserImportBatchLog>;
+    type UserImportBatchLogList = Common.PaginatingQueryRecord<UserImportBatchLog> & {
+      fieldPolicy?: TransferCapabilities;
+    };
 
     /** user export filters and mandatory audit reason */
     type UserExportRequest = {
@@ -372,7 +361,7 @@ declare namespace Api {
     type UserExportTaskStatus = 'CREATED' | 'SUCCESS' | 'FAILED';
 
     /** persisted user export task */
-    type UserExportTask = {
+    type UserExportTask = { exportId: string; fieldPolicy?: TransferCapabilities } & Partial<{
       exportId: string;
       operatorId: string;
       operatorName: string | null;
@@ -385,7 +374,7 @@ declare namespace Api {
       createdAt: string;
       finishedAt: string | null;
       expiresAt: string | null;
-    };
+    }>;
 
     /** export task list filters */
     type UserExportTaskQuery = CommonSearchParams & {
@@ -394,7 +383,7 @@ declare namespace Api {
     };
 
     /** paginated export task list */
-    type UserExportTaskList = Common.PaginatingQueryRecord<UserExportTask>;
+    type UserExportTaskList = Common.PaginatingQueryRecord<UserExportTask> & { fieldPolicy?: TransferCapabilities };
 
     /** user profile */
     type UserProfile = { userId: string } & Partial<{
@@ -407,7 +396,7 @@ declare namespace Api {
       userEmail: string;
       userAvatar: string;
       status: string;
-      roles: string[];
+      roles: Array<string | null>;
       createTime: string;
     }>;
 
@@ -453,7 +442,7 @@ declare namespace Api {
       | 'query'
     >;
 
-    type Menu = Common.CommonRecord<{
+    type MenuRecord = Common.CommonRecord<{
       menuId: string;
       /** parent menu id */
       parentId: string;
@@ -478,8 +467,9 @@ declare namespace Api {
     }> &
       MenuPropsOfRoute;
 
+    type Menu = Partial<Omit<MenuRecord, 'menuId'>> & { menuId: string; fieldPolicy?: RelationCapabilities };
     /** menu list */
-    type MenuList = Common.PaginatingQueryRecord<Menu>;
+    type MenuList = OrdinaryPage<Menu>;
 
     type MenuTree = {
       id: string;
@@ -490,7 +480,7 @@ declare namespace Api {
     };
 
     type CreateMenuParams = Pick<
-      Api.SystemManage.Menu,
+      MenuRecord,
       | 'menuType'
       | 'menuName'
       | 'routeName'
@@ -513,25 +503,21 @@ declare namespace Api {
       | 'buttons'
     >;
 
-    /** dept */
-    type Dept = Common.CommonRecord<{
-      /** dept id */
-      deptId: string;
-      /** parent dept id */
+    type DeptCreateParams = {
       parentId: string | null;
-      /** ancestors */
-      ancestors: string | null;
-      /** dept name */
       deptName: string;
-      /** order num */
       orderNum: number;
-      /** leader */
       leader: string | null;
-      /** phone */
       phone: string | null;
-      /** email */
       email: string | null;
-    }>;
+      status: Common.EnableStatus;
+    };
+    type Dept = Partial<DeptCreateParams> & {
+      deptId: string;
+      ancestors?: string | null;
+      createTime?: string;
+      fieldPolicy?: RelationCapabilities;
+    };
 
     /** dept tree node */
     type DeptTree = Dept & {
@@ -550,16 +536,7 @@ declare namespace Api {
     /** dept search params */
     type DeptSearchParams = CommonType.RecordNullable<Pick<Api.SystemManage.Dept, 'deptName' | 'status' | 'leader'>>;
 
-    /** dept create params */
-    type DeptCreateParams = Pick<
-      Api.SystemManage.Dept,
-      'parentId' | 'deptName' | 'orderNum' | 'leader' | 'phone' | 'email' | 'status'
-    >;
-
-    type DeptUpdateParams = Pick<
-      Api.SystemManage.Dept,
-      'deptName' | 'orderNum' | 'leader' | 'phone' | 'email' | 'status'
-    >;
+    type DeptUpdateParams = Partial<Omit<DeptCreateParams, 'parentId'>>;
 
     /** dept user item (for dept-users management) */
     type DeptUserItem = { userId: string } & Partial<{
@@ -573,7 +550,7 @@ declare namespace Api {
     }>;
 
     /** dept users management data */
-    type DeptUsersOut = Common.PaginatingQueryRecord<DeptUserItem>;
+    type DeptUsersOut = Common.PaginatingQueryRecord<DeptUserItem> & { authorizationEpoch: string };
 
     type DeptUsersQuery = Pick<CommonSearchParams, 'current' | 'size'> & {
       query?: string;
@@ -585,13 +562,11 @@ declare namespace Api {
     };
 
     /** file record */
-    type FileRecord = {
+    type FileRecord = { fileId: string; fieldPolicy: FileCapabilities } & Partial<{
       /** file id */
-      fileId: string;
       /** original filename */
       originalName: string;
       /** access url */
-      fileUrl: string;
       /** file size in bytes */
       fileSize: number;
       /** file extension */
@@ -604,9 +579,13 @@ declare namespace Api {
       businessId: string | null;
       /** uploader */
       createBy: string | null;
+      ownerName: string | null;
       /** upload time */
       createTime: string;
-    };
+    }>;
+
+    type FileCapabilities = RelationCapabilities & { canDownload: boolean };
+    type FileUploadReceipt = Omit<FileRecord, 'fieldPolicy'> & { fileUrl: string };
 
     /** file search params */
     type FileSearchParams = CommonType.RecordNullable<
@@ -614,7 +593,7 @@ declare namespace Api {
     >;
 
     /** file list */
-    type FileList = Common.PaginatingQueryRecord<FileRecord>;
+    type FileList = Common.PaginatingQueryRecord<FileRecord> & { fieldPolicy: FileCapabilities };
 
     /** job status */
     type JobStatus = Api.Common.EnableStatus;
@@ -626,7 +605,7 @@ declare namespace Api {
     type JobConcurrent = '1' | '2';
 
     /** scheduled job */
-    type Job = {
+    type JobRecord = {
       jobId: string;
       jobName: string;
       jobKey: string;
@@ -652,15 +631,17 @@ declare namespace Api {
       nextRunTime: string | null;
     };
 
+    type Job = Partial<Omit<JobRecord, 'jobId'>> & { jobId: string; fieldPolicy?: ControlCapabilities };
+
     /** job search params */
     type JobSearchParams = CommonType.RecordNullable<Pick<Job, 'jobName' | 'jobKey' | 'status'> & CommonSearchParams>;
 
     /** job list */
-    type JobList = Common.PaginatingQueryRecord<Job>;
+    type JobList = Common.PaginatingQueryRecord<Job> & { fieldPolicy: ControlCapabilities };
 
     /** job create params */
     type JobCreateParams = Pick<
-      Job,
+      JobRecord,
       | 'jobName'
       | 'jobKey'
       | 'cronExpression'
@@ -675,11 +656,17 @@ declare namespace Api {
       | 'runOnEnable'
       | 'remark'
     >;
+    type JobMetadataParams = Partial<Pick<JobRecord, 'jobName' | 'remark'>> & { jobId: string; formReceipt: string };
+    type JobScheduleParams = Partial<Omit<JobCreateParams, 'jobName' | 'jobKey' | 'status' | 'remark'>> & {
+      jobId: string;
+    };
+    type JobDelivery = { notificationStatus: 'notified' | 'unconfirmed' } | null;
 
     /** registered task */
     type RegisteredTask = {
       key: string;
-      name: string;
+      labelKey: string;
+      parameters: Record<string, unknown>;
     };
 
     /** job log */
@@ -708,7 +695,7 @@ declare namespace Api {
     type JobLogList = Common.PaginatingQueryRecord<JobLog>;
 
     /** system config */
-    type Config = Common.CommonRecord<{
+    type ConfigRecord = Common.CommonRecord<{
       /** config id */
       configId: string;
       /** config name */
@@ -726,6 +713,7 @@ declare namespace Api {
       /** remark */
       remark: string | null;
     }>;
+    type Config = Partial<Omit<ConfigRecord, 'configId'>> & { configId: string; fieldPolicy?: ControlCapabilities };
 
     /** config search params */
     type ConfigSearchParams = CommonType.RecordNullable<
@@ -733,12 +721,12 @@ declare namespace Api {
     >;
 
     /** config list */
-    type ConfigList = Common.PaginatingQueryRecord<Config>;
+    type ConfigList = Common.PaginatingQueryRecord<Config> & { fieldPolicy: ControlCapabilities };
 
     /** config create params */
     type ConfigCreateParams = Pick<
-      Api.SystemManage.Config,
-      'configName' | 'configKey' | 'configValue' | 'configType' | 'configGroup' | 'status' | 'isPublic' | 'remark'
+      Api.SystemManage.ConfigRecord,
+      'configName' | 'configKey' | 'configValue' | 'configType' | 'configGroup' | 'status' | 'remark'
     >;
 
     /** operation log */
@@ -795,35 +783,19 @@ declare namespace Api {
     /** login log list */
     type LoginLogList = Common.PaginatingQueryRecord<LoginLog>;
 
-    /** data scope demo record */
-    type DataScopeDemo = Common.CommonRecord<{
-      /** demo id */
+    type DataScopeDemoCreateParams = { title: string; content: string | null; status: Common.EnableStatus };
+    type DataScopeDemo = Partial<DataScopeDemoCreateParams> & {
       demoId: string;
-      /** title */
-      title: string;
-      /** content */
-      content: string | null;
-      /** dept id (data scope anchor) */
-      deptId: string;
-      /** create by user id (SELF scope anchor) */
-      createBy: string;
-    }> & {
-      createTime: string | null;
-      updateTime: string | null;
+      deptId?: string;
+      createBy?: string;
+      createTime?: string | null;
+      updateTime?: string | null;
+      fieldPolicy?: OrdinaryCapabilities;
     };
-
-    /** data scope demo search params */
     type DataScopeDemoSearchParams = CommonType.RecordNullable<
-      Pick<DataScopeDemo, 'title' | 'status'> & CommonSearchParams
+      Pick<DataScopeDemoCreateParams, 'title' | 'status'> & CommonSearchParams
     >;
-
-    /** data scope demo list */
-    type DataScopeDemoList = Common.PaginatingQueryRecord<DataScopeDemo>;
-
-    /** data scope demo create params */
-    type DataScopeDemoCreateParams = Pick<DataScopeDemo, 'title' | 'content' | 'status'>;
-
-    /** data scope demo update params */
+    type DataScopeDemoList = OrdinaryPage<DataScopeDemo>;
     type DataScopeDemoUpdateParams = Partial<DataScopeDemoCreateParams>;
   }
 }
