@@ -155,7 +155,10 @@ describe('AI runtime authorization revocation', () => {
     'AI_CHAT_PERMISSION_DENIED',
     'FIELD_AUTHORIZATION_CHANGED',
     'FIELD_POLICY_UNAVAILABLE',
-    'FIELD_CONFIRMATION_LINEAGE_REQUIRED'
+    'FIELD_CONFIRMATION_LINEAGE_REQUIRED',
+    'FIELD_READ_DENIED',
+    'FIELD_QUERY_DENIED',
+    'FIELD_PERMISSION_DENIED'
   ])('aborts active producers and clears every cached projection on entry denial: %s', async code => {
     const store = useAiStore();
     await Promise.all([store.loadModels(), store.loadAgents()]);

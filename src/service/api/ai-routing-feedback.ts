@@ -16,6 +16,7 @@ export function fetchRoutingFeedbackList(params: Api.AiRoutingFeedback.ListQuery
     total: number;
     current: number;
     size: number;
+    fieldPolicy: Api.Common.DeliveryCapabilities;
   }>({
     url: '/ai/routing-feedback/list',
     method: 'get',

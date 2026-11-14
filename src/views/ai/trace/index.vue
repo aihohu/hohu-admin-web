@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onMounted, reactive, ref, shallowRef } from 'vue';
+import { computed, h, onMounted, onScopeDispose, reactive, ref, shallowRef } from 'vue';
 import type { DataTableColumn } from 'naive-ui';
 import {
   NButton,
@@ -22,6 +22,8 @@ import {
 import dayjs from 'dayjs';
 import { fetchAiTraceDetail, fetchAiTraceList } from '@/service/api';
 import { $t } from '@/locales';
+import { deliveryColumns } from '@/hooks/business/delivery-fields';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 
 defineOptions({ name: 'AiTrace' });
 
@@ -30,10 +32,19 @@ const query = reactive<Api.AiTrace.ListQuery>({ current: 1, size: 20, traceId: i
 const queuedRange = ref<[number, number] | null>(null);
 const records = shallowRef<Api.AiTrace.Summary[]>([]);
 const total = ref(0);
+const fieldPolicy = shallowRef<Api.Common.DeliveryCapabilities>();
+let listGeneration = 0;
+let detailGeneration = 0;
 const loading = ref(false);
 const detailVisible = ref(false);
 const detailLoading = ref(false);
 const detail = shallowRef<Api.AiTrace.Detail | null>(null);
+onScopeDispose(() => {
+  listGeneration++;
+  detailGeneration++;
+  records.value = [];
+  detail.value = null;
+});
 
 const statusOptions = computed(() =>
   ['running', 'pending_confirmation', 'success', 'failed', 'rejected', 'expired'].map(value => ({
@@ -46,22 +57,31 @@ function formatTime(value: string | null | undefined) {
   return value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-';
 }
 
-function formatTargets(targets: Api.AiTrace.Target[]) {
+function formatTargets(targets: Api.AiTrace.Target[] | undefined) {
+  if (targets === undefined) return $t('fieldPolicy.unavailable');
   return targets.length ? targets.map(target => `${target.type}:${target.id}`).join(', ') : '-';
 }
 
 async function loadList() {
+  const generation = ++listGeneration;
+  records.value = [];
+  total.value = 0;
+  detailGeneration++;
+  detail.value = null;
+  detailVisible.value = false;
   loading.value = true;
   const { error, data } = await fetchAiTraceList({
     ...query,
     traceId: query.traceId || undefined,
     actorId: query.actorId || undefined,
-    agentCode: query.agentCode || undefined,
-    toolName: query.toolName || undefined,
-    status: query.status || undefined,
-    queuedFrom: queuedRange.value?.[0],
-    queuedTo: queuedRange.value?.[1]
+    agentCode: fieldAllowed(fieldPolicy.value?.query, 'agentCode') ? query.agentCode || undefined : undefined,
+    toolName: fieldAllowed(fieldPolicy.value?.query, 'toolName') ? query.toolName || undefined : undefined,
+    status: fieldAllowed(fieldPolicy.value?.query, 'status') ? query.status || undefined : undefined,
+    queuedFrom: fieldAllowed(fieldPolicy.value?.query, 'queuedAt') ? queuedRange.value?.[0] : undefined,
+    queuedTo: fieldAllowed(fieldPolicy.value?.query, 'queuedAt') ? queuedRange.value?.[1] : undefined
   });
+  if (generation !== listGeneration) return;
+  fieldPolicy.value = error ? undefined : data.fieldPolicy;
   if (!error) {
     records.value = data.records;
     total.value = data.total;
@@ -88,10 +108,12 @@ function reset() {
 }
 
 async function openTrace(traceId: string) {
+  const generation = ++detailGeneration;
   detailVisible.value = true;
   detailLoading.value = true;
   detail.value = null;
   const { error, data } = await fetchAiTraceDetail(traceId);
+  if (generation !== detailGeneration) return;
   if (!error) detail.value = data;
   detailLoading.value = false;
 }
@@ -113,17 +135,18 @@ const columns = computed<DataTableColumn<Api.AiTrace.Summary>[]>(() => [
   {
     title: $t('page.ai.trace.agent'),
     key: 'agentCodes',
-    render: row => row.agentCodes.join(', ')
+    render: row => row.agentCodes?.join(', ') ?? $t('fieldPolicy.unavailable')
   },
   {
     title: $t('page.ai.trace.tool'),
     key: 'toolNames',
-    render: row => row.toolNames.join(', ')
+    render: row => row.toolNames?.join(', ') ?? $t('fieldPolicy.unavailable')
   },
   {
     title: $t('page.ai.trace.status'),
     key: 'statuses',
-    render: row => h(NSpace, { size: 4 }, () => row.statuses.map(status => h(NTag, { size: 'small' }, () => status)))
+    render: row =>
+      h(NSpace, { size: 4 }, () => (row.statuses ?? []).map(status => h(NTag, { size: 'small' }, () => status)))
   },
   { title: $t('page.ai.trace.operationCount'), key: 'operationCount', width: 100 },
   {
@@ -143,6 +166,14 @@ const columns = computed<DataTableColumn<Api.AiTrace.Summary>[]>(() => [
   }
 ]);
 
+const visibleColumns = computed(() =>
+  deliveryColumns(columns.value, records.value, fieldPolicy.value, {
+    actorName: 'actor_name',
+    agentCodes: 'agent_code',
+    toolNames: 'tool_name',
+    statuses: 'status'
+  })
+);
 onMounted(loadList);
 
 defineExpose({ openTrace, query });
@@ -159,14 +190,19 @@ defineExpose({ openTrace, query });
           <NInput v-model:value="query.actorId" clearable />
         </NFormItem>
         <NFormItem :label="$t('page.ai.trace.agent')">
-          <NInput v-model:value="query.agentCode" clearable />
+          <NInput
+            v-model:value="query.agentCode"
+            :disabled="!fieldAllowed(fieldPolicy?.query, 'agentCode')"
+            clearable
+          />
         </NFormItem>
         <NFormItem :label="$t('page.ai.trace.tool')">
-          <NInput v-model:value="query.toolName" clearable />
+          <NInput v-model:value="query.toolName" :disabled="!fieldAllowed(fieldPolicy?.query, 'toolName')" clearable />
         </NFormItem>
         <NFormItem :label="$t('page.ai.trace.status')">
           <NSelect
             :value="query.status || null"
+            :disabled="!fieldAllowed(fieldPolicy?.query, 'status')"
             :options="statusOptions"
             clearable
             class="w-40"
@@ -174,7 +210,12 @@ defineExpose({ openTrace, query });
           />
         </NFormItem>
         <NFormItem :label="$t('page.ai.trace.queuedAt')">
-          <NDatePicker v-model:value="queuedRange" type="datetimerange" clearable />
+          <NDatePicker
+            v-model:value="queuedRange"
+            :disabled="!fieldAllowed(fieldPolicy?.query, 'queuedAt')"
+            type="datetimerange"
+            clearable
+          />
         </NFormItem>
         <NFormItem>
           <NSpace>
@@ -188,7 +229,7 @@ defineExpose({ openTrace, query });
     <NCard :title="$t('page.ai.trace.title')" data-testid="ai-trace-list">
       <NDataTable
         remote
-        :columns="columns"
+        :columns="visibleColumns"
         :data="records"
         :loading="loading"
         :pagination="{
@@ -217,13 +258,13 @@ defineExpose({ openTrace, query });
             <NCollapseItem
               v-for="operation in detail.operations"
               :key="operation.logId"
-              :title="`${operation.toolName} · ${operation.status}`"
+              :title="`${operation.toolName ?? $t('fieldPolicy.unavailable')} · ${operation.status ?? $t('fieldPolicy.unavailable')}`"
               :name="operation.logId"
             >
               <NDescriptions bordered :column="1" label-placement="left">
                 <NDescriptionsItem :label="$t('page.ai.trace.agent')">{{ operation.agentCode }}</NDescriptionsItem>
                 <NDescriptionsItem :label="$t('page.ai.trace.actor')">
-                  {{ operation.actorName || operation.actorId }}
+                  {{ operation.actorName ?? $t('fieldPolicy.unavailable') }}
                 </NDescriptionsItem>
                 <NDescriptionsItem :label="$t('page.ai.trace.sourceMessage')">
                   {{ operation.sourceMessageRole || '-' }} · {{ operation.sourceMessageId || '-' }} ·

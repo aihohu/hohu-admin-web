@@ -19,21 +19,22 @@ declare namespace Api {
       correct: number;
       wrong: number;
       wrongRate: number;
-      topWrongAgents: TopWrongAgent[];
+      topWrongAgents?: TopWrongAgent[];
     }
 
     interface ListItem {
       feedbackId: string;
-      messageId: string;
-      userId: string;
-      userName: string;
-      originalAgent: string;
-      originalAgentName: string;
-      feedback: 'correct' | 'wrong';
-      correctedAgent: string | null;
-      correctedAgentName: string | null;
-      traceId: string | null;
-      createTime: string;
+      messageId?: string;
+      userId?: string;
+      userName?: string;
+      originalAgent?: string;
+      originalAgentName?: string;
+      feedback?: 'correct' | 'wrong';
+      correctedAgent?: string | null;
+      correctedAgentName?: string | null;
+      traceId?: string | null;
+      createTime?: string;
+      fieldPolicy?: Common.DeliveryCapabilities;
     }
 
     interface ListQuery {

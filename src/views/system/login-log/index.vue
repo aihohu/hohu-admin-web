@@ -1,5 +1,9 @@
 <script setup lang="tsx">
 import { reactive } from 'vue';
+import { computed, shallowRef } from 'vue';
+import { deliveryColumns } from '@/hooks/business/delivery-fields';
+import { controlQuery } from '@/hooks/business/control-fields';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { fetchBatchDeleteLoginLog, fetchCleanLoginLog, fetchGetLoginLogList } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
@@ -12,6 +16,7 @@ defineOptions({
 });
 
 const appStore = useAppStore();
+const fieldPolicy = shallowRef<Api.Common.DeliveryCapabilities>();
 
 const searchParams: Api.SystemManage.LoginLogSearchParams = reactive({
   current: 1,
@@ -25,8 +30,15 @@ const searchParams: Api.SystemManage.LoginLogSearchParams = reactive({
 
 const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagination } =
   useNaivePaginatedTable({
-    api: () => fetchGetLoginLogList(searchParams),
-    transform: response => defaultTransform(response),
+    api: () => fetchGetLoginLogList(controlQuery(searchParams, fieldPolicy.value?.query)),
+    transform: response => {
+      fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
+      for (const key of Object.keys(searchParams)) {
+        const source = ['startTime', 'endTime'].includes(key) ? 'loginTime' : key;
+        if (!['current', 'size'].includes(key) && !fieldAllowed(fieldPolicy.value?.query, source)) Object.assign(searchParams, { [key]: null });
+      }
+      return defaultTransform(response);
+    },
     onPaginationParamsChange: params => {
       searchParams.current = params.page;
       searchParams.size = params.pageSize;
@@ -57,13 +69,6 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         width: 130
       },
       {
-        key: 'userAgent',
-        title: $t('page.system.loginLog.userAgent'),
-        minWidth: 200,
-        ellipsis: { tooltip: true },
-        render: row => row.userAgent || '-'
-      },
-      {
         key: 'status',
         title: $t('page.system.loginLog.status'),
         align: 'center',
@@ -74,16 +79,10 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
             '2': { type: 'error', label: $t('page.system.loginLog.statusFailed') },
             '3': { type: 'warning', label: $t('page.system.loginLog.statusLocked') }
           };
-          const item = statusMap[row.status];
+          const item = row.status === undefined ? undefined : statusMap[row.status];
           if (!item) return row.status;
           return <NTag type={item.type}>{item.label}</NTag>;
         }
-      },
-      {
-        key: 'message',
-        title: $t('page.system.loginLog.message'),
-        minWidth: 120,
-        render: row => row.message || '-'
       },
       {
         key: 'loginTime',
@@ -93,6 +92,8 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       }
     ]
   });
+
+const visibleColumns = computed(() => deliveryColumns(columns.value, data.value, fieldPolicy.value));
 
 const { checkedRowKeys, onDeleted } = useTableOperate(data, 'loginLogId', getData);
 
@@ -114,7 +115,7 @@ async function handleClean() {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <LoginLogSearch v-model:model="searchParams" @search="getDataByPage" />
+    <LoginLogSearch v-model:model="searchParams" :query-fields="fieldPolicy?.query" @search="getDataByPage" />
     <NCard
       :title="$t('page.system.loginLog.title')"
       :bordered="false"
@@ -144,7 +145,7 @@ async function handleClean() {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"

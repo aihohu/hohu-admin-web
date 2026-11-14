@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { onScopeDispose, ref, watch } from 'vue';
 import { useDialog } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import { useAiStore } from '@/store/modules/ai';
@@ -16,6 +16,18 @@ watch(searchKeyword, val => {
   searchTimer = setTimeout(() => {
     aiStore.loadConversations(keyword);
   }, 300);
+});
+watch(
+  () => aiStore.canQueryConversationTitle,
+  allowed => {
+    if (!allowed) {
+      if (searchTimer) clearTimeout(searchTimer);
+      searchKeyword.value = '';
+    }
+  }
+);
+onScopeDispose(() => {
+  if (searchTimer) clearTimeout(searchTimer);
 });
 
 function handleCreate() {
@@ -64,6 +76,7 @@ function handleScroll(e: Event) {
     <div class="px-12px pb-8px">
       <NInput
         v-model:value="searchKeyword"
+        :disabled="!aiStore.canQueryConversationTitle"
         :placeholder="t('page.ai.chat.searchPlaceholder')"
         clearable
         size="small"
@@ -86,7 +99,9 @@ function handleScroll(e: Event) {
           @click="handleSelect(conv.conversationId)"
         >
           <IconIcRoundChatBubbleOutline class="flex-shrink-0 text-16px" />
-          <span class="conv-title">{{ conv.title || t('page.ai.chat.newChat') }}</span>
+          <span class="conv-title">
+            {{ conv.title === undefined ? t('fieldPolicy.unavailable') : conv.title || t('page.ai.chat.newChat') }}
+          </span>
           <NButton
             quaternary
             circle

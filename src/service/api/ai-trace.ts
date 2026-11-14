@@ -2,7 +2,9 @@ import { request } from '@/service/request';
 
 /** Get the tenant-scoped grouped AI Trace list. */
 export function fetchAiTraceList(params: Api.AiTrace.ListQuery) {
-  return request<Api.Common.PaginatingQueryRecord<Api.AiTrace.Summary>>({
+  return request<
+    Api.Common.PaginatingQueryRecord<Api.AiTrace.Summary> & { fieldPolicy: Api.Common.DeliveryCapabilities }
+  >({
     url: '/ai/operation-log/traces',
     method: 'get',
     params

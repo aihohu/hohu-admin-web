@@ -12,6 +12,15 @@ describe('field policy purpose labels', () => {
   });
   it.each([
     'system_role',
+    'system_operation_log',
+    'system_login_log',
+    'job_log',
+    'ai_agent',
+    'ai_conversation',
+    'ai_message',
+    'ai_operation_log',
+    'ai_routing_log',
+    'ai_routing_feedback',
     'system_dept',
     'system_menu',
     'system_config',

@@ -670,7 +670,7 @@ declare namespace Api {
     };
 
     /** job log */
-    type JobLog = {
+    type JobLog = { jobLogId: string; fieldPolicy?: Common.DeliveryCapabilities } & Partial<{
       jobLogId: string;
       jobId: string;
       jobName: string;
@@ -681,7 +681,7 @@ declare namespace Api {
       endTime: string | null;
       duration: number | null;
       attemptCount: number;
-    };
+    }>;
 
     /** job log search params */
     type JobLogSearchParams = CommonType.RecordNullable<
@@ -692,7 +692,7 @@ declare namespace Api {
     >;
 
     /** job log list */
-    type JobLogList = Common.PaginatingQueryRecord<JobLog>;
+    type JobLogList = Common.PaginatingQueryRecord<JobLog> & { fieldPolicy: Common.DeliveryCapabilities };
 
     /** system config */
     type ConfigRecord = Common.CommonRecord<{
@@ -730,7 +730,7 @@ declare namespace Api {
     >;
 
     /** operation log */
-    type OperationLog = {
+    type OperationLog = { operationLogId: string; fieldPolicy?: Common.DeliveryCapabilities } & Partial<{
       operationLogId: string;
       userId: string;
       username: string;
@@ -743,7 +743,7 @@ declare namespace Api {
       ip: string | null;
       duration: number | null;
       createTime: string;
-    };
+    }>;
 
     /** operation log search params */
     type OperationLogSearchParams = CommonType.RecordNullable<
@@ -755,13 +755,13 @@ declare namespace Api {
     >;
 
     /** operation log list */
-    type OperationLogList = Common.PaginatingQueryRecord<OperationLog>;
+    type OperationLogList = Common.PaginatingQueryRecord<OperationLog> & { fieldPolicy: Common.DeliveryCapabilities };
 
     /** login log status */
     type LoginLogStatus = '1' | '2' | '3';
 
     /** login log */
-    type LoginLog = {
+    type LoginLog = { loginLogId: string; fieldPolicy?: Common.DeliveryCapabilities } & Partial<{
       loginLogId: string;
       userId: string | null;
       username: string;
@@ -770,7 +770,7 @@ declare namespace Api {
       status: LoginLogStatus;
       message: string | null;
       loginTime: string;
-    };
+    }>;
 
     /** login log search params */
     type LoginLogSearchParams = CommonType.RecordNullable<
@@ -781,7 +781,7 @@ declare namespace Api {
     >;
 
     /** login log list */
-    type LoginLogList = Common.PaginatingQueryRecord<LoginLog>;
+    type LoginLogList = Common.PaginatingQueryRecord<LoginLog> & { fieldPolicy: Common.DeliveryCapabilities };
 
     type DataScopeDemoCreateParams = { title: string; content: string | null; status: Common.EnableStatus };
     type DataScopeDemo = Partial<DataScopeDemoCreateParams> & {

@@ -88,6 +88,30 @@ const stubs = {
 import AiTracePage from '../index.vue';
 
 describe('AI Trace audit page', () => {
+  it('does not replace a hidden actor name with the internal user ID', async () => {
+    detailMock.mockResolvedValueOnce({
+      error: null,
+      data: {
+        traceId: 'tr_private',
+        conversationId: '900',
+        operations: [
+          {
+            logId: '101',
+            toolCallId: 'tc_private',
+            actorId: 'INTERNAL_ACTOR_SENTINEL',
+            status: 'success',
+            targetSummary: []
+          }
+        ]
+      }
+    });
+    const wrapper = mount(AiTracePage, { attachTo: document.body, global: { stubs } });
+    await flushPromises();
+    await (wrapper.vm as unknown as { openTrace: (id: string) => Promise<void> }).openTrace('tr_private');
+    expect(document.body.textContent).toContain('tr_private');
+    expect(document.body.textContent).not.toContain('INTERNAL_ACTOR_SENTINEL');
+    wrapper.unmount();
+  });
   beforeEach(() => {
     window.history.replaceState({}, '', '/');
     listMock.mockClear();
