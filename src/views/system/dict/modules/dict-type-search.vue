@@ -4,6 +4,8 @@ import { jsonClone } from '@sa/utils';
 import { enableStatusOptions } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+defineProps<{ allowedFields?: string[] }>();
 
 defineOptions({
   name: 'DictTypeSearch'
@@ -35,6 +37,7 @@ function search() {
         <NForm :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
             <NFormItemGi
+              v-if="fieldAllowed(allowedFields, 'dictName')"
               span="24 s:12 m:6"
               :label="$t('page.system.dict.dictTypeName')"
               path="dictName"
@@ -44,6 +47,7 @@ function search() {
             </NFormItemGi>
 
             <NFormItemGi
+              v-if="fieldAllowed(allowedFields, 'dictType')"
               span="24 s:12 m:6"
               :label="$t('page.system.dict.dictTypeCode')"
               path="dictType"
@@ -52,7 +56,13 @@ function search() {
               <NInput v-model:value="model.dictType" clearable />
             </NFormItemGi>
 
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.dict.status')" path="status" class="pr-24px">
+            <NFormItemGi
+              v-if="fieldAllowed(allowedFields, 'status')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.dict.status')"
+              path="status"
+              class="pr-24px"
+            >
               <NSelect
                 v-model:value="model.status"
                 :placeholder="$t('page.system.dict.typeForm.status')"

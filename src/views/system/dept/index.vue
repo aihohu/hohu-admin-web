@@ -1,20 +1,22 @@
 <script setup lang="tsx">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, shallowRef } from 'vue';
 import { useRoute } from 'vue-router';
 import type { FlatResponseData } from '@sa/axios';
 import { jsonClone } from '@sa/utils';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord } from '@/constants/business';
-import { fetchBatchDeleteDept, fetchDeleteDept, fetchGetDeptTree } from '@/service/api';
+import { fetchBatchDeleteDept, fetchDeleteDept, fetchGetDeptTreePage } from '@/service/api';
 import { fetchAiQueryCache } from '@/service/api/ai';
 import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
 import { useNaiveTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 import DeptOperateDrawer from './modules/dept-operate-drawer.vue';
 import DeptSearch from './modules/dept-search.vue';
 import DeptUsersModal from './modules/dept-users-modal.vue';
 
+const fieldPolicy = shallowRef<Api.SystemManage.OrdinaryCapabilities>();
 const appStore = useAppStore();
 const { hasAuth, hasSuperAdminAuth } = useAuth();
 const route = useRoute();
@@ -26,14 +28,15 @@ const searchParams: Api.SystemManage.DeptSearchParams = reactive({
 });
 
 const { columns, columnChecks, data, loading, getData, scrollX } = useNaiveTable<
-  FlatResponseData<any, Api.SystemManage.DeptTree[]>,
+  FlatResponseData<any, Api.SystemManage.OrdinaryPage<Api.SystemManage.DeptTree>>,
   Api.SystemManage.DeptTree
 >({
-  api: () => fetchGetDeptTree(searchParams),
+  api: () => fetchGetDeptTreePage(searchParams),
   transform: response => {
     const { data: treeData, error } = response;
+    fieldPolicy.value = error ? undefined : treeData.fieldPolicy;
     if (!error) {
-      return treeData || [];
+      return treeData.records || [];
     }
     return [];
   },
@@ -79,7 +82,7 @@ const { columns, columnChecks, data, loading, getData, scrollX } = useNaiveTable
       align: 'center',
       width: 100,
       render: row => {
-        if (row.status === null) {
+        if (!row.status) {
           return null;
         }
 
@@ -142,6 +145,9 @@ const { columns, columnChecks, data, loading, getData, scrollX } = useNaiveTable
   ]
 });
 
+const visibleColumns = computed(() => columns.value.filter(column => !('key' in column) ||
+  ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
+
 const {
   drawerVisible,
   operateType,
@@ -180,7 +186,7 @@ onMounted(async () => {
 
 function manageUsers(dept: Api.SystemManage.DeptTree) {
   usersModalDeptId.value = dept.deptId;
-  usersModalDeptName.value = dept.deptName;
+  usersModalDeptName.value = dept.deptName ?? '';
   usersModalVisible.value = true;
 }
 
@@ -228,11 +234,12 @@ async function handleDelete(id: string) {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <DeptSearch v-model:model="searchParams" @search="getData" />
+    <DeptSearch v-model:model="searchParams" :allowed-fields="fieldPolicy?.query" @search="getData" />
     <NCard :title="$t('page.system.dept.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <TableHeaderOperation
           v-model:columns="columnChecks"
+          :show-add="fieldPolicy?.canCreate === true"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
           add-auth="system:dept:add"
@@ -245,7 +252,7 @@ async function handleDelete(id: string) {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"

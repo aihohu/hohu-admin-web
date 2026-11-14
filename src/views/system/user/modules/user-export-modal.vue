@@ -23,12 +23,13 @@ const { hasAuth } = useAuth();
 const { bool: visible, setTrue: open, setFalse: close } = useBoolean();
 const hasExportAuth = computed(() => hasAuth('system:user:export'));
 
-const { reason, loading, errorCode, canExport, filterSummary, reset, setFilter, confirmExport } = useExportFlow({
-  onExported: () => {
-    emit('exported');
-    close();
-  }
-});
+const { reason, loading, errorCode, canExport, filterSummary, unsupportedFilter, reset, setFilter, confirmExport } =
+  useExportFlow({
+    onExported: () => {
+      emit('exported');
+      close();
+    }
+  });
 
 watch(
   () => props.filter,
@@ -46,6 +47,13 @@ async function handleConfirmExport() {
 function handleAfterLeave(): void {
   reset();
 }
+watch(
+  visible,
+  value => {
+    if (!value) reset();
+  },
+  { flush: 'sync' }
+);
 
 defineExpose({ open });
 </script>
@@ -60,6 +68,9 @@ defineExpose({ open });
     @after-leave="handleAfterLeave"
   >
     <NForm label-placement="top">
+      <NAlert v-if="unsupportedFilter" type="warning" class="mb-12px">
+        {{ $t('common.exportModal.errorCode.FILTER_UNSUPPORTED') }}
+      </NAlert>
       <NFormItem :label="$t('common.exportModal.reasonLabel')">
         <NInput
           v-model:value="reason"

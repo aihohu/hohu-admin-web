@@ -1,23 +1,29 @@
 <script setup lang="tsx">
 import { localizedText } from '@/locales';
-import { nextTick, onMounted, reactive, shallowRef } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, nextTick, onMounted, reactive, shallowRef } from 'vue';
+import { onBeforeRouteLeave, useRoute } from 'vue-router';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { enableStatusRecord, roleDataScopeRecord } from '@/constants/business';
-import { fetchBatchDeleteRole, fetchDeleteRole, fetchGetRoleDetail, fetchGetRoleList } from '@/service/api';
+import { fetchBatchDeleteRole, fetchDeleteRole, fetchGetRoleList } from '@/service/api';
 import { fetchAiQueryCache } from '@/service/api/ai';
 import { useAppStore } from '@/store/modules/app';
+import { useAuthStore } from '@/store/modules/auth';
+import { fieldPolicyRepository } from '@/service/api/field-policy';
 import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 import RoleOperateDrawer from './modules/role-operate-drawer.vue';
 import RoleSearch from './modules/role-search.vue';
 import MenuAuthModal from './modules/menu-auth-modal.vue';
 import AiAgentAuthModal from './modules/ai-agent-auth-modal.vue';
 import FieldPolicyDrawer from './modules/field-policy-drawer.vue';
 
+const fieldPolicy = shallowRef<Api.SystemManage.OrdinaryCapabilities>();
 const appStore = useAppStore();
+const authStore = useAuthStore();
+const fieldPolicyIdentity = computed(() => authStore.userInfo.userId + ':' + authStore.token);
 const { hasAuth, hasSuperAdminAuth } = useAuth();
 const route = useRoute();
 const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
@@ -28,6 +34,8 @@ const aiAgentAuthRoleId = shallowRef<string>('');
 const editingRole = shallowRef<Api.SystemManage.Role | null>(null);
 const fieldPolicyRoleId = shallowRef('');
 const fieldPolicyVisible = shallowRef(false);
+const fieldPolicyDrawer = shallowRef<InstanceType<typeof FieldPolicyDrawer> | null>(null);
+onBeforeRouteLeave(() => fieldPolicyVisible.value ? (fieldPolicyDrawer.value?.confirmLeave() ?? false) : true);
 
 const searchParams: Api.SystemManage.RoleSearchParams = reactive({
   current: 1,
@@ -40,7 +48,10 @@ const searchParams: Api.SystemManage.RoleSearchParams = reactive({
 
 const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
   api: () => fetchGetRoleList(searchParams),
-  transform: response => defaultTransform(response),
+  transform: response => {
+    fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
+    return defaultTransform(response);
+  },
   onPaginationParamsChange: params => {
     searchParams.current = params.page;
     searchParams.size = params.pageSize;
@@ -76,11 +87,11 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       title: $t('page.system.role.dataScope.label'),
       align: 'center',
       minWidth: 140,
-      render: row => (
+      render: row => row.dataScope ? (
         <NTag type="info" class="whitespace-nowrap">
           {$t(roleDataScopeRecord[row.dataScope])}
         </NTag>
-      )
+      ) : null
     },
     {
       key: 'status',
@@ -88,7 +99,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       align: 'center',
       width: 100,
       render: row => {
-        if (row.status === null) {
+        if (!row.status) {
           return null;
         }
 
@@ -114,6 +125,11 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
               {$t('page.system.role.menuAuth')}
             </NButton>
           )}
+          {hasSuperAdminAuth('system:role:field-policy-view') && (
+            <NButton type="info" ghost size="small" onClick={() => { fieldPolicyRoleId.value = row.roleId; fieldPolicyVisible.value = true; }}>
+              {$t('fieldPolicy.title')}
+            </NButton>
+          )}
           {row.delegable && hasAuth('system:role:ai-agent-auth') && (
             <NButton
               type="primary"
@@ -123,11 +139,6 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
               onClick={() => onAiAgentAuthClick(row.roleId)}
             >
               {$t('page.ai.aiAgentAuth.title')}
-            </NButton>
-          )}
-          {hasSuperAdminAuth('system:user:field-policy-view') && (
-            <NButton size="small" onClick={() => { fieldPolicyRoleId.value = row.roleId; fieldPolicyVisible.value = true; }}>
-              {$t('fieldPolicy.title')}
             </NButton>
           )}
           {row.delegable && hasAuth('system:role:edit') && (
@@ -152,6 +163,9 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     }
   ]
 });
+
+const visibleColumns = computed(() => columns.value.filter(column => !('key' in column) ||
+  ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
 
 const {
   drawerVisible,
@@ -198,11 +212,9 @@ async function handleDelete(id: string) {
   }
 }
 
-async function edit(id: string) {
-  const { data: detail, error } = await fetchGetRoleDetail(id);
-  if (error || !detail) return;
+function edit(id: string) {
   operateType.value = 'edit';
-  editingRole.value = detail;
+  editingRole.value = { roleId: id };
   openDrawer();
 }
 
@@ -231,6 +243,7 @@ async function onAgentMenuAuthClick(id: string) {
       <template #header-extra>
         <TableHeaderOperation
           v-model:columns="columnChecks"
+          :show-add="fieldPolicy?.canCreate === true"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
           add-auth="system:role:add"
@@ -243,7 +256,7 @@ async function onAgentMenuAuthClick(id: string) {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         table-layout="auto"
@@ -264,7 +277,21 @@ async function onAgentMenuAuthClick(id: string) {
     </NCard>
 
     <MenuAuthModal v-model:visible="menuAuthVisible" :role-id="currentRoleId" />
-    <FieldPolicyDrawer v-model:visible="fieldPolicyVisible" :role-id="fieldPolicyRoleId" />
+    <FieldPolicyDrawer
+      ref="fieldPolicyDrawer"
+      v-model:visible="fieldPolicyVisible"
+      :role-id="fieldPolicyRoleId"
+      :identity="fieldPolicyIdentity"
+      :repository="fieldPolicyRepository"
+      :can-menu="hasAuth('system:role:menu-auth')"
+      :can-edit-role="hasAuth('system:role:edit')"
+      @navigate="
+        target => {
+          if (target === 'menu') onMenuAuthClick(fieldPolicyRoleId);
+          else edit(fieldPolicyRoleId);
+        }
+      "
+    />
     <AiAgentAuthModal
       v-model:visible="aiAgentAuthVisible"
       :role-id="aiAgentAuthRoleId"

@@ -1,6 +1,6 @@
 <script setup lang="tsx">
 import { localizedText } from '@/locales';
-import { ref } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
 import type { Ref } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
@@ -11,9 +11,11 @@ import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 import SvgIcon from '@/components/custom/svg-icon.vue';
 import MenuOperateModal, { type OperateType } from './modules/menu-operate-modal.vue';
 
+const fieldPolicy = shallowRef<Api.SystemManage.OrdinaryCapabilities>();
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
 
@@ -23,7 +25,10 @@ const wrapperRef = ref<HTMLElement | null>(null);
 
 const { columns, columnChecks, data, loading, pagination, getData, getDataByPage } = useNaivePaginatedTable({
   api: () => fetchGetMenuList(),
-  transform: response => defaultTransform(response),
+  transform: response => {
+    fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
+    return defaultTransform(response);
+  },
   columns: () => [
     {
       type: 'selection',
@@ -76,6 +81,7 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
           C: 'primary'
         };
 
+        if (!row.menuType) return null;
         const label = $t(menuTypeRecord[row.menuType]);
 
         return <NTag type={tagMap[row.menuType]}>{label}</NTag>;
@@ -100,7 +106,7 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
       align: 'center',
       width: 120,
       render: row => {
-        if (row.status === null) {
+        if (!row.status) {
           return null;
         }
 
@@ -179,6 +185,9 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
   ]
 });
 
+const visibleColumns = computed(() => columns.value.filter(column => !('key' in column) ||
+  ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
+
 const { checkedRowKeys, onBatchDeleted, onDeleted } = useTableOperate(data, 'id', getData);
 
 const operateType = ref<OperateType>('add');
@@ -241,6 +250,7 @@ init();
       <template #header-extra>
         <TableHeaderOperation
           v-model:columns="columnChecks"
+          :show-add="fieldPolicy?.canCreate === true"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
           add-auth="system:menu:add"
@@ -252,7 +262,7 @@ init();
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"

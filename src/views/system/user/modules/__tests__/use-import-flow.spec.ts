@@ -61,6 +61,53 @@ const FIXTURE_EXECUTE = {
 };
 
 describe('useImportFlow', () => {
+  it.each(['empty', 'html'])('rejects %s template and error responses without downloading', async kind => {
+    const { fetchDownloadImportError } = await import('@/service/api');
+    const blob = kind === 'empty' ? new Blob([]) : new Blob(['denied'], { type: 'text/html' });
+    vi.mocked(fetchDownloadImportTemplate).mockResolvedValue(ok(blob));
+    vi.mocked(fetchDownloadImportError).mockResolvedValue(ok(blob));
+    const create = vi.spyOn(URL, 'createObjectURL');
+    const flow = useImportFlow();
+    await flow.downloadTemplate();
+    flow.executeResult.value = FIXTURE_EXECUTE;
+    await flow.downloadErrors();
+    expect(create).not.toHaveBeenCalled();
+    expect(flow.loading.value).toBe(false);
+    create.mockRestore();
+  });
+  it('handles a rejected error-file request and releases the action', async () => {
+    const { fetchDownloadImportError } = await import('@/service/api');
+    vi.mocked(fetchDownloadImportError).mockRejectedValue(new Error('transport closed'));
+    const flow = useImportFlow();
+    flow.executeResult.value = FIXTURE_EXECUTE;
+    await expect(flow.downloadErrors()).resolves.toBeUndefined();
+    expect(flow.loading.value).toBe(false);
+    expect(flow.errorCode.value).toBe('TEMPLATE_FAILED');
+  });
+  it('invalidates preview on reason changes and ignores replies after reopening', async () => {
+    vi.mocked(fetchDryRunImportUsers).mockResolvedValue(ok(FIXTURE_DRY_RUN));
+    const flow = useImportFlow();
+    flow.reason.value = 'first';
+    await flow.uploadFile(new File(['a'], 'users.csv', { type: 'text/csv' }));
+    expect(flow.canConfirm.value).toBe(true);
+    flow.reason.value = 'changed';
+    expect(flow.canConfirm.value).toBe(false);
+    await flow.confirmImport();
+    expect(fetchExecuteImportUsers).not.toHaveBeenCalled();
+    let complete!: (value: ApiResult<typeof FIXTURE_DRY_RUN>) => void;
+    vi.mocked(fetchDryRunImportUsers).mockImplementation(
+      () =>
+        new Promise(resolve => {
+          complete = resolve;
+        })
+    );
+    const pending = flow.uploadFile(new File(['b'], 'users.csv', { type: 'text/csv' }));
+    flow.open();
+    complete(ok(FIXTURE_DRY_RUN));
+    await pending;
+    expect(flow.dryRunResult.value).toBeNull();
+    expect(flow.step.value).toBe(1);
+  });
   it('downloads error files by batch identity and never follows the returned URL', async () => {
     const { fetchDownloadImportError } = await import('@/service/api');
     vi.mocked(fetchDownloadImportError).mockResolvedValue({ data: new Blob(['xlsx']), error: null } as never);
@@ -239,7 +286,7 @@ describe('useImportFlow', () => {
     const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 
     const clickSpy = vi.fn();
-    const anchorEl = { click: clickSpy, href: '', download: '' } as any;
+    const anchorEl = { click: clickSpy, remove: vi.fn(), href: '', download: '' } as any;
     const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(anchorEl);
     const appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => anchorEl);
     const removeSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => anchorEl);
@@ -251,6 +298,7 @@ describe('useImportFlow', () => {
     expect(createObjectURLSpy).toHaveBeenCalledWith(blob);
     expect(anchorEl.download).toBe('user_import_template.xlsx');
     expect(clickSpy).toHaveBeenCalled();
+    expect(anchorEl.remove).toHaveBeenCalled();
     expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:fake-url');
 
     createObjectURLSpy.mockRestore();

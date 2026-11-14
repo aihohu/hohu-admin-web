@@ -1,5 +1,9 @@
 <script setup lang="tsx">
 import { reactive, ref } from 'vue';
+import { computed, shallowRef, watch } from 'vue';
+import { deliveryColumns } from '@/hooks/business/delivery-fields';
+import { controlQuery } from '@/hooks/business/control-fields';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { fetchBatchDeleteJobLog, fetchCleanJobLog, fetchGetJobLogList } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
@@ -13,6 +17,7 @@ defineOptions({
 });
 
 const appStore = useAppStore();
+const fieldPolicy = shallowRef<Api.Common.DeliveryCapabilities>();
 
 const searchParams: Api.SystemManage.JobLogSearchParams = reactive({
   current: 1,
@@ -26,8 +31,15 @@ const searchParams: Api.SystemManage.JobLogSearchParams = reactive({
 
 const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagination } =
   useNaivePaginatedTable({
-    api: () => fetchGetJobLogList(searchParams),
-    transform: response => defaultTransform(response),
+    api: () => fetchGetJobLogList(controlQuery(searchParams, fieldPolicy.value?.query)),
+    transform: response => {
+      fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
+      for (const key of Object.keys(searchParams)) {
+        const source = ['startTime', 'endTime'].includes(key) ? 'startTime' : key;
+        if (!['current', 'size'].includes(key) && !fieldAllowed(fieldPolicy.value?.query, source)) Object.assign(searchParams, { [key]: null });
+      }
+      return defaultTransform(response);
+    },
     onPaginationParamsChange: params => {
       searchParams.current = params.page;
       searchParams.size = params.pageSize;
@@ -68,7 +80,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
             '2': { type: 'error', label: $t('page.system.jobLog.statusFailed') },
             '3': { type: 'primary', label: $t('page.system.jobLog.statusRunning') }
           };
-          const item = statusMap[row.status];
+          const item = row.status === undefined ? undefined : statusMap[row.status];
           if (!item) return null;
           return <NTag type={item.type}>{item.label}</NTag>;
         }
@@ -85,7 +97,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         title: $t('page.system.jobLog.attemptCount'),
         align: 'center',
         width: 80,
-        render: row => (row.attemptCount > 1 ? `${row.attemptCount}` : '-')
+        render: row => (row.attemptCount != null && row.attemptCount > 1 ? `${row.attemptCount}` : '-')
       },
       {
         key: 'startTime',
@@ -99,13 +111,6 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         align: 'center',
         minWidth: 160,
         render: row => row.endTime || '-'
-      },
-      {
-        key: 'errorMsg',
-        title: $t('page.system.jobLog.errorMsg'),
-        minWidth: 200,
-        ellipsis: { tooltip: true },
-        render: row => row.errorMsg || '-'
       },
       {
         key: 'actions',
@@ -122,11 +127,15 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
     ]
   });
 
+const visibleColumns = computed(() => deliveryColumns(columns.value, data.value, fieldPolicy.value));
+
 const { checkedRowKeys, onDeleted } = useTableOperate(data, 'jobLogId', getData);
 
 /** 详情抽屉 */
 const detailVisible = ref(false);
 const detailRow = ref<Api.SystemManage.JobLog | null>(null);
+
+watch(data, () => { detailVisible.value = false; detailRow.value = null; });
 
 function handleViewDetail(row: Api.SystemManage.JobLog) {
   detailRow.value = row;
@@ -151,7 +160,7 @@ async function handleClean() {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <JobLogSearch v-model:model="searchParams" @search="getDataByPage" />
+    <JobLogSearch v-model:model="searchParams" :query-fields="fieldPolicy?.query" @search="getDataByPage" />
     <NCard :title="$t('page.system.jobLog.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <NSpace>
@@ -176,7 +185,7 @@ async function handleClean() {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"

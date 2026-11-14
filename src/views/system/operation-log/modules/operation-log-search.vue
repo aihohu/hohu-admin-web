@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, toRaw } from 'vue';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+const props = defineProps<{ queryFields?: string[] }>();
 import { jsonClone } from '@sa/utils';
 import { $t } from '@/locales';
 
@@ -73,7 +75,12 @@ function handleDateRangeChange(value: [number, number] | null) {
               path="module"
               class="pr-24px"
             >
-              <NSelect v-model:value="model.module" :options="moduleOptions" clearable />
+              <NSelect
+                v-model:value="model.module"
+                :disabled="!fieldAllowed(props.queryFields, 'module')"
+                :options="moduleOptions"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi
               span="24 s:12 m:6"
@@ -81,7 +88,12 @@ function handleDateRangeChange(value: [number, number] | null) {
               path="action"
               class="pr-24px"
             >
-              <NSelect v-model:value="model.action" :options="actionOptions" clearable />
+              <NSelect
+                v-model:value="model.action"
+                :disabled="!fieldAllowed(props.queryFields, 'action')"
+                :options="actionOptions"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi
               span="24 s:12 m:6"
@@ -91,6 +103,7 @@ function handleDateRangeChange(value: [number, number] | null) {
             >
               <NInput
                 v-model:value="model.username"
+                :disabled="!fieldAllowed(props.queryFields, 'username')"
                 :placeholder="$t('page.system.operationLog.usernamePlaceholder')"
                 clearable
               />
@@ -101,11 +114,17 @@ function handleDateRangeChange(value: [number, number] | null) {
               path="statusCode"
               class="pr-24px"
             >
-              <NSelect v-model:value="model.statusCode" :options="statusCodeOptions" clearable />
+              <NSelect
+                v-model:value="model.statusCode"
+                :disabled="!fieldAllowed(props.queryFields, 'statusCode')"
+                :options="statusCodeOptions"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.operationLog.createTime')" class="pr-24px">
               <NDatePicker
                 v-model:value="dateRange"
+                :disabled="!fieldAllowed(props.queryFields, 'createTime')"
                 type="datetimerange"
                 clearable
                 class="w-full"

@@ -44,6 +44,26 @@ const stubs = {
 import RoutingFeedbackDashboard from '../index.vue';
 
 describe('routing-feedback dashboard', () => {
+  it('clears previous statistics and rows when current authorization fails', async () => {
+    summaryMock.mockResolvedValueOnce({
+      error: null,
+      data: { total: 17, correct: 17, wrong: 0, wrongRate: 0, topWrongAgents: [] }
+    });
+    listMock.mockResolvedValueOnce({
+      error: null,
+      data: { records: [{ feedbackId: '1', userName: 'PRIVATE USER' }], total: 1 }
+    });
+    const wrapper = mount(RoutingFeedbackDashboard, { global: { stubs } });
+    await flushPromises();
+    summaryMock.mockResolvedValueOnce({ error: {}, data: null });
+    listMock.mockResolvedValueOnce({ error: {}, data: null });
+    const vm = wrapper.vm as unknown as { days: number; summary: unknown; listData: unknown[] };
+    vm.days = 30;
+    await flushPromises();
+    expect(vm.summary).toBeNull();
+    expect(vm.listData).toEqual([]);
+    wrapper.unmount();
+  });
   beforeEach(() => {
     summaryMock.mockClear();
     listMock.mockClear();

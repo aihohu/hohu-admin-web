@@ -5,6 +5,7 @@
  */
 declare namespace Api {
   namespace Common {
+    type DeliveryCapabilities = { read: string[]; query: string[]; create?: string[]; update?: string[] };
     /** common params of paginating */
     interface PaginatingCommonParams {
       /** current page number */

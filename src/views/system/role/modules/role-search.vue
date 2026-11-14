@@ -4,6 +4,8 @@ import { jsonClone } from '@sa/utils';
 import { enableStatusOptions, roleDataScopeOptions } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+const props = defineProps<{ allowedFields?: string[] }>();
 
 defineOptions({
   name: 'RoleSearch'
@@ -35,6 +37,7 @@ function search() {
         <NForm :model="model" label-placement="top">
           <NGrid responsive="screen" item-responsive>
             <NFormItemGi
+              v-if="fieldAllowed(props.allowedFields, 'roleName')"
               span="24 s:12 m:6 l:5"
               :label="$t('page.system.role.roleName')"
               path="roleName"
@@ -43,6 +46,7 @@ function search() {
               <NInput v-model:value="model.roleName" :placeholder="$t('page.system.role.form.roleName')" />
             </NFormItemGi>
             <NFormItemGi
+              v-if="fieldAllowed(props.allowedFields, 'roleCode')"
               span="24 s:12 m:6 l:5"
               :label="$t('page.system.role.roleCode')"
               path="roleCode"
@@ -55,6 +59,7 @@ function search() {
               />
             </NFormItemGi>
             <NFormItemGi
+              v-if="fieldAllowed(props.allowedFields, 'status')"
               span="24 s:12 m:6 l:5"
               :label="$t('page.system.role.roleStatus')"
               path="status"
@@ -68,6 +73,7 @@ function search() {
               />
             </NFormItemGi>
             <NFormItemGi
+              v-if="fieldAllowed(props.allowedFields, 'dataScope')"
               span="24 s:12 m:6 l:5"
               :label="$t('page.system.role.dataScope.label')"
               path="dataScope"

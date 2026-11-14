@@ -1,61 +1,43 @@
 <script setup lang="ts">
-import type { PolicyPreview } from '@/service/api/user-field-policy';
+import { NAlert, NDataTable } from 'naive-ui';
+import { computed } from 'vue';
 import { $t } from '@/locales';
-defineProps<{ preview: PolicyPreview }>();
-function describe(value: PolicyPreview['changes'][number]['before']) {
-  return value ? `${$t(`fieldPolicy.${value.effect}`)} / ${$t(`fieldPolicy.${value.read}`)}` : $t('fieldPolicy.unset');
+import { ruleKey } from '@/hooks/business/field-policy-rules';
+defineProps<{ preview: Api.FieldManagement.Preview }>();
+const label = (key: string) => $t(`fieldPolicy.${key.replaceAll('.', '_')}`);
+const fieldLabel = (key: string) => label(key === 'title' ? 'data_title' : key);
+function describe(value: Api.FieldManagement.Rule | null) {
+  return value ? label(value.effect) + (value.effect === 'allow' ? ' / ' + label(value.level) : '') : label('unset');
 }
+const columns = computed(() => [
+  {
+    key: 'fieldId',
+    title: label('field'),
+    render: (row: Api.FieldManagement.Preview['diff'][number]) => fieldLabel(row.fieldId)
+  },
+  {
+    key: 'access',
+    title: label('purpose'),
+    render: (row: Api.FieldManagement.Preview['diff'][number]) =>
+      label(row.access.purpose.replaceAll('.', '_')) + ' / ' + label(row.access.operation)
+  },
+  {
+    key: 'before',
+    title: label('before'),
+    render: (row: Api.FieldManagement.Preview['diff'][number]) => describe(row.before)
+  },
+  {
+    key: 'after',
+    title: label('after'),
+    render: (row: Api.FieldManagement.Preview['diff'][number]) => describe(row.after)
+  }
+]);
 </script>
 
 <template>
-  <section class="my-4" :aria-label="$t('fieldPolicy.preview')">
-    <NAlert type="info" class="mb-3">{{ $t('fieldPolicy.previewHint') }}</NAlert>
-    <p v-if="!preview.changes.length">{{ $t('fieldPolicy.noChanges') }}</p>
-    <ul class="flex flex-col gap-3">
-      <li v-for="change in preview.changes" :key="`${change.fieldId}:${change.purpose}:${change.operation}`">
-        <strong>{{ $t(`fieldPolicy.${change.fieldId}`) }}</strong>
-        / {{ $t(`fieldPolicy.${change.purpose.replaceAll('.', '_')}`) }} / {{ $t(`fieldPolicy.${change.operation}`) }}
-        <p>
-          {{ $t('fieldPolicy.before') }}: {{ describe(change.before) }}; {{ $t('fieldPolicy.after') }}:
-          {{ describe(change.after) }}
-        </p>
-      </li>
-    </ul>
-    <h3 class="mt-4 font-semibold">{{ $t('fieldPolicy.effectiveSamples') }}</h3>
-    <p class="my-2 text-sm">{{ $t('fieldPolicy.sampleHint') }}</p>
-    <p v-if="preview.samplesTruncated">{{ $t('fieldPolicy.samplesTruncated') }}</p>
-    <div class="max-h-80 overflow-auto">
-      <table class="w-full text-left text-sm">
-        <thead>
-          <tr>
-            <th>{{ $t('fieldPolicy.subject') }}</th>
-            <th>{{ $t('fieldPolicy.record') }}</th>
-            <th>{{ $t('fieldPolicy.field') }}</th>
-            <th>{{ $t('fieldPolicy.operation') }}</th>
-            <th>{{ $t('fieldPolicy.before') }}</th>
-            <th>{{ $t('fieldPolicy.after') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="sample in preview.effectiveSamples"
-            :key="`${sample.subjectUserId}:${sample.recordUserId}:${sample.fieldId}:${sample.purpose}:${sample.operation}`"
-          >
-            <td>{{ sample.subjectUserId }}</td>
-            <td>{{ sample.recordUserId }}</td>
-            <td>{{ $t(`fieldPolicy.${sample.fieldId}`) }}</td>
-            <td>{{ $t(`fieldPolicy.${sample.operation}`) }}</td>
-            <td>
-              {{ $t(`fieldPolicy.${sample.before.allowed ? 'allow' : 'deny'}`) }} /
-              {{ $t(`fieldPolicy.${sample.before.read}`) }}
-            </td>
-            <td>
-              {{ $t(`fieldPolicy.${sample.after.allowed ? 'allow' : 'deny'}`) }} /
-              {{ $t(`fieldPolicy.${sample.after.read}`) }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  <section class="my-16px" :aria-label="label('preview')">
+    <NAlert type="info" class="mb-12px">{{ label('abstractPreview') }}</NAlert>
+    <NDataTable :columns="columns" :data="preview.diff" :row-key="ruleKey" size="small" :scroll-x="550" />
+    <p v-if="preview.sampleTruncated">{{ label('samplesTruncated') }}</p>
   </section>
 </template>

@@ -42,6 +42,9 @@ export type ChatAvailability =
 
 const runtimeAvailabilityErrorCodes = new Set([
   'FIELD_AUTHORIZATION_CHANGED',
+  'FIELD_READ_DENIED',
+  'FIELD_QUERY_DENIED',
+  'FIELD_PERMISSION_DENIED',
   'FIELD_POLICY_UNAVAILABLE',
   'FIELD_CONFIRMATION_LINEAGE_REQUIRED',
   'FIELD_CONFIRMATION_FACTS_REQUIRED',
@@ -90,6 +93,8 @@ async function getResponseErrorCode(response: Response): Promise<string | null> 
 
 export const useAiStore = defineStore(SetupStoreId.Ai, () => {
   const conversations = ref<Api.Ai.Conversation[]>([]);
+  const conversationFieldPolicy = ref<Api.Common.DeliveryCapabilities>();
+  const canQueryConversationTitle = computed(() => conversationFieldPolicy.value?.query.includes('title') ?? false);
   const currentConversationId = ref<string | null>(null);
   const currentMessages = ref<Api.Ai.MessageProjection[]>([]);
   const streamingText = ref('');
@@ -524,7 +529,8 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     if (chatAvailability.value === 'forbidden' || chatAvailability.value === 'module_disabled') return;
     const session = sessionSeq;
     const requestSeq = ++conversationLoadSeq;
-    searchTitle.value = title ?? null;
+    searchTitle.value = canQueryConversationTitle.value ? (title ?? null) : null;
+    conversations.value = [];
     conversationCurrent.value = 1;
     hasMoreConversations.value = true;
     loading.value = true;
@@ -537,9 +543,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
       });
       if (session !== sessionSeq || requestSeq !== conversationLoadSeq) return;
       if (!error && data) {
+        conversationFieldPolicy.value = data.fieldPolicy;
         conversations.value = data.records;
         hasMoreConversations.value = data.records.length >= conversationSize.value;
       } else {
+        conversationFieldPolicy.value = undefined;
         conversations.value = [];
         hasMoreConversations.value = false;
         applyRuntimeAvailabilityError(getBackendErrorCode(error));
@@ -547,6 +555,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     } catch (error) {
       if (session !== sessionSeq || requestSeq !== conversationLoadSeq) return;
       conversations.value = [];
+      conversationFieldPolicy.value = undefined;
       hasMoreConversations.value = false;
       applyRuntimeAvailabilityError(getBackendErrorCode(error));
     } finally {
@@ -567,10 +576,11 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
         current: conversationCurrent.value,
         size: conversationSize.value,
         status: null,
-        title: searchTitle.value
+        title: canQueryConversationTitle.value ? searchTitle.value : null
       });
       if (session !== sessionSeq || requestSeq !== conversationLoadSeq) return;
       if (!error && data) {
+        conversationFieldPolicy.value = data.fieldPolicy;
         conversations.value.push(...data.records);
         hasMoreConversations.value = data.records.length >= conversationSize.value;
       } else {
@@ -745,6 +755,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
     clearCurrentConversation();
     conversations.value = [];
     loading.value = false;
+    conversationFieldPolicy.value = undefined;
     availableModels.value = [];
     selectedModelId.value = '';
     modelLoadState.value = 'idle';
@@ -1737,6 +1748,7 @@ export const useAiStore = defineStore(SetupStoreId.Ai, () => {
 
   return {
     conversations,
+    canQueryConversationTitle,
     currentConversationId,
     currentMessages,
     streamingText,
