@@ -16,6 +16,9 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 
 COPY . .
 
+ARG VITE_TENANT_MODE=single
+ENV VITE_TENANT_MODE=${VITE_TENANT_MODE}
+
 RUN pnpm build
 
 # --- Production Stage ---
