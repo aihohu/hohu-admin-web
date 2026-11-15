@@ -2,7 +2,7 @@
 import { localizedText } from '@/locales';
 import { computed, nextTick, onMounted, reactive, shallowRef } from 'vue';
 import { onBeforeRouteLeave, useRoute } from 'vue-router';
-import { NButton, NPopconfirm, NTag } from 'naive-ui';
+import { NAlert, NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { enableStatusRecord, roleDataScopeRecord } from '@/constants/business';
 import { fetchBatchDeleteRole, fetchDeleteRole, fetchGetRoleList } from '@/service/api';
@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
 import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+import { useRolePolicyRepair } from '@/hooks/business/role-policy-repair';
 import RoleOperateDrawer from './modules/role-operate-drawer.vue';
 import RoleSearch from './modules/role-search.vue';
 import MenuAuthModal from './modules/menu-auth-modal.vue';
@@ -46,8 +47,10 @@ const searchParams: Api.SystemManage.RoleSearchParams = reactive({
   status: null
 });
 
+const roleRepair = useRolePolicyRepair({ identity: fieldPolicyIdentity, params: searchParams, repository: fieldPolicyRepository, fetchRoles: () => fetchGetRoleList(searchParams), canRepair: () => hasSuperAdminAuth('system:role:field-policy-view') });
+const { repairMode } = roleRepair;
 const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
-  api: () => fetchGetRoleList(searchParams),
+  api: roleRepair.load,
   transform: response => {
     fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
     return defaultTransform(response);
@@ -146,7 +149,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
               {$t('common.edit')}
             </NButton>
           )}
-          {hasSuperAdminAuth('system:role:delete') && (
+          {!repairMode.value && hasSuperAdminAuth('system:role:delete') && (
             <NPopconfirm onPositiveClick={() => handleDelete(row.roleId)}>
               {{
                 default: () => $t('common.confirmDelete'),
@@ -164,7 +167,10 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
   ]
 });
 
-const visibleColumns = computed(() => columns.value.filter(column => !('key' in column) ||
+const visibleColumns = computed<NaiveUI.TableColumn<Api.SystemManage.RoleSummary>[]>(() => repairMode.value ? [
+  { key: 'roleId', title: $t('fieldPolicy.roleAnchor'), align: 'center', minWidth: 180 },
+  ...columns.value.filter(column => 'key' in column && column.key === 'operate')
+] : columns.value.filter(column => !('key' in column) ||
   ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
 
 const {
@@ -248,12 +254,13 @@ async function onAgentMenuAuthClick(id: string) {
           :loading="loading"
           add-auth="system:role:add"
           delete-auth="system:role:batch-delete"
-          :show-delete="hasSuperAdminAuth('system:role:batch-delete')"
+          :show-delete="!repairMode && hasSuperAdminAuth('system:role:batch-delete')"
           @add="handleAdd"
           @delete="handleBatchDelete"
           @refresh="getData"
         />
       </template>
+      <NAlert v-if="repairMode" type="info" class="mb-12px">{{ $t('fieldPolicy.roleRepairHint') }}</NAlert>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
         :columns="visibleColumns"
@@ -283,8 +290,8 @@ async function onAgentMenuAuthClick(id: string) {
       :role-id="fieldPolicyRoleId"
       :identity="fieldPolicyIdentity"
       :repository="fieldPolicyRepository"
-      :can-menu="hasAuth('system:role:menu-auth')"
-      :can-edit-role="hasAuth('system:role:edit')"
+      :can-menu="!repairMode && hasAuth('system:role:menu-auth')"
+      :can-edit-role="!repairMode && hasAuth('system:role:edit')"
       @navigate="
         target => {
           if (target === 'menu') onMenuAuthClick(fieldPolicyRoleId);

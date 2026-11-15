@@ -46,6 +46,8 @@ function repository() {
     roles: vi.fn(),
     previewManifest: vi.fn(),
     build: vi.fn(),
+    ready: vi.fn().mockResolvedValue({ headVersion: '2' }),
+    activate: vi.fn().mockResolvedValue({ headVersion: '3' }),
     freeze: vi.fn()
   } satisfies FieldPolicyRepository;
 }
@@ -58,6 +60,101 @@ function setup(repo = repository()) {
 }
 
 describe('real policy management draft lifecycle', () => {
+  it('sends separate qualified ready and activate commands for the exact tenant manifest', async () => {
+    const { model, repo, scope } = setup();
+    const state = {
+      ...context,
+      candidateManifestId: '9007199254740993',
+      candidateManifestDigest: 'candidate',
+      items: [],
+      objects: [],
+      capabilities: { ...context.capabilities, activate: true },
+      canReady: true,
+      canActivate: false,
+      readyUntil: null,
+      activationBlockers: []
+    };
+    repo.manifest.mockResolvedValue(state);
+    await model.load();
+    model.reason.value = 'ready full tenant';
+    await model.readyManifest();
+    expect(repo.ready).toHaveBeenCalledWith(
+      '9007199254740993',
+      expect.objectContaining({
+        candidateManifestDigest: 'candidate',
+        expectedVersion: '1',
+        expectedEpoch: '1',
+        reason: 'ready full tenant'
+      })
+    );
+    expect(repo.activate).not.toHaveBeenCalled();
+    repo.manifest.mockResolvedValue({
+      ...state,
+      canReady: false,
+      canActivate: true,
+      readyUntil: new Date(Date.now() + 300000).toISOString()
+    });
+    await model.load();
+    model.reason.value = 'activate full tenant';
+    expect(model.canActivate.value).toBe(true);
+    await model.activateManifest();
+    expect(repo.activate).toHaveBeenCalledWith(
+      '9007199254740993',
+      expect.objectContaining({
+        candidateManifestDigest: 'candidate',
+        catalogDigest: 'catalog',
+        reason: 'activate full tenant'
+      })
+    );
+    scope.stop();
+  });
+  it('expires readiness locally and never retries activation after an unknown commit', async () => {
+    vi.useFakeTimers();
+    const { model, repo, scope } = setup();
+    try {
+      repo.manifest.mockResolvedValue({
+        ...context,
+        candidateManifestId: '123',
+        candidateManifestDigest: 'candidate',
+        capabilities: { ...context.capabilities, activate: true },
+        canReady: false,
+        canActivate: true,
+        readyUntil: new Date(Date.now() + 2000).toISOString(),
+        items: [],
+        objects: [],
+        activationBlockers: []
+      });
+      await model.load();
+      model.reason.value = 'approved';
+      expect(model.canActivate.value).toBe(true);
+      vi.advanceTimersByTime(3000);
+      expect(model.canActivate.value).toBe(false);
+      await model.activateManifest();
+      expect(repo.activate).not.toHaveBeenCalled();
+      repo.manifest.mockResolvedValue({
+        ...context,
+        candidateManifestId: '123',
+        candidateManifestDigest: 'candidate',
+        capabilities: { ...context.capabilities, activate: true },
+        canReady: false,
+        canActivate: true,
+        readyUntil: new Date(Date.now() + 2000).toISOString(),
+        items: [],
+        objects: [],
+        activationBlockers: []
+      });
+      await model.load();
+      model.reason.value = 'approved';
+      repo.activate.mockRejectedValue(new FieldPolicyError('AUTHORIZATION_COMMIT_UNKNOWN', 503));
+      await model.activateManifest();
+      expect(model.unknownRequest.value).toBeTruthy();
+      await model.activateManifest();
+      expect(repo.activate).toHaveBeenCalledTimes(1);
+    } finally {
+      scope.stop();
+      vi.useRealTimers();
+    }
+  });
   it('loads all ten catalog objects without inheriting a grant for a new control object', async () => {
     const { model, repo, scope } = setup();
     const ids = [

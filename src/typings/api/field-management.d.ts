@@ -37,7 +37,7 @@ declare namespace Api {
       actionCatalogDigest: string;
       complete: boolean;
     };
-    type Role = { roleId: string; roleName: string; roleCode: string; dataScope: string; status: string };
+    type Role = { roleId: string; roleName?: string; roleCode?: string; dataScope?: string; status?: string };
     type Document = Context & {
       role: Role;
       objectId: string;
@@ -47,14 +47,23 @@ declare namespace Api {
     };
     type ManifestItem = { roleId: string; objectId: string; revisionId: string; rulesDigest: string };
     type Manifest = Context & {
+      candidateManifestId: string | null;
+      readyUntil: string | null;
       objects: { objectId: string; mode: string }[];
       items: ManifestItem[];
       canActivate: boolean;
+      canReady: boolean;
       activationBlockers: string[];
       rolloutState: string;
     };
     type Draft = { catalogDigest: string; expectedVersion: string; expectedBindingVersion: string; rules: Rule[] };
     type ManifestDraft = { catalogDigest: string; expectedVersion: string };
+    type Activation = ManifestDraft & {
+      expectedEpoch: string;
+      candidateManifestDigest: string;
+      requestId: string;
+      reason: string;
+    };
     type Mutation = { previewDigest: string; reason: string; requestId: string };
     type Preview = Context & {
       previewDigest: string;

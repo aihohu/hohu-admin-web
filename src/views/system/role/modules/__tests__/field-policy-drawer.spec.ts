@@ -51,12 +51,22 @@ function repository(edit = true) {
       bindingVersion: '0',
       rules: []
     }),
-    manifest: vi.fn().mockResolvedValue({ ...common, items: [] }),
+    manifest: vi.fn().mockResolvedValue({
+      ...common,
+      items: [],
+      candidateManifestId: null,
+      readyUntil: null,
+      canReady: false,
+      canActivate: false,
+      activationBlockers: ['QUALIFICATION_REQUIRED']
+    }),
     preview: vi.fn(),
     publish: vi.fn(),
     roles: vi.fn(),
     previewManifest: vi.fn(),
     build: vi.fn(),
+    ready: vi.fn(),
+    activate: vi.fn(),
     freeze: vi.fn(),
     receipt: vi.fn()
   };
@@ -101,6 +111,42 @@ async function render(edit = true) {
   return { page, repo };
 }
 beforeEach(() => vi.clearAllMocks());
+it.each([false, true])('requires current-context confirmation before ready (identity changed: %s)', async changed => {
+  const { page, repo } = await render();
+  repo.manifest.mockResolvedValue({
+    ...context,
+    candidateManifestId: '123',
+    candidateManifestDigest: 'candidate',
+    readyUntil: null,
+    canReady: true,
+    canActivate: false,
+    activationBlockers: [],
+    items: []
+  });
+  await page
+    .findAll('button')
+    .find(b => b.text() === 'fieldPolicy.reload')!
+    .trigger('click');
+  await flushPromises();
+  page
+    .findAllComponents({ name: 'Input' })
+    .find(input => input.props('type') === 'textarea')!
+    .vm.$emit('update:value', 'review complete tenant');
+  await flushPromises();
+  const action = page.findAll('button').find(b => b.text() === 'fieldPolicy.ready')!;
+  expect(action.attributes('disabled')).toBeUndefined();
+  await action.trigger('click');
+  const confirmation = dialogs.warning.mock.calls[0][0];
+  expect(repo.ready).not.toHaveBeenCalled();
+  if (changed) {
+    await page.setProps({ identity: '0/102' });
+    await flushPromises();
+  }
+  await confirmation.onPositiveClick();
+  expect(repo.ready).toHaveBeenCalledTimes(changed ? 0 : 1);
+  expect(repo.activate).not.toHaveBeenCalled();
+  page.unmount();
+});
 it('retains confirmed action order and requires confirmation before discarding a draft', async () => {
   const { page, repo } = await render();
   const actions = page.findAll('button').map(b => b.text());

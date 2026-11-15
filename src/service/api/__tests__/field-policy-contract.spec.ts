@@ -36,3 +36,20 @@ it('preserves bigint IDs, escapes targets, and sends CAS bodies without authorit
   await repo.receipt('a/b');
   expect(call).toHaveBeenLastCalledWith('/system/field-policy/requests/a%2Fb');
 });
+
+it('binds activation to the exact string manifest identity and sends no qualification', async () => {
+  const call = vi.fn().mockResolvedValue({});
+  const repo = createFieldPolicyRepository(call);
+  const body = {
+    expectedVersion: '3',
+    expectedEpoch: '4',
+    catalogDigest: 'catalog',
+    candidateManifestDigest: 'candidate',
+    requestId: 'request',
+    reason: 'approve complete manifest'
+  };
+  await repo.ready('9007199254740993', body);
+  expect(call).toHaveBeenLastCalledWith('/system/field-policy/manifests/9007199254740993/ready', body);
+  await repo.activate('9007199254740993', body);
+  expect(call).toHaveBeenLastCalledWith('/system/field-policy/manifests/9007199254740993/activate', body);
+});

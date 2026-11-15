@@ -58,9 +58,14 @@ const {
   previewResult,
   manifestPreview,
   history,
-  canPublish
+  canPublish,
+  canReady,
+  canActivate
 } = model;
 const label = (key: string) => $t(`fieldPolicy.${key.replaceAll('.', '_')}`);
+const roleTitle = computed(
+  () => document.value?.role.roleName ?? $t('fieldPolicy.roleAnchorValue', { id: document.value?.role.roleId ?? '' })
+);
 const object = computed(() => catalog.value?.objects.find(o => o.objectId === objectId.value));
 const objectOptions = computed(
   () => catalog.value?.objects.map(o => ({ value: o.objectId, label: label(o.objectId) })) ?? []
@@ -156,6 +161,26 @@ function confirmFreeze() {
     }
   });
 }
+function confirmActivation(operation: 'ready' | 'activate') {
+  const isCurrent = captureContext();
+  const state = manifest.value;
+  if (!state || !(operation === 'ready' ? canReady.value : canActivate.value)) return;
+  dialog.warning({
+    title: label(operation),
+    content: $t('fieldPolicy.activationConfirm', {
+      tenant: state.tenantId,
+      count: state.items.length,
+      digest: state.candidateManifestDigest
+    }),
+    positiveText: $t('common.confirm'),
+    negativeText: $t('common.cancel'),
+    onPositiveClick: async () => {
+      if (!isCurrent() || manifest.value !== state) return;
+      const result = operation === 'ready' ? await model.readyManifest() : await model.activateManifest();
+      if (result) message.success(label(operation === 'ready' ? 'activationReady' : 'activated'));
+    }
+  });
+}
 </script>
 
 <template>
@@ -168,11 +193,7 @@ function confirmFreeze() {
       }
     "
   >
-    <NDrawerContent
-      :title="label('title') + ' · ' + (document?.role.roleName ?? '')"
-      closable
-      :native-scrollbar="false"
-    >
+    <NDrawerContent :title="label('title') + ' · ' + roleTitle" closable :native-scrollbar="false">
       <NSpin :show="busy">
         <NSpace align="center" justify="space-between" class="mb-16px">
           <NSpace>
@@ -194,7 +215,8 @@ function confirmFreeze() {
           <NAlert v-if="!document.capabilities.edit" type="info" class="mb-16px">{{ label('readOnly') }}</NAlert>
           <NDescriptions :column="2" size="small" class="mb-12px">
             <NDescriptionsItem :label="$t('page.system.role.roleName')">
-              {{ document.role.roleName }} ({{ document.role.roleCode }})
+              {{ roleTitle }}
+              <span v-if="document.role.roleCode">({{ document.role.roleCode }})</span>
             </NDescriptionsItem>
             <NDescriptionsItem :label="label('tenant')">{{ document.tenantId }}</NDescriptionsItem>
             <NDescriptionsItem :label="$t('page.system.role.dataScope.label')">
@@ -258,7 +280,9 @@ function confirmFreeze() {
           <NButton type="primary" :disabled="!canPublish" @click="save">{{ label('saveCandidate') }}</NButton>
           <NDivider />
           <p class="mb-12px font-semibold">{{ label('tenantManifest') }}</p>
-          <NAlert type="warning" class="mb-12px">{{ label('FULL_SYSTEM_ACCEPTANCE_REQUIRED') }}</NAlert>
+          <NAlert v-if="manifest?.activationBlockers.includes('QUALIFICATION_REQUIRED')" type="warning" class="mb-12px">
+            {{ label('qualificationRequired') }}
+          </NAlert>
           <p class="mb-12px break-all">
             {{ label('candidateDigest') }}: {{ manifest?.candidateManifestDigest ?? '—' }}
           </p>
@@ -269,7 +293,8 @@ function confirmFreeze() {
             <NButton :disabled="!editable || dirty || !manifestPreview || !reason.trim()" @click="confirmManifest">
               {{ label('sealManifest') }}
             </NButton>
-            <NButton disabled>{{ label('activate') }}</NButton>
+            <NButton :disabled="!canReady" @click="confirmActivation('ready')">{{ label('ready') }}</NButton>
+            <NButton :disabled="!canActivate" @click="confirmActivation('activate')">{{ label('activate') }}</NButton>
             <NButton
               v-if="manifest?.activeManifestDigest"
               type="warning"

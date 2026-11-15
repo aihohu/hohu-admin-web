@@ -31,6 +31,10 @@ export function createFieldPolicyRepository(call: PolicyCall) {
       call<Api.FieldManagement.Preview>(`${root}/manifests/preview`, data),
     build: (data: Api.FieldManagement.ManifestDraft & Api.FieldManagement.Mutation) =>
       call<Api.FieldManagement.Receipt>(`${root}/manifests`, data),
+    ready: (manifestId: string, data: Api.FieldManagement.Activation) =>
+      call<Api.FieldManagement.Receipt>(`${root}/manifests/${encodeURIComponent(manifestId)}/ready`, data),
+    activate: (manifestId: string, data: Api.FieldManagement.Activation) =>
+      call<Api.FieldManagement.Receipt>(`${root}/manifests/${encodeURIComponent(manifestId)}/activate`, data),
     freeze: (data: {
       expectedVersion: string;
       expectedEpoch: string;

@@ -26,6 +26,8 @@ export function useFieldPolicy(options: {
   let generation = 0;
   let abort = new AbortController();
   let expiry: ReturnType<typeof setTimeout> | undefined;
+  let readyTimer: ReturnType<typeof setTimeout> | undefined;
+  const readyExpired = shallowRef(true);
   const dirty = computed(() =>
     Boolean(document.value && fingerprint(rules.value) !== fingerprint(document.value.rules))
   );
@@ -39,6 +41,31 @@ export function useFieldPolicy(options: {
     )
   );
   const canPublish = computed(() => Boolean(editable.value && previewResult.value && reason.value.trim()));
+  const canReady = computed(() =>
+    Boolean(
+      editable.value &&
+      !dirty.value &&
+      manifest.value?.canReady &&
+      manifest.value.candidateManifestId &&
+      manifest.value.candidateManifestDigest &&
+      reason.value.trim()
+    )
+  );
+  const canActivate = computed(() =>
+    Boolean(
+      manifest.value?.canActivate &&
+      manifest.value.capabilities.activate &&
+      manifest.value.candidateManifestId &&
+      manifest.value.candidateManifestDigest &&
+      catalog.value?.complete &&
+      !busy.value &&
+      !dirty.value &&
+      !reloadRequired.value &&
+      !unknownRequest.value &&
+      !readyExpired.value &&
+      reason.value.trim()
+    )
+  );
 
   function clearPreview() {
     previewResult.value = null;
@@ -60,6 +87,8 @@ export function useFieldPolicy(options: {
     errorCode.value = '';
     busy.value = false;
     clearPreview();
+    clearTimeout(readyTimer);
+    readyExpired.value = true;
   }
   watch([options.roleId, options.identity], reset, { flush: 'sync' });
   onScopeDispose(reset);
@@ -120,6 +149,12 @@ export function useFieldPolicy(options: {
       document.value = value;
       rules.value = structuredClone(value.rules);
       manifest.value = state;
+      const remaining = state.readyUntil ? Date.parse(state.readyUntil) - Date.now() : 0;
+      readyExpired.value = !Number.isFinite(remaining) || remaining <= 0;
+      if (!readyExpired.value)
+        readyTimer = setTimeout(() => {
+          if (current === generation) readyExpired.value = true;
+        }, remaining);
     } catch (error) {
       if (current === generation) reject(error);
     } finally {
@@ -244,6 +279,28 @@ export function useFieldPolicy(options: {
       })
     );
   }
+  async function transitionManifest(operation: 'ready' | 'activate') {
+    const value = manifest.value;
+    if (
+      !(operation === 'ready' ? canReady.value : canActivate.value) ||
+      !value?.candidateManifestId ||
+      !value.candidateManifestDigest
+    )
+      return false;
+    if (operation === 'activate' && (!value.readyUntil || Date.parse(value.readyUntil) <= Date.now())) return false;
+    return mutate(requestId =>
+      repo[operation](value.candidateManifestId!, {
+        catalogDigest: value.catalogDigest,
+        expectedVersion: value.headVersion,
+        expectedEpoch: value.epoch,
+        candidateManifestDigest: value.candidateManifestDigest!,
+        reason: reason.value,
+        requestId
+      })
+    );
+  }
+  const readyManifest = () => transitionManifest('ready');
+  const activateManifest = () => transitionManifest('activate');
   async function checkReceipt() {
     if (!unknownRequest.value || busy.value) return;
     const current = generation;
@@ -277,6 +334,8 @@ export function useFieldPolicy(options: {
     errorCode,
     history,
     canPublish,
+    canReady,
+    canActivate,
     reset,
     load,
     setRules,
@@ -285,6 +344,8 @@ export function useFieldPolicy(options: {
     publish,
     reviewManifest,
     buildManifest,
+    readyManifest,
+    activateManifest,
     freeze,
     checkReceipt
   };
