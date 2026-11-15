@@ -17,7 +17,7 @@ vi.mock('@/service/api', () => ({
   fetchIsRouteExist: vi.fn()
 }));
 vi.mock('@/router', () => ({
-  router: { addRoute: vi.fn(), removeRoute: vi.fn(), push: vi.fn(), replace: vi.fn() }
+  router: { addRoute: vi.fn(() => vi.fn()), removeRoute: vi.fn(), push: vi.fn(), replace: vi.fn() }
 }));
 vi.mock('@/router/routes', () => ({
   createStaticRoutes: vi.fn(() => ({
@@ -30,6 +30,7 @@ vi.mock('@/router/routes', () => ({
 }));
 vi.mock('../../auth', () => ({
   useAuthStore: vi.fn(() => ({
+    authSessionRevision: '',
     isStaticSuper: false,
     userInfo: { isSystemAdmin: false, roles: [] },
     initUserInfo: vi.fn()
@@ -50,6 +51,9 @@ vi.mock('../../tab', () => ({
 import { fetchGetConstantRoutes, fetchGetUserRoutes } from '@/service/api';
 import { router } from '@/router';
 import { localStg } from '@/utils/storage';
+import { useAuthStore } from '../../auth';
+import { useTabStore } from '../../tab';
+import { useContributesStore } from '../../contributes';
 import { useRouteStore } from '..';
 
 function mockUserRoutes(routes: unknown[], home: string) {
@@ -63,6 +67,8 @@ describe('zero accessible routes lands on the constant empty page', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
+    localStg.remove('authSessionRevision');
   });
 
   it('falls back to routeHome=empty when the user has no auth routes', async () => {
@@ -110,10 +116,50 @@ describe('zero accessible routes lands on the constant empty page', () => {
 
     expect(store.routeHome).toBe('ai_chat');
   });
+
+  it.each(['static', 'dynamic'])(
+    'does not hydrate or install %s routes when storage belongs to a different tab session',
+    async mode => {
+      vi.stubEnv('VITE_AUTH_ROUTE_MODE', mode);
+      localStg.set('authSessionRevision', 'B');
+      const hydrate = vi.fn();
+      const home = vi.fn();
+      vi.mocked(useAuthStore).mockReturnValueOnce({
+        authSessionRevision: 'A',
+        userInfo: { userId: '', roles: [] },
+        initUserInfo: hydrate
+      } as never);
+      vi.mocked(useTabStore).mockReturnValueOnce({ initHomeTab: home } as never);
+      const store = useRouteStore();
+      await store.initAuthRoute();
+      await store.initConstantRoute();
+      expect(hydrate).not.toHaveBeenCalled();
+      expect(fetchGetUserRoutes).not.toHaveBeenCalled();
+      expect(fetchGetConstantRoutes).not.toHaveBeenCalled();
+      expect(router.addRoute).not.toHaveBeenCalled();
+      expect(router.removeRoute).not.toHaveBeenCalled();
+      expect(home).not.toHaveBeenCalled();
+      expect(store.isInitAuthRoute).toBe(false);
+      expect(store.isInitConstantRoute).toBe(false);
+    }
+  );
+  it('keeps old menus untouched while a different storage session has not been accepted', async () => {
+    localStg.set('authSessionRevision', 'B');
+    const clear = vi.fn();
+    vi.mocked(useAuthStore).mockReturnValueOnce({ authSessionRevision: 'A', userInfo: {} } as never);
+    vi.mocked(useContributesStore).mockReturnValueOnce({ clear, canViewContribute: false } as never);
+    const store = useRouteStore();
+    store.menus = [{ key: 'keep', label: 'existing', routeKey: 'home', routePath: '/home' }];
+    await store.rebuildMenus();
+    expect(store.menus.map(menu => menu.key)).toEqual(['keep']);
+    expect(clear).not.toHaveBeenCalled();
+  });
+
   it.each(['success', 'failure'] as const)(
     'does not install late %s constant routes after a session change',
     async outcome => {
       localStg.set('authSessionRevision', 'A');
+      vi.mocked(useAuthStore).mockReturnValueOnce({ authSessionRevision: 'A', userInfo: {} } as never);
       let finish!: (value: unknown) => void;
       vi.mocked(fetchGetConstantRoutes).mockReturnValue(
         new Promise(resolve => {

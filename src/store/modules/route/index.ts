@@ -8,7 +8,7 @@ import { fetchGetConstantRoutes, fetchGetUserRoutes, fetchIsRouteExist } from '@
 import { SetupStoreId } from '@/enum';
 import { createStaticRoutes, getAuthVueRoutes } from '@/router/routes';
 import { ROOT_ROUTE } from '@/router/routes/builtin';
-import { readClientSession, sameClientSession } from '@/utils/auth-session';
+import { createClientSessionGuard } from '@/utils/auth-session';
 import { getRouteName, getRoutePath } from '@/router/elegant/transform';
 import {
   filterHostedCapabilityRoutes,
@@ -36,8 +36,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   const authStore = useAuthStore();
   const tabStore = useTabStore();
   function routeSessionGuard() {
-    const session = readClientSession();
-    return () => sameClientSession(session);
+    return createClientSessionGuard(() => authStore.authSessionRevision);
   }
   const { bool: isInitConstantRoute, setBool: setIsInitConstantRoute } = useBoolean();
   const { bool: isInitAuthRoute, setBool: setIsInitAuthRoute } = useBoolean();
@@ -199,6 +198,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   /** Init auth route */
   async function initAuthRoute() {
     const isCurrent = routeSessionGuard();
+    if (!isCurrent()) return;
     // check if user info is initialized
     if (!authStore.userInfo.userId) {
       await authStore.initUserInfo();
@@ -245,6 +245,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
    */
   async function rebuildMenus() {
     const isCurrent = routeSessionGuard();
+    if (!isCurrent()) return;
     const allRoutes = [...constantRoutes.value, ...authRoutes.value];
     const sortRoutes = sortRoutesByOrder(allRoutes);
     getGlobalMenus(sortRoutes);

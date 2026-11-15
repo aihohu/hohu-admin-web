@@ -4,6 +4,7 @@ import type { VNode } from 'vue';
 import { Icon } from '@iconify/vue';
 import { useAuthStore } from '@/store/modules/auth';
 import { fetchLogout } from '@/service/api';
+import { createClientSessionGuard } from '@/utils/auth-session';
 import { localStg } from '@/utils/storage';
 import { useRouterPush } from '@/hooks/common/router';
 import { useSvgIcon } from '@/hooks/common/icon';
@@ -58,16 +59,19 @@ const options = computed(() => {
 });
 
 async function logout() {
+  const isCurrent = createClientSessionGuard(() => authStore.authSessionRevision);
+  if (!isCurrent()) return;
   window.$dialog?.info({
     title: $t('common.tip'),
     content: $t('common.logoutConfirm'),
     positiveText: $t('common.confirm'),
     negativeText: $t('common.cancel'),
     onPositiveClick: async () => {
+      if (!isCurrent()) return;
       // 通知后端把 access + refresh token 加入黑名单，无论成功失败都清本地状态
       const refreshToken = localStg.get('refreshToken') || undefined;
-      await fetchLogout(refreshToken);
-      authStore.resetStore();
+      await fetchLogout(refreshToken).catch(() => {});
+      if (isCurrent()) await authStore.resetStore();
     }
   });
 }

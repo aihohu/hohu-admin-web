@@ -15,3 +15,11 @@ export function sameClientSession(expected: ReturnType<typeof readClientSession>
     current.authenticated === expected.authenticated
   );
 }
+
+/** Bind delayed UI work to the identity already accepted by this tab. */
+export function createClientSessionGuard(readAcceptedRevision: () => string) {
+  const session = readClientSession();
+  const revision = readAcceptedRevision();
+  const accepted = revision === session.revision;
+  return () => accepted && readAcceptedRevision() === revision && sameClientSession(session);
+}
