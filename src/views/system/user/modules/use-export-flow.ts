@@ -1,4 +1,5 @@
-import { computed, ref } from 'vue';
+import { readClientSession, sameClientSession } from '@/utils/auth-session';
+import { computed, getCurrentScope, onScopeDispose, ref } from 'vue';
 import { downloadBlob } from '@/utils/download-blob';
 import { fetchExportUsers } from '@/service/api';
 import { $t } from '@/locales';
@@ -54,6 +55,8 @@ export function summarizeFilter(filter?: Api.SystemManage.UserSearchParams | nul
 
 export function useExportFlow(options: UseExportFlowOptions = {}) {
   let generation = 0;
+  const currentRequest = (expected: number, session: ReturnType<typeof readClientSession>) =>
+    expected === generation && sameClientSession(session);
   const reason = ref<string>('');
   const loading = ref<boolean>(false);
   const errorCode = ref<ExportFlowErrorCode | null>(null);
@@ -69,6 +72,8 @@ export function useExportFlow(options: UseExportFlowOptions = {}) {
     loading.value = false;
     errorCode.value = null;
   }
+
+  if (getCurrentScope()) onScopeDispose(reset);
 
   function setFilter(f: Api.SystemManage.UserSearchParams | null | undefined): void {
     generation += 1;
@@ -102,9 +107,10 @@ export function useExportFlow(options: UseExportFlowOptions = {}) {
     loading.value = true;
     errorCode.value = null;
     const requestGeneration = generation;
+    const requestSession = readClientSession();
     try {
       const { data, error } = await fetchExportUsers(payload);
-      if (requestGeneration !== generation) return false;
+      if (!currentRequest(requestGeneration, requestSession)) return false;
       if (error || !(data instanceof Blob) || data.type.includes('json')) {
         const errCode = (error as any)?.code ?? null;
         if (errCode === 'AI_EXPORT_ASYNC_REQUIRED') {
@@ -122,10 +128,10 @@ export function useExportFlow(options: UseExportFlowOptions = {}) {
       options.onExported?.();
       return true;
     } catch {
-      if (requestGeneration === generation) notifyError('EXPORT_FAILED');
+      if (currentRequest(requestGeneration, requestSession)) notifyError('EXPORT_FAILED');
       return false;
     } finally {
-      if (requestGeneration === generation) loading.value = false;
+      if (currentRequest(requestGeneration, requestSession)) loading.value = false;
     }
   }
 

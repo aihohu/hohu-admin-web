@@ -15,16 +15,17 @@ export function getAuthorization() {
  *
  * 单飞语义：refreshTokenPromise 保证并发请求只触发一次 refresh。
  */
-async function handleRefreshToken() {
+async function handleRefreshToken(revision: string, rToken: string) {
   const { resetStore } = useAuthStore();
-
-  const rToken = localStg.get('refreshToken') || '';
+  const current = () =>
+    (localStg.get('authSessionRevision') || '') === revision && (localStg.get('refreshToken') || '') === rToken;
   if (!rToken) {
-    resetStore();
+    if (current()) resetStore();
     return false;
   }
 
   const { error, data } = await fetchRefreshToken(rToken);
+  if (!current()) return false;
   if (!error) {
     localStg.set('token', data.token);
     localStg.set('refreshToken', data.refreshToken);
@@ -35,15 +36,24 @@ async function handleRefreshToken() {
   return false;
 }
 
-export async function handleExpiredRequest(state: RequestInstanceState) {
-  if (!state.refreshTokenPromise) {
-    state.refreshTokenPromise = handleRefreshToken();
+export async function handleExpiredRequest(
+  state: RequestInstanceState,
+  revision = localStg.get('authSessionRevision') || ''
+) {
+  if (revision.startsWith('changing:') || (localStg.get('authSessionRevision') || '') !== revision) return false;
+  if (!state.refreshTokenPromise || state.refreshTokenSessionRevision !== revision) {
+    state.refreshTokenSessionRevision = revision;
+    state.refreshTokenPromise = handleRefreshToken(revision, localStg.get('refreshToken') || '');
   }
-
+  const pending = state.refreshTokenPromise;
   try {
-    return await state.refreshTokenPromise;
+    const result = await pending;
+    return result && (localStg.get('authSessionRevision') || '') === revision;
   } finally {
-    state.refreshTokenPromise = null;
+    if (state.refreshTokenPromise === pending) {
+      state.refreshTokenPromise = null;
+      state.refreshTokenSessionRevision = undefined;
+    }
   }
 }
 

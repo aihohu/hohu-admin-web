@@ -20,7 +20,12 @@ vi.mock('@/router', () => ({
   router: { addRoute: vi.fn(), removeRoute: vi.fn(), push: vi.fn(), replace: vi.fn() }
 }));
 vi.mock('@/router/routes', () => ({
-  createStaticRoutes: vi.fn(() => []),
+  createStaticRoutes: vi.fn(() => ({
+    constantRoutes: [
+      { name: '403', path: '/403', component: 'layout.blank$view.403', meta: { title: '403', constant: true } }
+    ],
+    authRoutes: []
+  })),
   getAuthVueRoutes: vi.fn(routes => routes)
 }));
 vi.mock('../../auth', () => ({
@@ -42,7 +47,9 @@ vi.mock('../../tab', () => ({
   }))
 }));
 
-import { fetchGetUserRoutes } from '@/service/api';
+import { fetchGetConstantRoutes, fetchGetUserRoutes } from '@/service/api';
+import { router } from '@/router';
+import { localStg } from '@/utils/storage';
 import { useRouteStore } from '..';
 
 function mockUserRoutes(routes: unknown[], home: string) {
@@ -103,4 +110,28 @@ describe('zero accessible routes lands on the constant empty page', () => {
 
     expect(store.routeHome).toBe('ai_chat');
   });
+  it.each(['success', 'failure'] as const)(
+    'does not install late %s constant routes after a session change',
+    async outcome => {
+      localStg.set('authSessionRevision', 'A');
+      let finish!: (value: unknown) => void;
+      vi.mocked(fetchGetConstantRoutes).mockReturnValue(
+        new Promise(resolve => {
+          finish = resolve;
+        }) as never
+      );
+      const store = useRouteStore();
+      const job = store.initConstantRoute();
+      localStg.set('authSessionRevision', 'B');
+      finish(
+        outcome === 'success'
+          ? { data: [{ name: '403', path: '/403', meta: { constant: true } }], error: null }
+          : { data: null, error: new Error('old failure') }
+      );
+      await job;
+      expect(router.addRoute).not.toHaveBeenCalled();
+      expect(store.isInitConstantRoute).toBe(false);
+      localStg.remove('authSessionRevision');
+    }
+  );
 });

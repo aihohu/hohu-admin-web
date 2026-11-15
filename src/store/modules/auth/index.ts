@@ -12,12 +12,13 @@ import { $t } from '@/locales';
 import { useAiStore } from '../ai';
 import { useRouteStore } from '../route';
 import { useTabStore } from '../tab';
-import { clearAuthStorage, createSingleFlightAction, getToken, watchAuthSession } from './shared';
+import { clearAuthStorage, createSingleFlightAction, getToken, installAuthStorage, watchAuthSession } from './shared';
 
 export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   const route = useRoute();
   const authStore = useAuthStore();
   const aiStore = useAiStore();
+  const authSessionRevision = ref(localStg.get('authSessionRevision') || '');
   const sessionSync = watchAuthSession(
     () => `${localStg.get('authSessionRevision') || ''}:${Boolean(getToken())}`,
     () => {
@@ -54,24 +55,39 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   /** Is login */
   const isLogin = computed(() => Boolean(token.value));
 
+  function currentSession(revision: string) {
+    return (
+      authSessionRevision.value === revision &&
+      (localStg.get('authSessionRevision') || '') === revision &&
+      !revision.startsWith('changing:')
+    );
+  }
+
   /** Reset auth store. Concurrent 401 responses share one route-reset operation. */
-  const resetStore = createSingleFlightAction(async () => {
-    recordUserId();
+  const resetStore = createSingleFlightAction(
+    async () => {
+      if (!currentSession(authSessionRevision.value)) return;
+      recordUserId();
 
-    clearAuthStorage();
-    sessionSync.accept();
+      const revision = clearAuthStorage();
 
-    aiStore.resetStore();
-    clearRuntimeSettings();
-    authStore.$reset();
+      aiStore.resetStore();
+      clearRuntimeSettings();
+      authStore.$reset();
+      authSessionRevision.value = revision;
+      sessionSync.accept();
 
-    if (!route.meta.constant) {
-      await toLogin();
-    }
+      if (!route.meta.constant) {
+        await toLogin();
+      }
 
-    tabStore.cacheTabs();
-    await routeStore.resetStore();
-  });
+      if (!currentSession(revision)) return;
+
+      tabStore.cacheTabs();
+      await routeStore.resetStore(() => currentSession(revision));
+    },
+    () => authSessionRevision.value
+  );
 
   /** Record the user ID of the previous login session Used to compare with the current user ID on next login */
   function recordUserId() {
@@ -116,53 +132,59 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
    * @param [redirect=true] Whether to redirect after login. Default is `true`
    * @param tenantCode Optional pre-auth tenant locator for hosted deployments
    */
+  let loginGeneration = 0;
   async function login(userName: string, password: string, redirect = true, tenantCode?: string) {
+    const generation = ++loginGeneration;
+    const revision = authSessionRevision.value;
     startLoading();
+    try {
+      const { data: loginToken, error } = await fetchLogin(userName, password, tenantCode);
+      if (generation !== loginGeneration || !currentSession(revision)) return;
 
-    const { data: loginToken, error } = await fetchLogin(userName, password, tenantCode);
+      if (!error) {
+        const pass = await loginByToken(loginToken);
 
-    if (!error) {
-      const pass = await loginByToken(loginToken);
+        if (pass) {
+          // Check if the tab needs to be cleared
+          const isClear = checkTabClear();
+          let needRedirect = redirect;
 
-      if (pass) {
-        // Check if the tab needs to be cleared
-        const isClear = checkTabClear();
-        let needRedirect = redirect;
+          if (isClear) {
+            // If the tab needs to be cleared,it means we don't need to redirect.
+            needRedirect = false;
+          }
+          const installedRevision = authSessionRevision.value;
+          await redirectFromLogin(needRedirect);
+          if (!currentSession(installedRevision)) return;
 
-        if (isClear) {
-          // If the tab needs to be cleared,it means we don't need to redirect.
-          needRedirect = false;
+          window.$notification?.success({
+            title: $t('page.login.common.loginSuccess'),
+            content: $t('page.login.common.welcomeBack', { userName: userInfo.userName }),
+            duration: 4500
+          });
         }
-        await redirectFromLogin(needRedirect);
-
-        window.$notification?.success({
-          title: $t('page.login.common.loginSuccess'),
-          content: $t('page.login.common.welcomeBack', { userName: userInfo.userName }),
-          duration: 4500
-        });
+      } else {
+        resetStore();
       }
-    } else {
-      resetStore();
+    } finally {
+      if (generation === loginGeneration) endLoading();
     }
-
-    endLoading();
   }
 
   async function loginByToken(loginToken: Api.Auth.LoginToken) {
     aiStore.resetStore();
     clearRuntimeSettings();
     // 1. stored in the localStorage, the later requests need it in headers
-    localStg.set('token', loginToken.token);
-    if (loginToken.refreshToken) {
-      localStg.set('refreshToken', loginToken.refreshToken);
-      localStg.set('authSessionRevision', crypto.randomUUID());
-      sessionSync.accept();
-    }
+    token.value = '';
+    Object.assign(userInfo, { userId: '', userName: '', userAvatar: '', isSystemAdmin: false, roles: [], buttons: [] });
+    const revision = installAuthStorage(loginToken);
+    authSessionRevision.value = revision;
+    sessionSync.accept();
 
     // 2. get user info
     const pass = await getUserInfo();
 
-    if (pass) {
+    if (pass && currentSession(revision)) {
       token.value = loginToken.token;
 
       return true;
@@ -172,12 +194,15 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   }
 
   async function getUserInfo() {
+    const revision = authSessionRevision.value;
     const { data: info, error } = await fetchGetUserInfo();
+    if (!currentSession(revision)) return false;
 
     if (!error) {
       // update store
       Object.assign(userInfo, info);
       const runtime = await refreshRuntimeSettings();
+      if (!currentSession(revision)) return false;
       if (runtime) useAppStore().applyDefaultLocale(runtime.defaultLocale);
 
       return true;
@@ -187,11 +212,14 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   }
 
   async function initUserInfo() {
+    const revision = authSessionRevision.value;
+    if (!currentSession(revision)) return;
     const maybeToken = getToken();
 
     if (maybeToken) {
       token.value = maybeToken;
       const pass = await getUserInfo();
+      if (!currentSession(revision)) return;
 
       if (!pass) {
         resetStore();
@@ -200,6 +228,7 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   }
 
   return {
+    authSessionRevision,
     token,
     userInfo,
     isStaticSuper,

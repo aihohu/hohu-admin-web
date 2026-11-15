@@ -110,8 +110,13 @@ function finish() {
   });
 }
 const columns = computed<DataTableColumns<Api.FieldManagement.Role>>(() => [
-  { key: 'roleName', title: $t('page.system.role.roleName'), minWidth: 160 },
-  { key: 'roleCode', title: $t('page.system.role.roleCode'), minWidth: 120 },
+  { key: 'roleId', title: label('roleAnchor'), minWidth: 180 },
+  ...(roles.value.some(role => Object.hasOwn(role, 'roleName'))
+    ? [{ key: 'roleName', title: $t('page.system.role.roleName'), minWidth: 160 }]
+    : []),
+  ...(roles.value.some(role => Object.hasOwn(role, 'roleCode'))
+    ? [{ key: 'roleCode', title: $t('page.system.role.roleCode'), minWidth: 120 }]
+    : []),
   {
     key: 'operate',
     title: $t('common.operate'),

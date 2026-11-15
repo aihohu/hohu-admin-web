@@ -1,6 +1,7 @@
+import { readClientSession, sameClientSession } from '@/utils/auth-session';
 import { runtimeSettings, validateUploadPolicy } from '@/utils/runtime-settings';
 import { downloadBlob } from '@/utils/download-blob';
-import { computed, ref, watch } from 'vue';
+import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue';
 import {
   fetchCancelImportBatch,
   fetchDownloadImportTemplate,
@@ -30,6 +31,8 @@ export interface UseImportFlowOptions {
 
 export function useImportFlow(options: UseImportFlowOptions = {}) {
   let generation = 0;
+  const currentRequest = (expected: number, session: ReturnType<typeof readClientSession>) =>
+    expected === generation && sameClientSession(session);
   let previewInput: { file: File; reason: string; onConflict: string } | null = null;
   const step = ref<1 | 2 | 3>(1);
   const file = ref<File | null>(null);
@@ -85,6 +88,8 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     reset();
   }
 
+  if (getCurrentScope()) onScopeDispose(reset);
+
   function validateFile(f: File): ImportFlowErrorCode | null {
     const lowerName = f.name.toLowerCase();
     const extOk = ALLOWED_EXTENSIONS.some(ext => lowerName.endsWith(ext));
@@ -119,10 +124,11 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     loading.value = true;
     errorCode.value = null;
     const requestGeneration = ++generation;
+    const requestSession = readClientSession();
     const input = { file: f, reason: reason.value.trim(), onConflict: onConflict.value };
     try {
       const { data, error } = await fetchDryRunImportUsers(f, input.reason, onConflict.value);
-      if (requestGeneration !== generation) return;
+      if (!currentRequest(requestGeneration, requestSession)) return;
       if (error || !data) {
         notifyError('DRY_RUN_FAILED');
         return;
@@ -131,9 +137,9 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
       dryRunResult.value = data;
       step.value = 2;
     } catch {
-      if (requestGeneration === generation) notifyError('DRY_RUN_FAILED');
+      if (currentRequest(requestGeneration, requestSession)) notifyError('DRY_RUN_FAILED');
     } finally {
-      if (requestGeneration === generation) loading.value = false;
+      if (currentRequest(requestGeneration, requestSession)) loading.value = false;
     }
   }
 
@@ -142,6 +148,7 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     loading.value = true;
     errorCode.value = null;
     const requestGeneration = generation;
+    const requestSession = readClientSession();
     try {
       const { data, error } = await fetchExecuteImportUsers(
         file.value,
@@ -150,7 +157,7 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
         onConflict.value,
         syncMode.value
       );
-      if (requestGeneration !== generation) return;
+      if (!currentRequest(requestGeneration, requestSession)) return;
       if (error || !data) {
         notifyError('EXECUTE_FAILED');
         return;
@@ -162,9 +169,9 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
       }
       options.onCompleted?.(data);
     } catch {
-      if (requestGeneration === generation) notifyError('EXECUTE_FAILED');
+      if (currentRequest(requestGeneration, requestSession)) notifyError('EXECUTE_FAILED');
     } finally {
-      if (requestGeneration === generation) loading.value = false;
+      if (currentRequest(requestGeneration, requestSession)) loading.value = false;
     }
   }
 
@@ -178,9 +185,10 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     loading.value = true;
     errorCode.value = null;
     const requestGeneration = generation;
+    const requestSession = readClientSession();
     try {
       const { error } = await fetchCancelImportBatch(batchId);
-      if (requestGeneration !== generation) return false;
+      if (!currentRequest(requestGeneration, requestSession)) return false;
       if (error) {
         notifyError('CANCEL_FAILED');
         return false;
@@ -188,10 +196,10 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
       options.onCancelled?.();
       return true;
     } catch {
-      if (requestGeneration === generation) notifyError('CANCEL_FAILED');
+      if (currentRequest(requestGeneration, requestSession)) notifyError('CANCEL_FAILED');
       return false;
     } finally {
-      if (requestGeneration === generation) loading.value = false;
+      if (currentRequest(requestGeneration, requestSession)) loading.value = false;
     }
   }
 
@@ -200,17 +208,18 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     loading.value = true;
     errorCode.value = null;
     const requestGeneration = generation;
+    const requestSession = readClientSession();
     try {
       const { data, error } = await fetchDownloadImportTemplate();
-      if (requestGeneration !== generation) return;
+      if (!currentRequest(requestGeneration, requestSession)) return;
       if (error || !downloadBlob(data, TEMPLATE_DOWNLOAD_FILENAME)) {
         notifyError('TEMPLATE_FAILED');
         return;
       }
     } catch {
-      if (requestGeneration === generation) notifyError('TEMPLATE_FAILED');
+      if (currentRequest(requestGeneration, requestSession)) notifyError('TEMPLATE_FAILED');
     } finally {
-      if (requestGeneration === generation) loading.value = false;
+      if (currentRequest(requestGeneration, requestSession)) loading.value = false;
     }
   }
 
@@ -219,17 +228,18 @@ export function useImportFlow(options: UseImportFlowOptions = {}) {
     if (!batchId || loading.value) return;
     loading.value = true;
     const requestGeneration = generation;
+    const requestSession = readClientSession();
     try {
       const { data, error } = await fetchDownloadImportError(batchId);
-      if (requestGeneration !== generation) return;
+      if (!currentRequest(requestGeneration, requestSession)) return;
       if (error || !downloadBlob(data, 'user_import_errors.xlsx')) {
         notifyError('TEMPLATE_FAILED');
         return;
       }
     } catch {
-      if (requestGeneration === generation) notifyError('TEMPLATE_FAILED');
+      if (currentRequest(requestGeneration, requestSession)) notifyError('TEMPLATE_FAILED');
     } finally {
-      if (requestGeneration === generation) loading.value = false;
+      if (currentRequest(requestGeneration, requestSession)) loading.value = false;
     }
   }
 

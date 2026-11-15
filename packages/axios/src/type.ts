@@ -19,6 +19,10 @@ export interface RequestOption<
    * The default state
    */
   defaultState?: State;
+  /** Capture caller context synchronously, before Axios queues interceptors. */
+  onRequestStart?: (config: CustomAxiosRequestConfig) => CustomAxiosRequestConfig;
+  /** Synchronous delivery predicate, checked again after asynchronous transforms. */
+  isResponseCurrent?: (response: AxiosResponse<ResponseData>) => boolean;
   /**
    * transform the response data to the api data
    *

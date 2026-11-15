@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 vi.mock('@/service/request/platform', () => ({ platformRequest: vi.fn() }));
+vi.mock('@/store/modules/auth', () => ({ useAuthStore: () => ({ authSessionRevision: '' }) }));
 
 const { requestConfigs, flatOptions } = vi.hoisted(() => ({
   requestConfigs: [] as Array<Record<string, unknown>>,
@@ -38,7 +39,8 @@ it('preserves FormData as multipart before Axios transforms the body', async () 
   const config = { data: formData, headers: {} as Record<string, string> };
 
   const onRequest = flatOptions[0]?.onRequest as (value: typeof config) => Promise<typeof config>;
-  const result = await onRequest(config);
+  const onRequestStart = flatOptions[0]?.onRequestStart as (value: typeof config) => typeof config;
+  const result = await onRequest(onRequestStart(config));
 
   expect(result.data).toBe(formData);
   expect(result.headers['Content-Type']).toBe('multipart/form-data');
