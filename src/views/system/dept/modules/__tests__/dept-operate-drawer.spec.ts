@@ -6,7 +6,8 @@ import DeptOperateDrawer from '../dept-operate-drawer.vue';
 const serviceMocks = vi.hoisted(() => ({
   fetchGetDeptTreeOption: vi.fn(),
   fetchSaveDept: vi.fn(),
-  fetchUpdateDept: vi.fn()
+  fetchUpdateDept: vi.fn(),
+  fetchRelationForm: vi.fn()
 }));
 
 vi.mock('@/service/api', () => serviceMocks);
@@ -73,6 +74,35 @@ describe('dept-operate-drawer', () => {
       error: null,
       response: { data: { msg: 'updated' } }
     });
+    serviceMocks.fetchRelationForm.mockResolvedValue({
+      data: {
+        record: row,
+        fieldPolicy: {
+          read: ['parent_id', 'dept_name', 'order_num', 'leader', 'phone', 'email', 'status'],
+          query: [],
+          create: [],
+          update: ['dept_name', 'order_num', 'leader', 'phone', 'email', 'status'],
+          readLevels: {
+            role_desc: 'plain',
+            role_name: 'plain',
+            role_code: 'plain',
+            status: 'plain',
+            data_scope: 'plain',
+            dept_ids: 'plain',
+            parent_id: 'plain',
+            dept_name: 'plain',
+            order_num: 'plain',
+            leader: 'plain',
+            phone: 'plain',
+            email: 'plain'
+          },
+          specialCreate: ['parent_id'],
+          specialUpdate: [],
+          canCreate: false,
+          complete: {}
+        }
+      }
+    });
   });
 
   it('keeps hierarchy read-only and omits parentId from base updates', async () => {
@@ -92,13 +122,9 @@ describe('dept-operate-drawer', () => {
     await vm.handleSubmit();
 
     expect(wrapper.findComponent(NTreeSelectStub).props('disabled')).toBe(true);
-    expect(serviceMocks.fetchUpdateDept).toHaveBeenCalledWith('200', {
-      deptName: 'Engineering',
-      orderNum: 1,
-      leader: null,
-      phone: null,
-      email: null,
-      status: '1'
-    });
+    expect(serviceMocks.fetchUpdateDept).not.toHaveBeenCalled();
+    vm.model.deptName = 'Explicit change';
+    await vm.handleSubmit();
+    expect(serviceMocks.fetchUpdateDept).toHaveBeenCalledWith('200', { deptName: 'Explicit change' });
   });
 });

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { runtimeSettings } from '@/utils/runtime-settings';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import type { DataTableColumns, UploadFileInfo } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { $t } from '@/locales';
@@ -39,7 +39,8 @@ const {
   uploadFile,
   confirmImport,
   cancelImport,
-  downloadTemplate
+  downloadTemplate,
+  downloadErrors
 } = useImportFlow({
   onCompleted: result => {
     emit('completed', result);
@@ -111,6 +112,13 @@ function handleFileChange({ file: entry }: { file: UploadFileInfo }) {
 function handleAfterLeave() {
   reset();
 }
+watch(
+  visible,
+  value => {
+    if (!value) reset();
+  },
+  { flush: 'sync' }
+);
 
 defineExpose({ open });
 </script>
@@ -276,7 +284,7 @@ defineExpose({ open });
         <NText depth="2">{{ $t('common.importModal.downloadFailedRows') }}</NText>
         <NDataTable :columns="errorColumns" :data="failedRowsPreview" size="small" :max-height="240" class="mt-8px" />
         <NSpace v-if="executeResult?.failedRowsFile" justify="end" class="mt-8px">
-          <NButton tag="a" :href="executeResult.failedRowsFile" target="_blank" rel="noopener noreferrer">
+          <NButton :loading="loading" @click="downloadErrors">
             {{ $t('common.importModal.downloadFailedRows') }}
           </NButton>
         </NSpace>

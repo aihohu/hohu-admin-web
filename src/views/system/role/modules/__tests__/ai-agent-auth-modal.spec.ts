@@ -211,4 +211,36 @@ describe('ai-agent-auth-modal', () => {
     expect(wrapper.text()).toContain('page.ai.aiAgentAuth.loadFailed');
     expect(wrapper.text()).not.toContain('page.ai.aiAgentAuth.entryMissing');
   });
+
+  it('discards late bindings and save results after a role switch', async () => {
+    const { fetchRoleAgentBinding, fetchUpdateRoleAgentBinding } = await import('@/service/api');
+    let resolveLoad!: (result: unknown) => void;
+    vi.mocked(fetchRoleAgentBinding).mockImplementationOnce(
+      () =>
+        new Promise<unknown>(resolve => {
+          resolveLoad = resolve;
+        }) as ReturnType<typeof fetchRoleAgentBinding>
+    );
+    const wrapper = await mountWithBinding();
+    await wrapper.setProps({ roleId: '2' });
+    await flushPromises();
+    resolveLoad({ data: { allAgents: [], boundAgentIds: ['old'], aiChatEntryGranted: false }, error: null });
+    await flushPromises();
+    const vm = wrapper.vm as unknown as { checkedIds: string[]; handleSubmit: () => Promise<boolean> };
+    expect(vm.checkedIds).toEqual(['101']);
+    let resolveSave!: (result: unknown) => void;
+    vi.mocked(fetchUpdateRoleAgentBinding).mockImplementationOnce(
+      () =>
+        new Promise<unknown>(resolve => {
+          resolveSave = resolve;
+        }) as ReturnType<typeof fetchUpdateRoleAgentBinding>
+    );
+    const save = vm.handleSubmit();
+    await wrapper.setProps({ roleId: '3' });
+    await flushPromises();
+    resolveSave({ error: null });
+    await save;
+    expect(wrapper.emitted('update:visible')).toBeUndefined();
+    wrapper.unmount();
+  });
 });

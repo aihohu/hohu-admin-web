@@ -12,13 +12,15 @@ const mocks = vi.hoisted(() => ({
       children: [{ id: '101', label: '前端组', pId: '100' }]
     }
   ] as Api.SystemManage.DeptTreeOption[],
-  fetchUpdateRole: vi.fn()
+  fetchUpdateRole: vi.fn(),
+  fetchRelationForm: vi.fn()
 }));
 
 vi.mock('@/service/api', () => ({
   fetchGetDeptTreeOption: vi.fn().mockResolvedValue({ error: null, data: mocks.deptTreeOptions }),
   fetchSaveRole: vi.fn().mockResolvedValue({ error: null, response: { data: { msg: 'saved' } } }),
-  fetchUpdateRole: mocks.fetchUpdateRole
+  fetchUpdateRole: mocks.fetchUpdateRole,
+  fetchRelationForm: mocks.fetchRelationForm
 }));
 
 vi.mock('@/hooks/common/form', async importOriginal => {
@@ -65,6 +67,48 @@ describe('role-operate-drawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.fetchUpdateRole.mockResolvedValue({ error: null, response: { data: { msg: 'updated' } } });
+    mocks.fetchRelationForm.mockImplementation((_surface, query) =>
+      Promise.resolve({
+        data: {
+          record:
+            query.mode === 'create'
+              ? null
+              : {
+                  roleId: '200',
+                  roleName: 'Department operator',
+                  roleCode: 'R_DEPT_OPERATOR',
+                  roleDesc: 'Current detail',
+                  dataScope: '4',
+                  deptIds: [],
+                  status: '1'
+                },
+          fieldPolicy: {
+            read: ['role_name', 'role_code', 'role_desc', 'status', 'data_scope', 'dept_ids'],
+            query: [],
+            create: ['role_name', 'role_code', 'role_desc'],
+            update: ['role_name', 'role_desc'],
+            readLevels: {
+              role_desc: 'plain',
+              role_name: 'plain',
+              role_code: 'plain',
+              status: 'plain',
+              data_scope: 'plain',
+              dept_ids: 'plain',
+              parent_id: 'plain',
+              dept_name: 'plain',
+              order_num: 'plain',
+              leader: 'plain',
+              phone: 'plain',
+              email: 'plain'
+            },
+            specialCreate: ['data_scope', 'status', 'dept_ids'],
+            specialUpdate: ['data_scope', 'status', 'dept_ids'],
+            canCreate: true,
+            complete: {}
+          }
+        }
+      })
+    );
   });
 
   it('自定义数据权限使用可显示部门名称的树选项', async () => {
@@ -107,18 +151,63 @@ describe('role-operate-drawer', () => {
     await flushPromises();
 
     const vm = wrapper.vm as unknown as {
-      model: { roleCode: string };
+      model: { roleCode: string; roleDesc: string };
       handleSubmit: () => Promise<void>;
     };
     vm.model.roleCode = 'R_MUTATED';
     await vm.handleSubmit();
 
     expect(wrapper.get('[data-testid="role-code-input"]').attributes('disabled')).toBeDefined();
-    expect(mocks.fetchUpdateRole).toHaveBeenCalledWith('200', {
-      roleName: 'Department operator',
-      roleDesc: 'Scoped operator',
-      dataScope: '4',
-      status: '1'
+    expect(mocks.fetchUpdateRole).not.toHaveBeenCalled();
+    expect(vm.model.roleDesc).toBe('Current detail');
+    vm.model.roleDesc = 'Explicit change';
+    await vm.handleSubmit();
+    expect(mocks.fetchUpdateRole).toHaveBeenCalledWith('200', { roleDesc: 'Explicit change' });
+  });
+
+  it('does not save hidden defaults or a failed form context', async () => {
+    mocks.fetchRelationForm.mockResolvedValueOnce({
+      data: {
+        record: { roleId: '200' },
+        fieldPolicy: {
+          read: [],
+          query: [],
+          create: [],
+          update: ['role_desc'],
+          readLevels: {
+            role_desc: 'plain',
+            role_name: 'plain',
+            role_code: 'plain',
+            status: 'plain',
+            data_scope: 'plain',
+            dept_ids: 'plain',
+            parent_id: 'plain',
+            dept_name: 'plain',
+            order_num: 'plain',
+            leader: 'plain',
+            phone: 'plain',
+            email: 'plain'
+          },
+          specialCreate: [],
+          specialUpdate: [],
+          canCreate: false,
+          complete: {}
+        }
+      }
     });
+    const wrapper = mount(RoleOperateDrawer, {
+      props: { visible: false, operateType: 'edit', rowData: { roleId: '200' } },
+      global: { stubs }
+    });
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    const vm = wrapper.vm as unknown as { model: { roleDesc?: string }; handleSubmit: () => Promise<void> };
+    expect(vm.model).toEqual({ roleId: '200' });
+    await vm.handleSubmit();
+    expect(mocks.fetchUpdateRole).not.toHaveBeenCalled();
+    vm.model.roleDesc = 'Write-only';
+    await vm.handleSubmit();
+    expect(mocks.fetchUpdateRole).toHaveBeenCalledWith('200', { roleDesc: 'Write-only' });
+    wrapper.unmount();
   });
 });

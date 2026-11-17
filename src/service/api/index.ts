@@ -7,3 +7,5 @@ export * from './route';
 export * from './system';
 export * from './platform';
 export * from './tenant';
+export * from './user-field-policy';
+export * from './control';

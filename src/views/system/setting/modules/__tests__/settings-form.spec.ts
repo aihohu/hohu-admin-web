@@ -37,7 +37,9 @@ const group = {
   revision: 'revision',
   fields: [{ key: 'site_name', kind: 'text', options: [], minimum: null, maximum: null }],
   secretKeys: [],
-  configuredSecrets: []
+  configuredSecrets: [],
+  formReceipt: 'receipt',
+  fieldPolicy: { read: ['site_name'], update: ['site_name'], specialUpdate: [], complete: {} }
 };
 const container = { template: '<div><slot /></div>' };
 const stubs = {
@@ -82,7 +84,7 @@ it('preserves drafts across tabs and saves only the active group', async () => {
   await flushPromises();
   await wrapper.get('button').trigger('click');
   await flushPromises();
-  expect(mocks.save).toHaveBeenCalledWith('account', { values: { site_name: 'Original' }, revision: 'revision' });
+  expect(mocks.save).not.toHaveBeenCalled();
   wrapper.findComponent(stubs.NTabs).vm.$emit('update:value', 'brand');
   await flushPromises();
   expect(wrapper.get('input').element.value).toBe('Unsaved brand');
@@ -137,7 +139,11 @@ it('saves original values with a revision and refreshes runtime consumers', asyn
   await wrapper.get('input').setValue('Custom brand');
   await wrapper.get('button').trigger('click');
   await flushPromises();
-  expect(mocks.save).toHaveBeenCalledWith('brand', { values: { site_name: 'Custom brand' }, revision: 'revision' });
+  expect(mocks.save).toHaveBeenCalledWith('brand', {
+    values: { site_name: 'Custom brand' },
+    revision: 'revision',
+    formReceipt: 'receipt'
+  });
   expect(mocks.refresh).toHaveBeenCalledOnce();
   expect(mocks.apply).toHaveBeenCalledWith('en-US');
   wrapper.unmount();
@@ -156,10 +162,11 @@ it('does not refresh runtime state when saving conflicts', async () => {
   mocks.save.mockResolvedValue({ data: null, error: new Error('SETTINGS_CONFLICT') });
   const wrapper = mount(SettingsForm, { global: { stubs } });
   await flushPromises();
+  await wrapper.get('input').setValue('Retained draft');
   await wrapper.get('button').trigger('click');
   await flushPromises();
   expect(mocks.refresh).not.toHaveBeenCalled();
-  expect(wrapper.get('input').element.value).toBe('Original');
+  expect(wrapper.get('input').element.value).toBe('Retained draft');
   wrapper.unmount();
 });
 
@@ -180,7 +187,14 @@ it('renders extension options from field metadata', async () => {
         }
       ],
       secretKeys: [],
-      configuredSecrets: []
+      configuredSecrets: [],
+      formReceipt: 'receipt',
+      fieldPolicy: {
+        read: ['upload:allowed_extensions'],
+        update: [],
+        specialUpdate: ['upload:allowed_extensions'],
+        complete: {}
+      }
     },
     error: null
   });
@@ -196,5 +210,20 @@ it('renders extension options from field metadata', async () => {
     { label: '.png', value: '.png' },
     { label: '.zip', value: '.zip' }
   ]);
+  wrapper.unmount();
+});
+
+it('does not write a setting whose exact stable key has no update capability', async () => {
+  mocks.group.mockResolvedValue({
+    data: {
+      ...structuredClone(group),
+      formReceipt: 'receipt',
+      fieldPolicy: { read: ['site_name'], update: [], specialUpdate: [], complete: {} }
+    },
+    error: null
+  });
+  const wrapper = mount(SettingsForm, { global: { stubs } });
+  await flushPromises();
+  expect(wrapper.find('button').exists()).toBe(false);
   wrapper.unmount();
 });

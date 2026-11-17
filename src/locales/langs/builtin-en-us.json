@@ -72,7 +72,10 @@
     "ai_routing_feedback_list": "View",
     "system_role_ai_agent_auth": "Assign AI assistants",
     "system_setting_list": "View settings",
-    "system_setting_edit": "Edit settings"
+    "system_setting_edit": "Edit settings",
+    "system_user_field_policy_view": "View user field policies",
+    "system_user_field_policy_edit": "Publish user field policies",
+    "system_user_field_policy_activate": "Activate/freeze user field policies"
   },
   "role": {
     "systemAdmin": {

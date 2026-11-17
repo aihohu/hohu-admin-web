@@ -73,7 +73,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       align: 'center',
       width: 100,
       render: row => {
-        if (row.userGender === null) {
+        if (row.userGender == null) {
           return null;
         }
 
@@ -105,7 +105,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
           <NSpace size="small" justify="center">
             {row.roleNames.map((name, index) => (
               <NTag size="small" type="info">
-                {localizedText(name, row.roleNameKeys?.[index])}
+                {name === null ? '-' : localizedText(name, row.roleNameKeys?.[index])}
               </NTag>
             ))}
           </NSpace>
@@ -130,7 +130,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
       align: 'center',
       width: 100,
       render: row => {
-        if (row.status === null) {
+        if (row.status == null) {
           return null;
         }
 

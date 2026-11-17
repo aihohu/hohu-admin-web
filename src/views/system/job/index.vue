@@ -1,5 +1,8 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
+import { reactive, computed, shallowRef } from 'vue';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+import { controlQuery, jobNotification } from '@/hooks/business/control-fields';
+import { useControlAction } from '@/hooks/business/control-action';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord } from '@/constants/business';
 import { fetchBatchDeleteJob, fetchDeleteJob, fetchGetJobList, fetchRunJobNow, fetchUpdateJobStatus } from '@/service/api';
@@ -16,6 +19,9 @@ defineOptions({
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
+const fieldPolicy = shallowRef<Api.SystemManage.ControlCapabilities>();
+const command = shallowRef<'metadata' | 'schedule'>('metadata');
+const { busy: actionBusy, run: runAction } = useControlAction();
 
 const searchParams: Api.SystemManage.JobSearchParams = reactive({
   current: 1,
@@ -27,8 +33,14 @@ const searchParams: Api.SystemManage.JobSearchParams = reactive({
 
 const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagination } =
   useNaivePaginatedTable({
-    api: () => fetchGetJobList(searchParams),
-    transform: response => defaultTransform(response),
+    api: () => fetchGetJobList(controlQuery(searchParams, fieldPolicy.value?.query)),
+    transform: response => {
+      fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
+      for (const key of Object.keys(searchParams) as (keyof typeof searchParams)[]) {
+        if (!['current', 'size'].includes(key) && !fieldAllowed(fieldPolicy.value?.query, key)) Object.assign(searchParams, { [key]: null });
+      }
+      return defaultTransform(response);
+    },
     onPaginationParamsChange: params => {
       searchParams.current = params.page;
       searchParams.size = params.pageSize;
@@ -71,7 +83,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
               hours: $t('page.system.job.unitHours'),
               days: $t('page.system.job.unitDays')
             };
-            return `${row.intervalValue} ${unitMap[row.intervalUnit || 'seconds']}`;
+            return row.intervalValue !== undefined && row.intervalUnit ? `${row.intervalValue} ${unitMap[row.intervalUnit]}` : null;
           }
           return row.cronExpression || '-';
         }
@@ -82,7 +94,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         align: 'center',
         width: 100,
         render: row => {
-          if (row.status === null) {
+          if (!row.status) {
             return null;
           }
 
@@ -102,6 +114,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         align: 'center',
         width: 100,
         render: row => {
+          if (!row.concurrent) return null;
           return row.concurrent === '1'
             ? $t('page.system.job.concurrentAllow')
             : $t('page.system.job.concurrentForbid');
@@ -121,14 +134,14 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         width: 320,
         render: row => (
           <div class="flex-center gap-8px">
-            {hasAuth('system:job:edit') && (
-              <NButton type="primary" ghost size="small" onClick={() => edit(row.jobId)}>
+            {hasAuth('system:job:edit') && Boolean(row.fieldPolicy?.update.length) && (
+              <NButton type="primary" ghost size="small" onClick={() => edit(row.jobId, 'metadata')}>
                 {$t('common.edit')}
               </NButton>
             )}
-            {hasAuth('system:job:edit') &&
+            {hasAuth('system:job:edit') && fieldAllowed(row.fieldPolicy?.specialUpdate, 'status') && row.status &&
               (row.status === '1' ? (
-                <NPopconfirm onPositiveClick={() => handleToggleStatus(row.jobId, '2')}>
+                <NPopconfirm positiveButtonProps={{ disabled: actionBusy.value, loading: actionBusy.value }} onPositiveClick={() => handleToggleStatus(row.jobId, '2')}>
                   {{
                     default: () => $t('page.system.job.disableConfirm'),
                     trigger: () => (
@@ -139,7 +152,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
                   }}
                 </NPopconfirm>
               ) : (
-                <NPopconfirm onPositiveClick={() => handleToggleStatus(row.jobId, '1')}>
+                <NPopconfirm positiveButtonProps={{ disabled: actionBusy.value, loading: actionBusy.value }} onPositiveClick={() => handleToggleStatus(row.jobId, '1')}>
                   {{
                     default: () => $t('page.system.job.enableConfirm'),
                     trigger: () => (
@@ -150,8 +163,11 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
                   }}
                 </NPopconfirm>
               ))}
-            {hasAuth('system:job:run') && (
-              <NPopconfirm onPositiveClick={() => handleRunNow(row.jobId)}>
+            {hasAuth('system:job:edit') && row.fieldPolicy?.specialUpdate.some(key => key !== 'status') && (
+              <NButton type="primary" ghost size="small" onClick={() => edit(row.jobId, 'schedule')}>{$t('fieldPolicy.scheduleJob')}</NButton>
+            )}
+            {hasAuth('system:job:run') && row.fieldPolicy?.controlActions?.canRun === true && (
+              <NPopconfirm positiveButtonProps={{ disabled: actionBusy.value, loading: actionBusy.value }} onPositiveClick={() => handleRunNow(row.jobId)}>
                 {{
                   default: () => $t('page.system.job.runConfirm'),
                   trigger: () => (
@@ -163,7 +179,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
               </NPopconfirm>
             )}
             {hasAuth('system:job:delete') && (
-              <NPopconfirm onPositiveClick={() => handleDelete(row.jobId)}>
+              <NPopconfirm positiveButtonProps={{ disabled: actionBusy.value, loading: actionBusy.value }} onPositiveClick={() => handleDelete(row.jobId)}>
                 {{
                   default: () => $t('common.confirmDelete'),
                   trigger: () => (
@@ -180,6 +196,9 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
     ]
   });
 
+const visibleColumns = computed(() => columns.value.filter(column => !('key' in column) ||
+  ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
+
 const {
   drawerVisible,
   operateType,
@@ -191,48 +210,56 @@ const {
 } = useTableOperate(data, 'jobId', getData);
 
 async function handleDelete(id: string) {
-  const { error } = await fetchDeleteJob(id);
-  if (!error) {
-    onDeleted();
-  }
+  await runAction(async current => {
+    const { error } = await fetchDeleteJob(id);
+    if (current() && !error) onDeleted();
+  });
 }
 
 async function handleBatchDelete() {
-  const { error } = await fetchBatchDeleteJob(checkedRowKeys.value);
-  if (!error) {
-    onDeleted();
-  }
+  await runAction(async current => {
+    const { error } = await fetchBatchDeleteJob(checkedRowKeys.value);
+    if (current() && !error) onDeleted();
+  });
 }
 
 async function handleToggleStatus(jobId: string, status: string) {
-  const { error } = await fetchUpdateJobStatus(jobId, status);
-  if (!error) {
-    window.$message?.success($t('common.updateSuccess'));
+  await runAction(async current => {
+  const { error, data: delivery } = await fetchUpdateJobStatus(jobId, status);
+  if (current() && !error) {
+    const notice = jobNotification(delivery);
+    if (notice) window.$message?.warning($t(`fieldPolicy.job_${notice}`));
+    else window.$message?.success($t('common.updateSuccess'));
     getData();
   }
+  });
 }
 
 async function handleRunNow(jobId: string) {
-  const { error } = await fetchRunJobNow(jobId);
-  if (!error) {
-    window.$message?.success($t('page.system.job.runNow'));
+  await runAction(async current => {
+  const { error, data: delivery } = await fetchRunJobNow(jobId);
+  if (current() && !error) {
+    window.$message?.warning($t(`fieldPolicy.job_${jobNotification(delivery) ?? 'unconfirmed'}`));
   }
+  });
 }
 
-function edit(id: string) {
+function edit(id: string, next: 'metadata' | 'schedule') {
+  command.value = next;
   handleEdit(id);
 }
 </script>
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <JobSearch v-model:model="searchParams" @search="getDataByPage" />
+    <JobSearch v-model:model="searchParams" :query-fields="fieldPolicy?.query" @search="getDataByPage" />
     <NCard :title="$t('page.system.job.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <TableHeaderOperation
           v-model:columns="columnChecks"
           :disabled-delete="checkedRowKeys.length === 0"
-          :loading="loading"
+          :loading="loading || actionBusy"
+          :show-add="fieldPolicy?.canCreate === true"
           add-auth="system:job:add"
           delete-auth="system:job:batch-delete"
           @add="handleAdd"
@@ -242,7 +269,7 @@ function edit(id: string) {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
@@ -256,6 +283,7 @@ function edit(id: string) {
       <JobOperateDrawer
         v-model:visible="drawerVisible"
         :operate-type="operateType"
+        :command="command"
         :row-data="editingData"
         @submitted="getDataByPage"
       />

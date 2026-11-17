@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { reactive, shallowRef } from 'vue';
+import { reactive, shallowRef, computed } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { enableStatusRecord } from '@/constants/business';
@@ -8,11 +8,14 @@ import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 import DataScopeDemoSearch from './modules/data-scope-demo-search.vue';
 import DataScopeDemoOperateDrawer from './modules/data-scope-demo-operate-drawer.vue';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
+
+const fieldPolicy = shallowRef<Api.SystemManage.OrdinaryCapabilities>();
 
 const searchParams: Api.SystemManage.DataScopeDemoSearchParams = reactive({
   current: 1,
@@ -23,7 +26,10 @@ const searchParams: Api.SystemManage.DataScopeDemoSearchParams = reactive({
 
 const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
   api: () => fetchGetDataScopeDemoList(searchParams),
-  transform: response => defaultTransform(response),
+  transform: response => {
+      fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
+      return defaultTransform(response);
+    },
   onPaginationParamsChange: params => {
     searchParams.current = params.page;
     searchParams.size = params.pageSize;
@@ -70,7 +76,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       align: 'center',
       width: 100,
       render: row => {
-        if (row.status === null) {
+        if (!row.status) {
           return null;
         }
         const tagMap: Record<Api.Common.EnableStatus, NaiveUI.ThemeColor> = {
@@ -88,7 +94,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       width: 180,
       render: row => (
         <div class="flex-center gap-8px">
-          {hasAuth('system:data-scope-demo:edit') && (
+          {hasAuth('system:data-scope-demo:edit') && Boolean(row.fieldPolicy?.update?.length) && (
             <NButton type="primary" ghost size="small" onClick={() => edit(row.demoId)}>
               {$t('common.edit')}
             </NButton>
@@ -110,6 +116,9 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     }
   ]
 });
+
+const visibleColumns = computed(() => columns.value.filter(column => !('key' in column) ||
+  ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
 
 const {
   drawerVisible,
@@ -159,7 +168,7 @@ const hintAccounts = shallowRef([
       </div>
     </NAlert>
 
-    <DataScopeDemoSearch v-model:model="searchParams" @search="getDataByPage" />
+    <DataScopeDemoSearch v-model:model="searchParams" :allowed-fields="fieldPolicy?.query" @search="getDataByPage" />
     <NCard
       :title="$t('page.system.dataScopeDemo.title')"
       :bordered="false"
@@ -169,6 +178,7 @@ const hintAccounts = shallowRef([
       <template #header-extra>
         <TableHeaderOperation
           v-model:columns="columnChecks"
+          :show-add="fieldPolicy?.canCreate === true"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
           add-auth="system:data-scope-demo:add"
@@ -178,7 +188,7 @@ const hintAccounts = shallowRef([
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
@@ -193,6 +203,7 @@ const hintAccounts = shallowRef([
         v-model:visible="drawerVisible"
         :operate-type="operateType"
         :row-data="editingData"
+        :capabilities="fieldPolicy"
         @submitted="getDataByPage"
       />
     </NCard>

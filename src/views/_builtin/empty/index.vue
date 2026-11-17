@@ -2,6 +2,7 @@
 import { useAuthStore } from '@/store/modules/auth';
 import { useRouterPush } from '@/hooks/common/router';
 import { fetchLogout } from '@/service/api';
+import { createClientSessionGuard } from '@/utils/auth-session';
 import { localStg } from '@/utils/storage';
 import { $t } from '@/locales';
 
@@ -11,10 +12,15 @@ const authStore = useAuthStore();
 const { routerPushByKey } = useRouterPush();
 
 async function handleLogout() {
+  const isCurrent = createClientSessionGuard(() => authStore.authSessionRevision);
+  if (!isCurrent()) return;
   const refreshToken = localStg.get('refreshToken') || undefined;
   await fetchLogout(refreshToken).catch(() => {});
-  await authStore.resetStore();
-  routerPushByKey('login');
+  if (!isCurrent()) return;
+  const reset = authStore.resetStore();
+  const isResetCurrent = createClientSessionGuard(() => authStore.authSessionRevision);
+  await reset;
+  if (isResetCurrent()) routerPushByKey('login');
 }
 </script>
 

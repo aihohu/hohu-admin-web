@@ -8,6 +8,7 @@ import { fetchGetConstantRoutes, fetchGetUserRoutes, fetchIsRouteExist } from '@
 import { SetupStoreId } from '@/enum';
 import { createStaticRoutes, getAuthVueRoutes } from '@/router/routes';
 import { ROOT_ROUTE } from '@/router/routes/builtin';
+import { createClientSessionGuard } from '@/utils/auth-session';
 import { getRouteName, getRoutePath } from '@/router/elegant/transform';
 import {
   filterHostedCapabilityRoutes,
@@ -34,6 +35,9 @@ import {
 export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   const authStore = useAuthStore();
   const tabStore = useTabStore();
+  function routeSessionGuard() {
+    return createClientSessionGuard(() => authStore.authSessionRevision);
+  }
   const { bool: isInitConstantRoute, setBool: setIsInitConstantRoute } = useBoolean();
   const { bool: isInitAuthRoute, setBool: setIsInitAuthRoute } = useBoolean();
 
@@ -143,7 +147,8 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   const breadcrumbs = computed(() => getBreadcrumbsByRoute(router.currentRoute.value, menus.value));
 
   /** Reset store */
-  async function resetStore() {
+  async function resetStore(isCurrent = routeSessionGuard()) {
+    if (!isCurrent()) return;
     const routeStore = useRouteStore();
 
     routeStore.$reset();
@@ -151,7 +156,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
     resetVueRoutes();
 
     // after reset store, need to re-init constant route
-    await initConstantRoute();
+    await initConstantRoute(isCurrent);
   }
 
   /** Reset vue routes */
@@ -161,8 +166,8 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   }
 
   /** init constant route */
-  async function initConstantRoute() {
-    if (isInitConstantRoute.value) return;
+  async function initConstantRoute(isCurrent = routeSessionGuard()) {
+    if (!isCurrent() || isInitConstantRoute.value) return;
 
     const staticRoute = createStaticRoutes();
 
@@ -172,6 +177,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
       addConstantRoutes(staticRoute.constantRoutes);
     } else {
       const { data, error } = await fetchGetConstantRoutes();
+      if (!isCurrent()) return;
 
       if (!error) {
         addConstantRoutes(data);
@@ -191,19 +197,24 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
 
   /** Init auth route */
   async function initAuthRoute() {
+    const isCurrent = routeSessionGuard();
+    if (!isCurrent()) return;
     // check if user info is initialized
     if (!authStore.userInfo.userId) {
       await authStore.initUserInfo();
     }
+    if (!isCurrent()) return;
 
     if (authRouteMode.value === 'static') {
       initStaticAuthRoute();
     } else {
-      await initDynamicAuthRoute();
+      await initDynamicAuthRoute(isCurrent);
     }
+    if (!isCurrent()) return;
 
     // Merge marketplace contributes into sidebar after static menus are built
-    await mergeContributeMenus();
+    await mergeContributeMenus(isCurrent);
+    if (!isCurrent()) return;
 
     tabStore.initHomeTab();
   }
@@ -212,7 +223,8 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
    * Fetch contributes and append to menus.value.
    * Called once after initAuthRoute; called again by rebuildMenus on install/uninstall.
    */
-  async function mergeContributeMenus() {
+  async function mergeContributeMenus(isCurrent = routeSessionGuard()) {
+    if (!isCurrent()) return;
     const contributesStore = useContributesStore();
     if (!isMarketplaceCapabilityAvailable()) {
       contributesStore.clear();
@@ -220,6 +232,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
     }
 
     await contributesStore.fetchContributes();
+    if (!isCurrent()) return;
     const contributeMenus = buildContributeMenus(contributesStore.menus, contributesStore.pages);
     if (contributeMenus.length) {
       menus.value = [...menus.value, ...contributeMenus];
@@ -231,10 +244,12 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
    * Called after contributesStore.refresh() when an app is installed/uninstalled/enabled/disabled.
    */
   async function rebuildMenus() {
+    const isCurrent = routeSessionGuard();
+    if (!isCurrent()) return;
     const allRoutes = [...constantRoutes.value, ...authRoutes.value];
     const sortRoutes = sortRoutesByOrder(allRoutes);
     getGlobalMenus(sortRoutes);
-    await mergeContributeMenus();
+    await mergeContributeMenus(isCurrent);
   }
 
   /** Init static auth route */
@@ -255,8 +270,9 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   }
 
   /** Init dynamic auth route */
-  async function initDynamicAuthRoute() {
+  async function initDynamicAuthRoute(isCurrent: () => boolean) {
     const { data, error } = await fetchGetUserRoutes();
+    if (!isCurrent()) return;
 
     if (!error) {
       const { routes, home } = data;

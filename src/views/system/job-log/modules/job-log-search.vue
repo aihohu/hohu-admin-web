@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, toRaw } from 'vue';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+const props = defineProps<{ queryFields?: string[] }>();
 import { jsonClone } from '@sa/utils';
 import { $t } from '@/locales';
 
@@ -55,14 +57,25 @@ function handleDateRangeChange(value: [number, number] | null) {
         <NForm :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
             <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.jobLog.jobKey')" path="jobKey" class="pr-24px">
-              <NInput v-model:value="model.jobKey" :placeholder="$t('page.system.job.form.jobKey')" clearable />
+              <NInput
+                v-model:value="model.jobKey"
+                :disabled="!fieldAllowed(props.queryFields, 'jobKey')"
+                :placeholder="$t('page.system.job.form.jobKey')"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.jobLog.status')" path="status" class="pr-24px">
-              <NSelect v-model:value="model.status" :options="jobLogStatusOptions" clearable />
+              <NSelect
+                v-model:value="model.status"
+                :disabled="!fieldAllowed(props.queryFields, 'status')"
+                :options="jobLogStatusOptions"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.jobLog.startTime')" class="pr-24px">
               <NDatePicker
                 v-model:value="dateRange"
+                :disabled="!fieldAllowed(props.queryFields, 'startTime')"
                 type="datetimerange"
                 clearable
                 class="w-full"

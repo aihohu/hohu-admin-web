@@ -45,7 +45,7 @@ describe('role-search', () => {
       dataScope: null
     });
     const wrapper = mount(RoleSearch, {
-      props: { model },
+      props: { model, allowedFields: ['role_name', 'role_code', 'status', 'data_scope'] },
       global: { stubs }
     });
 
@@ -64,7 +64,7 @@ describe('role-search', () => {
       dataScope: null
     });
     const wrapper = mount(RoleSearch, {
-      props: { model },
+      props: { model, allowedFields: ['role_name', 'role_code', 'status', 'data_scope'] },
       global: { stubs }
     });
 
@@ -81,7 +81,7 @@ describe('role-search', () => {
       dataScope: null
     });
     const wrapper = mount(RoleSearch, {
-      props: { model },
+      props: { model, allowedFields: ['role_name', 'role_code', 'status', 'data_scope'] },
       global: { stubs }
     });
 

@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
+import { reactive, computed, shallowRef } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord } from '@/constants/business';
 import {
@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { useRouter } from 'vue-router';
 import { $t } from '@/locales';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 import DictTypeOperateDrawer from './modules/dict-type-operate-drawer.vue';
 import DictTypeSearch from './modules/dict-type-search.vue';
 
@@ -22,6 +23,8 @@ defineOptions({
 const router = useRouter();
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
+
+const fieldPolicy = shallowRef<Api.SystemManage.OrdinaryCapabilities>();
 
 const searchParams: Api.SystemManage.DictTypeSearchParams = reactive({
   current: 1,
@@ -34,7 +37,10 @@ const searchParams: Api.SystemManage.DictTypeSearchParams = reactive({
 const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagination } =
   useNaivePaginatedTable({
     api: () => fetchGetDictTypeList(searchParams),
-    transform: response => defaultTransform(response),
+    transform: response => {
+      fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
+      return defaultTransform(response);
+    },
     onPaginationParamsChange: params => {
       searchParams.current = params.page;
       searchParams.size = params.pageSize;
@@ -70,7 +76,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         align: 'center',
         width: 100,
         render: row => {
-          if (row.status === null) {
+          if (!row.status) {
             return null;
           }
 
@@ -99,10 +105,10 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         width: 300,
         render: row => (
           <div class="flex-center gap-8px">
-            <NButton type="info" ghost size="small" onClick={() => viewDictData(row)}>
+            <NButton type="info" ghost size="small" disabled={!row.dictType} onClick={() => viewDictData(row)}>
               {$t('page.system.dict.viewDictData')}
             </NButton>
-            {hasAuth('system:dict-type:edit') && (
+            {hasAuth('system:dict-type:edit') && Boolean(row.fieldPolicy?.update?.length) && (
               <NButton type="primary" ghost size="small" onClick={() => edit(row.dictTypeId)}>
                 {$t('common.edit')}
               </NButton>
@@ -125,6 +131,9 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
     ]
   });
 
+const visibleColumns = computed(() => columns.value.filter(column => !('key' in column) ||
+  ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
+
 const {
   drawerVisible,
   operateType,
@@ -143,18 +152,19 @@ async function handleBatchDelete() {
   }
 }
 
-async function handleDelete(id: number) {
+async function handleDelete(id: string) {
   const { error } = await fetchDeleteDictType(id);
   if (!error) {
     onDeleted();
   }
 }
 
-function edit(id: number) {
+function edit(id: string) {
   handleEdit(id);
 }
 
 function viewDictData(row: Api.SystemManage.DictType) {
+  if (!row.dictType) return;
   router.push({
     name: 'system_dict_data',
     query: { dictType: row.dictType }
@@ -164,11 +174,12 @@ function viewDictData(row: Api.SystemManage.DictType) {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <DictTypeSearch v-model:model="searchParams" @search="getDataByPage" />
+    <DictTypeSearch v-model:model="searchParams" :allowed-fields="fieldPolicy?.query" @search="getDataByPage" />
     <NCard :title="$t('page.system.dict.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <TableHeaderOperation
           v-model:columns="columnChecks"
+          :show-add="fieldPolicy?.canCreate === true"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
           add-auth="system:dict-type:add"
@@ -180,7 +191,7 @@ function viewDictData(row: Api.SystemManage.DictType) {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
@@ -195,6 +206,7 @@ function viewDictData(row: Api.SystemManage.DictType) {
         v-model:visible="drawerVisible"
         :operate-type="operateType"
         :row-data="editingData"
+        :capabilities="fieldPolicy"
         @submitted="getDataByPage"
       />
     </NCard>

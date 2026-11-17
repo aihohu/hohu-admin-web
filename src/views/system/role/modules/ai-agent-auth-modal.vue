@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue';
+import { computed, onScopeDispose, shallowRef, watch } from 'vue';
 import { $t, localizedText } from '@/locales';
 import { fetchRoleAgentBinding, fetchUpdateRoleAgentBinding } from '@/service/api';
 import AgentToolDetail from './agent-tool-detail.vue';
@@ -20,6 +20,10 @@ const aiChatEntryGranted = shallowRef(false);
 const showSpin = shallowRef(false);
 const saving = shallowRef(false);
 const loadFailed = shallowRef(false);
+let generation = 0;
+onScopeDispose(() => {
+  generation += 1;
+});
 const dirty = computed(() => [...checkedIds.value].sort().join(',') !== [...savedIds.value].sort().join(','));
 
 function missingPermissionCount(agent: Api.AiAgent.AgentRow): number {
@@ -45,6 +49,8 @@ function toggleAgentDetail(agentId: string) {
 
 async function loadBinding() {
   if (!props.roleId) return;
+  const token = generation;
+  const roleId = props.roleId;
   showSpin.value = true;
   loadFailed.value = false;
   allAgents.value = [];
@@ -53,7 +59,8 @@ async function loadBinding() {
   expandedAgentId.value = '';
   aiChatEntryGranted.value = false;
   try {
-    const { error, data } = await fetchRoleAgentBinding(props.roleId);
+    const { error, data } = await fetchRoleAgentBinding(roleId);
+    if (token !== generation || !visible.value) return;
     if (error || !data) {
       loadFailed.value = true;
       return;
@@ -63,39 +70,46 @@ async function loadBinding() {
     savedIds.value = [...data.boundAgentIds];
     aiChatEntryGranted.value = data.aiChatEntryGranted;
   } catch {
-    loadFailed.value = true;
+    if (token === generation) loadFailed.value = true;
   } finally {
-    showSpin.value = false;
+    if (token === generation) showSpin.value = false;
   }
 }
 
 async function handleSubmit(): Promise<boolean> {
-  if (saving.value || showSpin.value || loadFailed.value) return false;
+  if (!visible.value || saving.value || showSpin.value || loadFailed.value) return false;
+  const token = generation;
+  const roleId = props.roleId;
+  const selected = [...checkedIds.value];
+  const available = new Set(allAgents.value.map(agent => agent.agentId));
+  if (new Set(selected).size !== selected.length || selected.some(id => !available.has(id))) return false;
   saving.value = true;
   try {
-    const { error } = await fetchUpdateRoleAgentBinding(props.roleId, checkedIds.value);
+    const { error } = await fetchUpdateRoleAgentBinding(roleId, selected);
+    if (token !== generation || !visible.value) return false;
     if (error) return false;
-    savedIds.value = [...checkedIds.value];
+    savedIds.value = selected;
     window.$message?.success?.($t('common.modifySuccess'));
     visible.value = false;
     return true;
   } catch {
     return false;
   } finally {
-    saving.value = false;
+    if (token === generation) saving.value = false;
   }
 }
 
 function closeModal() {
   if (saving.value) return;
   if (dirty.value && window.$dialog) {
+    const token = generation;
     window.$dialog.warning({
       title: $t('page.ai.aiAgentAuth.discardTitle'),
       content: $t('page.ai.aiAgentAuth.discardContent'),
       positiveText: $t('page.ai.aiAgentAuth.discard'),
       negativeText: $t('page.ai.aiAgentAuth.keepEditing'),
       onPositiveClick: () => {
-        visible.value = false;
+        if (token === generation) visible.value = false;
       }
     });
     return;
@@ -105,14 +119,27 @@ function closeModal() {
 
 async function handleOpenMenuAuth() {
   if (!props.canOpenMenuAuth) return;
+  const roleId = props.roleId;
   if (dirty.value && !(await handleSubmit())) return;
+  if (props.roleId !== roleId) return;
   visible.value = false;
-  emit('openMenuAuth', props.roleId);
+  emit('openMenuAuth', roleId);
 }
 
-watch(visible, show => {
-  if (show) loadBinding();
-});
+watch(
+  [visible, () => props.roleId],
+  ([show]) => {
+    generation += 1;
+    showSpin.value = false;
+    saving.value = false;
+    loadFailed.value = true;
+    allAgents.value = [];
+    checkedIds.value = [];
+    savedIds.value = [];
+    if (show) loadBinding();
+  },
+  { immediate: true, flush: 'sync' }
+);
 
 defineExpose({ handleSubmit, checkedIds, allAgents });
 </script>
@@ -139,7 +166,7 @@ defineExpose({ handleSubmit, checkedIds, allAgents });
       </div>
       <NAlert v-if="loadFailed" type="error" class="mb-12px">{{ $t('page.ai.aiAgentAuth.loadFailed') }}</NAlert>
       <div v-else class="agent-auth-list">
-        <NCheckboxGroup v-model:value="checkedIds">
+        <NCheckboxGroup v-model:value="checkedIds" :disabled="saving || showSpin || loadFailed">
           <div v-for="agent in allAgents" :key="agent.agentId" class="agent-auth-row">
             <div class="agent-auth-row-main">
               <NCheckbox :value="agent.agentId" :data-testid="`role-agent-checkbox-${agent.code}`">

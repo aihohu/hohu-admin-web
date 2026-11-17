@@ -95,4 +95,24 @@ describe('unavailable conversation recovery', () => {
     expect(store.currentMessages).toEqual([]);
     expect(store.chatAvailability).toBe('forbidden');
   });
+
+  it('clears private titles before a refresh and drops a filter no longer advertised by the server', async () => {
+    const store = useAiStore();
+    vi.mocked(fetchGetConversationList).mockResolvedValueOnce({
+      data: { records: [{ conversationId: 'c', title: 'private' }], fieldPolicy: { read: ['title'], query: [] } },
+      error: null
+    } as never);
+    await store.loadConversations();
+    let finish!: (value: never) => void;
+    vi.mocked(fetchGetConversationList).mockReturnValueOnce(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const pending = store.loadConversations('private');
+    expect(store.conversations).toEqual([]);
+    expect(vi.mocked(fetchGetConversationList).mock.calls.at(-1)?.[0]?.title).toBeNull();
+    finish({ data: { records: [], fieldPolicy: { read: [], query: [] } }, error: null } as never);
+    await pending;
+  });
 });

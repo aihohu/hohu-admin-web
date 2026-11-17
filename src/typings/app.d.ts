@@ -311,6 +311,7 @@ declare namespace App {
     };
 
     type Schema = {
+      fieldPolicy: Record<string, string>;
       settings: Record<string, string>;
       account: Record<string, string>;
       builtin: {
@@ -461,6 +462,7 @@ declare namespace App {
             REASON_REQUIRED: string;
             ASYNC_REQUIRED: string;
             EXPORT_FAILED: string;
+            FILTER_UNSUPPORTED: string;
           };
         };
         importHistoryDrawer: {
@@ -790,6 +792,7 @@ declare namespace App {
               userRoleRequired: string;
               primaryDeptRequired: string;
               partialUpdateWarning: string;
+              replacementHint: string;
             };
             addUser: string;
             editUser: string;
@@ -929,6 +932,7 @@ declare namespace App {
             };
           };
           dept: {
+            rootDept: string;
             title: string;
             deptName: string;
             parentId: string;
@@ -968,6 +972,8 @@ declare namespace App {
             uploader: string;
             uploadTime: string;
             copyLink: string;
+            downloadFile: string;
+            downloadFailed: string;
             confirmDelete: string;
             linkCopied: string;
             linkCopyFailed: string;
@@ -1712,6 +1718,22 @@ declare namespace App {
         };
       };
       errorCode: {
+        FIELD_AUTHORIZATION_CHANGED: string;
+        FIELD_POLICY_UNAVAILABLE: string;
+        FIELD_CONFIRMATION_LINEAGE_REQUIRED: string;
+        FIELD_CONFIRMATION_FACTS_REQUIRED: string;
+        FIELD_POLICY_VERSION_CONFLICT: string;
+        FIELD_POLICY_CATALOG_CONFLICT: string;
+        FIELD_POLICY_MANAGEMENT_FORBIDDEN: string;
+        FIELD_POLICY_ACTIVATION_BLOCKED: string;
+        FIELD_POLICY_INVALID: string;
+        FIELD_POLICY_STALE: string;
+        FIELD_QUERY_DENIED: string;
+        FIELD_READ_DENIED: string;
+        FIELD_WRITE_DENIED: string;
+        FIELD_MASKED_INPUT_INVALID: string;
+        FIELD_TRANSFER_REGENERATE_REQUIRED: string;
+        AUTHORIZATION_COMMIT_UNKNOWN: string;
         MAIL_NOT_CONFIGURED: string;
         MAIL_SEND_FAILED: string;
         ACCOUNT_SERVICE_DISABLED: string;
