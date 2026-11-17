@@ -1,5 +1,8 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
+import { reactive, computed, shallowRef } from 'vue';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+import { controlQuery } from '@/hooks/business/control-fields';
+import { useControlAction } from '@/hooks/business/control-action';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord } from '@/constants/business';
 import { fetchBatchDeleteConfig, fetchDeleteConfig, fetchExportConfig, fetchGetConfigList, fetchImportConfig } from '@/service/api';
@@ -12,6 +15,8 @@ import ConfigSearch from './config-search.vue';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
+const fieldPolicy = shallowRef<Api.SystemManage.ControlCapabilities>();
+const { busy: actionBusy, run: runAction } = useControlAction();
 
 const searchParams: Api.SystemManage.ConfigSearchParams = reactive({
   current: 1,
@@ -23,8 +28,14 @@ const searchParams: Api.SystemManage.ConfigSearchParams = reactive({
 });
 
 const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
-  api: () => fetchGetConfigList(searchParams),
-  transform: response => defaultTransform(response),
+  api: () => fetchGetConfigList(controlQuery(searchParams, fieldPolicy.value?.query)),
+  transform: response => {
+      fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
+      for (const key of Object.keys(searchParams) as (keyof typeof searchParams)[]) {
+        if (!['current', 'size'].includes(key) && !fieldAllowed(fieldPolicy.value?.query, key)) Object.assign(searchParams, { [key]: null });
+      }
+      return defaultTransform(response);
+    },
   onPaginationParamsChange: params => {
     searchParams.current = params.page;
     searchParams.size = params.pageSize;
@@ -71,7 +82,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
           richtext: $t('page.system.config.typeRichtext'),
           file: $t('page.system.config.typeFile')
         };
-        return typeMap[row.configType] || row.configType;
+        return row.configType ? typeMap[row.configType] || row.configType : null;
       }
     },
     {
@@ -86,7 +97,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       align: 'center',
       width: 100,
       render: row => {
-        if (row.status === null) {
+        if (!row.status) {
           return null;
         }
 
@@ -111,7 +122,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       title: $t('page.system.config.isPublic'),
       align: 'center',
       width: 90,
-      render: row => <NTag type={row.isPublic ? 'success' : 'default'} size="small">{row.isPublic ? '✓' : '—'}</NTag>
+      render: row => Object.hasOwn(row, 'isPublic') ? <NTag type={row.isPublic ? 'success' : 'default'} size="small">{row.isPublic ? '✓' : '—'}</NTag> : null
     },
     {
       key: 'operate',
@@ -120,13 +131,13 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       width: 160,
       render: row => (
         <div class="flex-center gap-8px">
-          {hasAuth('system:config:edit') && (
+          {(hasAuth('system:config:edit') && Boolean(row.fieldPolicy?.update.length) || hasAuth('system:config:publish')) && (
             <NButton type="primary" ghost size="small" onClick={() => edit(row.configId)}>
               {$t('common.edit')}
             </NButton>
           )}
           {hasAuth('system:config:delete') && (
-            <NPopconfirm onPositiveClick={() => handleDelete(row.configId)}>
+            <NPopconfirm positiveButtonProps={{ disabled: actionBusy.value, loading: actionBusy.value }} onPositiveClick={() => handleDelete(row.configId)}>
               {{
                 default: () => $t('common.confirmDelete'),
                 trigger: () => (
@@ -143,6 +154,9 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
   ]
 });
 
+const visibleColumns = computed(() => columns.value.filter(column => !('key' in column) ||
+  ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
+
 const {
   drawerVisible,
   operateType,
@@ -155,17 +169,17 @@ const {
 } = useTableOperate(data, 'configId', getData);
 
 async function handleBatchDelete() {
-  const { error } = await fetchBatchDeleteConfig(checkedRowKeys.value);
-  if (!error) {
-    onBatchDeleted();
-  }
+  await runAction(async current => {
+    const { error } = await fetchBatchDeleteConfig(checkedRowKeys.value);
+    if (current() && !error) onBatchDeleted();
+  });
 }
 
 async function handleDelete(id: string) {
-  const { error } = await fetchDeleteConfig(id);
-  if (!error) {
-    onDeleted();
-  }
+  await runAction(async current => {
+    const { error } = await fetchDeleteConfig(id);
+    if (current() && !error) onDeleted();
+  });
 }
 
 function edit(id: string) {
@@ -173,11 +187,9 @@ function edit(id: string) {
 }
 
 async function handleExport() {
-  const { error, response } = await fetchExportConfig(searchParams);
-  if (!error && response) {
-    const blob = new Blob([response as any], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
+  await runAction(async current => {
+  const { error, data: blob } = await fetchExportConfig(controlQuery(searchParams, fieldPolicy.value?.query));
+  if (current() && !error && blob instanceof Blob && !blob.type.includes('json')) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -185,13 +197,16 @@ async function handleExport() {
     a.click();
     window.URL.revokeObjectURL(url);
   }
+  });
 }
 
 function handleImport({ file }: { file: { file: File | null } }) {
   if (!file.file) return false;
-  fetchImportConfig(file.file).then((res: any) => {
-    if (!res.error) {
-      window.$message?.success(res.data?.msg || '导入成功');
+  const input = file.file;
+  void runAction(async current => {
+    const res = await fetchImportConfig(input);
+    if (current() && !res.error) {
+      window.$message?.success($t('common.saveSuccess'));
       getDataByPage();
     }
   });
@@ -201,11 +216,18 @@ function handleImport({ file }: { file: { file: File | null } }) {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <ConfigSearch v-model:model="searchParams" @search="getDataByPage" />
+    <ConfigSearch v-model:model="searchParams" :query-fields="fieldPolicy?.query" @search="getDataByPage" />
     <NCard :title="$t('page.system.config.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <NSpace>
-          <NButton v-permission="'system:config:export'" size="small" ghost type="success" @click="handleExport">
+          <NButton
+            v-permission="'system:config:export'"
+            :disabled="fieldPolicy?.controlActions?.canExport !== true || loading || actionBusy"
+            size="small"
+            ghost
+            type="success"
+            @click="handleExport"
+          >
             <template #icon>
               <IconUilExport class="text-icon" />
             </template>
@@ -214,10 +236,16 @@ function handleImport({ file }: { file: { file: File | null } }) {
           <NUpload
             v-permission="'system:config:import'"
             :show-file-list="false"
-            accept=".xlsx,.xls"
+            :disabled="fieldPolicy?.controlActions?.canImport !== true || loading || actionBusy"
+            accept=".xlsx"
             :custom-request="handleImport"
           >
-            <NButton size="small" ghost type="warning">
+            <NButton
+              :disabled="fieldPolicy?.controlActions?.canImport !== true || loading || actionBusy"
+              size="small"
+              ghost
+              type="warning"
+            >
               <template #icon>
                 <IconUilImport class="text-icon" />
               </template>
@@ -227,7 +255,8 @@ function handleImport({ file }: { file: { file: File | null } }) {
           <TableHeaderOperation
             v-model:columns="columnChecks"
             :disabled-delete="checkedRowKeys.length === 0"
-            :loading="loading"
+            :loading="loading || actionBusy"
+            :show-add="fieldPolicy?.canCreate === true"
             add-auth="system:config:add"
             delete-auth="system:config:batch-delete"
             @add="handleAdd"
@@ -238,7 +267,7 @@ function handleImport({ file }: { file: { file: File | null } }) {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"

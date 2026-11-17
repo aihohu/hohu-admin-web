@@ -143,6 +143,8 @@ pnpm build
 
 ## 开发与参与贡献
 
+Web 镜像默认使用 `single` 单租户模式。托管多租户 Web 使用 `docker build --build-arg VITE_TENANT_MODE=hosted -t your-web-image .` 构建，并另外配置 Backend 的 hosted 租户模式。这是编译时配置；在运行中的 Nginx 容器设置该变量不会改变已构建界面，也不会授予租户访问权限。
+
 组件使用 Composition API 与 `<script setup lang="ts">`。页面放在 `src/views/`，请求放在 `src/service/api/`，API 类型放在 `src/typings/api/`，界面文案接入 `src/locales/`。复用统一请求层处理认证、刷新和错误，不在页面另建请求客户端。
 
 运行 dev server 时，`@elegant-router` 自动生成路由；只有未运行服务、需要预生成或路由未同步时才使用 `pnpm gen-route`。生成前端路由不会自动创建后端菜单或授予权限。接入步骤见 [Web 页面与请求](https://hohu.org/zh/guide/development/web.html)和[新增业务模块](https://hohu.org/zh/guide/development/module.html)。

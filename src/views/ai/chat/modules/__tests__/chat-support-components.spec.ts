@@ -10,6 +10,7 @@ const store = reactive({
   currentConversationId: null as string | null,
   hasMoreConversations: true,
   loading: false,
+  canQueryConversationTitle: true,
   approveTool: vi.fn(),
   rejectTool: vi.fn(),
   pickClarificationAgent: vi.fn(),

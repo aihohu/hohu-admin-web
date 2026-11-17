@@ -1,11 +1,13 @@
-import { computed, ref } from 'vue';
+import { readClientSession, sameClientSession } from '@/utils/auth-session';
+import { computed, getCurrentScope, onScopeDispose, ref } from 'vue';
+import { downloadBlob } from '@/utils/download-blob';
 import { fetchExportUsers } from '@/service/api';
 import { $t } from '@/locales';
 
 const EXPORT_FILENAME_PREFIX = 'hohu_users_';
 const EXPORT_FILENAME_SUFFIX = '.xlsx';
 
-export type ExportFlowErrorCode = 'REASON_REQUIRED' | 'ASYNC_REQUIRED' | 'EXPORT_FAILED';
+export type ExportFlowErrorCode = 'REASON_REQUIRED' | 'ASYNC_REQUIRED' | 'EXPORT_FAILED' | 'FILTER_UNSUPPORTED';
 
 export interface UseExportFlowOptions {
   onExported?: () => void;
@@ -52,21 +54,30 @@ export function summarizeFilter(filter?: Api.SystemManage.UserSearchParams | nul
 }
 
 export function useExportFlow(options: UseExportFlowOptions = {}) {
+  let generation = 0;
+  const currentRequest = (expected: number, session: ReturnType<typeof readClientSession>) =>
+    expected === generation && sameClientSession(session);
   const reason = ref<string>('');
   const loading = ref<boolean>(false);
   const errorCode = ref<ExportFlowErrorCode | null>(null);
   const filter = ref<Api.SystemManage.UserSearchParams | null | undefined>(null);
 
-  const canExport = computed<boolean>(() => !!reason.value.trim() && !loading.value);
+  const unsupportedFilter = computed(() => Boolean(filter.value?.roleCode || filter.value?.userGender != null));
+  const canExport = computed<boolean>(() => !!reason.value.trim() && !loading.value && !unsupportedFilter.value);
   const filterSummary = computed<string>(() => summarizeFilter(filter.value ?? null));
 
   function reset(): void {
+    generation += 1;
     reason.value = '';
     loading.value = false;
     errorCode.value = null;
   }
 
+  if (getCurrentScope()) onScopeDispose(reset);
+
   function setFilter(f: Api.SystemManage.UserSearchParams | null | undefined): void {
+    generation += 1;
+    loading.value = false;
     filter.value = f;
   }
 
@@ -78,18 +89,16 @@ export function useExportFlow(options: UseExportFlowOptions = {}) {
     window.$message?.error(translated === key ? code : translated);
   }
 
-  function triggerBlobDownload(blob: Blob): void {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = buildFilename();
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  function triggerBlobDownload(blob: Blob): boolean {
+    return downloadBlob(blob, buildFilename());
   }
 
   async function confirmExport(): Promise<boolean> {
+    if (loading.value) return false;
+    if (unsupportedFilter.value) {
+      notifyError('FILTER_UNSUPPORTED');
+      return false;
+    }
     if (!reason.value.trim()) {
       notifyError('REASON_REQUIRED');
       return false;
@@ -97,21 +106,33 @@ export function useExportFlow(options: UseExportFlowOptions = {}) {
     const payload = buildExportPayload(reason.value.trim(), filter.value ?? null);
     loading.value = true;
     errorCode.value = null;
-    const { data, error } = await fetchExportUsers(payload);
-    loading.value = false;
-    if (error || !(data instanceof Blob) || data.type.includes('json')) {
-      const errCode = (error as any)?.code ?? null;
-      if (errCode === 'AI_EXPORT_ASYNC_REQUIRED') {
-        notifyError('ASYNC_REQUIRED');
-      } else {
-        notifyError('EXPORT_FAILED');
+    const requestGeneration = generation;
+    const requestSession = readClientSession();
+    try {
+      const { data, error } = await fetchExportUsers(payload);
+      if (!currentRequest(requestGeneration, requestSession)) return false;
+      if (error || !(data instanceof Blob) || data.type.includes('json')) {
+        const errCode = (error as any)?.code ?? null;
+        if (errCode === 'AI_EXPORT_ASYNC_REQUIRED') {
+          notifyError('ASYNC_REQUIRED');
+        } else {
+          notifyError('EXPORT_FAILED');
+        }
+        return false;
       }
+      if (!triggerBlobDownload(data)) {
+        notifyError('EXPORT_FAILED');
+        return false;
+      }
+      window.$message?.success($t('common.exportModal.exportSuccess'));
+      options.onExported?.();
+      return true;
+    } catch {
+      if (currentRequest(requestGeneration, requestSession)) notifyError('EXPORT_FAILED');
       return false;
+    } finally {
+      if (currentRequest(requestGeneration, requestSession)) loading.value = false;
     }
-    triggerBlobDownload(data);
-    window.$message?.success($t('common.exportModal.exportSuccess'));
-    options.onExported?.();
-    return true;
   }
 
   return {
@@ -120,6 +141,7 @@ export function useExportFlow(options: UseExportFlowOptions = {}) {
     errorCode,
     canExport,
     filterSummary,
+    unsupportedFilter,
     reset,
     setFilter,
     confirmExport,

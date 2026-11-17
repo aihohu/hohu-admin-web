@@ -71,6 +71,9 @@ jobs:
           test -s .local/artifacts/web-dist/licenses/LICENSE
           test -s .local/artifacts/web-dist/licenses/NOTICE
           test -s .local/artifacts/web-dist/licenses/THIRD_PARTY_NOTICES.md
+          pnpm build:policy --outDir .local/artifacts/policy-dist
+          test -s .local/artifacts/policy-dist/policy-prepare.html
+          test -s .local/artifacts/policy-dist/policy-preparation.json
           git diff --exit-code
 
       - name: Upload coverage diagnostics

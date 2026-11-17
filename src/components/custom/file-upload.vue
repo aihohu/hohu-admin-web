@@ -65,7 +65,7 @@ function handleCustomRequest({ file, onFinish, onError }: any) {
         // 让 NUpload 用 fileUrl 做预览
         onFinish(data.fileUrl);
         emitValue();
-        emit('change', { fileId: data.fileId, fileUrl: data.fileUrl, fileName: data.originalName });
+        emit('change', { fileId: data.fileId, fileUrl: data.fileUrl, fileName: data.originalName ?? file.file.name });
       } else {
         onError();
       }

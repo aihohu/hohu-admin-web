@@ -57,5 +57,10 @@ describe('user field draft', () => {
       completeRelation({ roles: [], fieldAccess: { roles: { ...access('masked'), replace: true } } }, 'roles', [])
     ).toBe(false);
     expect(completeRelation({}, 'roles', [])).toBe(false);
+    expect(
+      completeRelation({ roles: ['A', null], fieldAccess: { roles: { ...access('plain'), replace: true } } }, 'roles', [
+        'A'
+      ])
+    ).toBe(false);
   });
 });

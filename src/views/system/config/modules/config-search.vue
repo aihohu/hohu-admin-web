@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { toRaw } from 'vue';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+const props = defineProps<{ queryFields?: string[] }>();
 import { jsonClone } from '@sa/utils';
 import { enableStatusOptions } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
@@ -35,6 +37,7 @@ function search() {
         <NForm :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
             <NFormItemGi
+              v-if="fieldAllowed(props.queryFields, 'configName')"
               span="24 s:12 m:6"
               :label="$t('page.system.config.configName')"
               path="configName"
@@ -43,6 +46,7 @@ function search() {
               <NInput v-model:value="model.configName" :placeholder="$t('page.system.config.form.configName')" />
             </NFormItemGi>
             <NFormItemGi
+              v-if="fieldAllowed(props.queryFields, 'configGroup')"
               span="24 s:12 m:6"
               :label="$t('page.system.config.configGroup')"
               path="configGroup"
@@ -51,6 +55,7 @@ function search() {
               <NInput v-model:value="model.configGroup" :placeholder="$t('page.system.config.form.configGroup')" />
             </NFormItemGi>
             <NFormItemGi
+              v-if="fieldAllowed(props.queryFields, 'status')"
               span="24 s:12 m:6"
               :label="$t('page.system.config.configStatus')"
               path="status"

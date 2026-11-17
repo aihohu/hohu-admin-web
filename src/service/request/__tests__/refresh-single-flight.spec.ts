@@ -67,3 +67,64 @@ describe('refresh single-flight', () => {
     expect(state.refreshTokenPromise).toBeNull();
   });
 });
+
+describe('refresh completion belongs to its original session', () => {
+  beforeEach(() => vi.clearAllMocks());
+  it.each(['success', 'failure'] as const)('does not mutate or log out B after late A %s', async outcome => {
+    const storage = new Map([
+      ['token', 'A-access'],
+      ['refreshToken', 'A-refresh'],
+      ['authSessionRevision', 'A']
+    ]);
+    mocks.getStorage.mockImplementation((key: string) => storage.get(key) || null);
+    mocks.setStorage.mockImplementation((key: string, value: string) => storage.set(key, value));
+    let finish!: (value: unknown) => void;
+    mocks.fetchRefreshToken.mockReturnValue(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const job = handleExpiredRequest(requestState());
+    storage.set('token', 'B-access');
+    storage.set('refreshToken', 'B-refresh');
+    storage.set('authSessionRevision', 'B');
+    finish(
+      outcome === 'success'
+        ? { error: null, data: { token: 'A-next', refreshToken: 'A-next-refresh' } }
+        : { error: new Error('A expired'), data: null }
+    );
+    await expect(job).resolves.toBe(false);
+    expect(storage.get('token')).toBe('B-access');
+    expect(storage.get('refreshToken')).toBe('B-refresh');
+    expect(mocks.resetStore).not.toHaveBeenCalled();
+  });
+  it('gives B a separate flight and never lets A clear that promise', async () => {
+    const storage = new Map([
+      ['refreshToken', 'A-refresh'],
+      ['authSessionRevision', 'A']
+    ]);
+    mocks.getStorage.mockImplementation((key: string) => storage.get(key) || null);
+    mocks.setStorage.mockImplementation((key: string, value: string) => storage.set(key, value));
+    const finishes: ((value: unknown) => void)[] = [];
+    mocks.fetchRefreshToken.mockImplementation(
+      () =>
+        new Promise(resolve => {
+          finishes.push(resolve);
+        })
+    );
+    const state = requestState();
+    const first = handleExpiredRequest(state);
+    storage.set('refreshToken', 'B-refresh');
+    storage.set('authSessionRevision', 'B');
+    const second = handleExpiredRequest(state);
+    const bFlight = state.refreshTokenPromise;
+    expect(mocks.fetchRefreshToken).toHaveBeenCalledTimes(2);
+    finishes[0]({ error: null, data: { token: 'A-next', refreshToken: 'A-next-refresh' } });
+    await expect(first).resolves.toBe(false);
+    expect(state.refreshTokenPromise).toBe(bFlight);
+    finishes[1]({ error: null, data: { token: 'B-next', refreshToken: 'B-next-refresh' } });
+    await expect(second).resolves.toBe(true);
+    expect(state.refreshTokenPromise).toBeNull();
+    expect(storage.get('token')).toBe('B-next');
+  });
+});

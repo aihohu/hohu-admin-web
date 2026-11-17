@@ -149,10 +149,11 @@ function mergeRoleOptions(roles: Api.SystemManage.AssignableRole[]) {
   candidateRoles.value = [...options.values()];
 }
 
-async function getRoleOptions(generation: number, currentRoleCodes: string[]) {
+async function getRoleOptions(generation: number, currentRoleCodes: Array<string | null>) {
+  const visibleCodes = currentRoleCodes.filter((code): code is string => typeof code === 'string');
   const resultSets = await Promise.all([
     fetchRoleCandidates(),
-    ...currentRoleCodes.map(roleCode => fetchRoleCandidates(roleCode))
+    ...visibleCodes.map(roleCode => fetchRoleCandidates(roleCode))
   ]);
   if (generation !== initializationGeneration) return;
   const roles = [...new Map(resultSets.flat().map(role => [role.roleId, role])).values()];
@@ -168,7 +169,7 @@ async function getRoleOptions(generation: number, currentRoleCodes: string[]) {
 
   if (currentRoleCodes.length > 0) {
     const roleIdByCode = new Map(roles.map(role => [role.roleCode, role.roleId]));
-    model.value.roleIds = currentRoleCodes.flatMap(roleCode => {
+    model.value.roleIds = visibleCodes.flatMap(roleCode => {
       const roleId = roleIdByCode.get(roleCode);
       return roleId ? [roleId] : [];
     });

@@ -59,10 +59,9 @@ declare namespace Api {
     };
 
     /** model create params */
-    type AiModelCreateParams = Pick<
-      AiModel,
-      'name' | 'capabilities' | 'baseUrl' | 'isEnabled' | 'sortOrder' | 'config'
-    >;
+    type AiModelCreateParams = Pick<AiModel, 'name' | 'capabilities' | 'baseUrl' | 'isEnabled' | 'sortOrder'> & {
+      config?: Record<string, unknown> | null;
+    };
 
     /** model update params */
     type AiModelUpdateParams = Partial<AiModelCreateParams>;
@@ -127,17 +126,18 @@ declare namespace Api {
       /** conversation id */
       conversationId: string;
       /** title */
-      title: string | null;
+      title?: string | null;
       /** model name */
-      modelName: string | null;
+      modelName?: string | null;
       /** system prompt */
-      systemPrompt: string | null;
-      /** status: 0=active, 1=archived */
-      status: number;
+      systemPrompt?: string | null;
+      /** status?: 0=active, 1=archived */
+      status?: number;
       /** create time */
-      createTime: string;
+      createTime?: string;
       /** update time */
-      updateTime: string;
+      updateTime?: string;
+      fieldPolicy?: Common.DeliveryCapabilities;
     };
 
     /** conversation search params */
@@ -146,7 +146,7 @@ declare namespace Api {
     >;
 
     /** conversation list */
-    type ConversationList = Common.PaginatingQueryRecord<Conversation>;
+    type ConversationList = Common.PaginatingQueryRecord<Conversation> & { fieldPolicy?: Common.DeliveryCapabilities };
 
     /** conversation create params */
     type ConversationCreateParams = Pick<Conversation, 'title'> &
@@ -173,9 +173,9 @@ declare namespace Api {
       /** message type: text/tool_call/tool_result */
       messageType: string;
       /** content */
-      content: string | null;
+      content?: string | null;
       /** structured message parts (images, files, etc.) */
-      parts: MessagePart[] | null;
+      parts?: MessagePart[] | null;
       /** Audited completed calls in a safe receipt, without deleted target details. */
       completedToolCallIds?: string[];
       /** Persisted tool details; safe completion receipts do not restore these. */
@@ -204,17 +204,17 @@ declare namespace Api {
       /** revision lineage; current send path is null */
       supersedesMessageId?: string | null;
       /** input tokens */
-      tokensInput: number | null;
+      tokensInput?: number | null;
       /** output tokens */
-      tokensOutput: number | null;
+      tokensOutput?: number | null;
       /** create time */
-      createTime: string;
+      createTime?: string;
     };
 
     /** Fail-closed placeholder returned when a historic result is no longer visible. */
     type MessageTombstone = {
       messageId: string;
-      role: 'assistant' | 'system' | 'tool';
+      role: 'user' | 'assistant' | 'system' | 'tool';
       status: 'redacted';
       errorCode: 'AI_RESULT_PROJECTION_FORBIDDEN';
     };
@@ -484,10 +484,12 @@ declare namespace Api {
     type Agent = {
       i18nKeys?: Record<string, string> | null;
       code: string;
-      name: string;
-      description: string;
-      modelPreference: string | null;
-      displayOrder: number;
+      name?: string;
+      description?: string;
+      modelPreference?: string | null;
+      displayOrder?: number;
+      agentId?: string;
+      fieldPolicy?: Common.DeliveryCapabilities;
     };
   }
 }

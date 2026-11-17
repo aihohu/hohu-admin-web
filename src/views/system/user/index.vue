@@ -105,7 +105,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
           <NSpace size="small" justify="center">
             {row.roleNames.map((name, index) => (
               <NTag size="small" type="info">
-                {localizedText(name, row.roleNameKeys?.[index])}
+                {name === null ? '-' : localizedText(name, row.roleNameKeys?.[index])}
               </NTag>
             ))}
           </NSpace>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { runtimeSettings } from '@/utils/runtime-settings';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import type { DataTableColumns, UploadFileInfo } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { $t } from '@/locales';
@@ -112,6 +112,13 @@ function handleFileChange({ file: entry }: { file: UploadFileInfo }) {
 function handleAfterLeave() {
   reset();
 }
+watch(
+  visible,
+  value => {
+    if (!value) reset();
+  },
+  { flush: 'sync' }
+);
 
 defineExpose({ open });
 </script>

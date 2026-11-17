@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, toRaw } from 'vue';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+const props = defineProps<{ queryFields?: string[] }>();
 import { jsonClone } from '@sa/utils';
 import { $t } from '@/locales';
 
@@ -62,19 +64,31 @@ function handleDateRangeChange(value: [number, number] | null) {
             >
               <NInput
                 v-model:value="model.username"
+                :disabled="!fieldAllowed(props.queryFields, 'username')"
                 :placeholder="$t('page.system.loginLog.usernamePlaceholder')"
                 clearable
               />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.loginLog.status')" path="status" class="pr-24px">
-              <NSelect v-model:value="model.status" :options="statusOptions" clearable />
+              <NSelect
+                v-model:value="model.status"
+                :disabled="!fieldAllowed(props.queryFields, 'status')"
+                :options="statusOptions"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="IP" path="ip" class="pr-24px">
-              <NInput v-model:value="model.ip" :placeholder="$t('page.system.loginLog.ipPlaceholder')" clearable />
+              <NInput
+                v-model:value="model.ip"
+                :disabled="!fieldAllowed(props.queryFields, 'ip')"
+                :placeholder="$t('page.system.loginLog.ipPlaceholder')"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.loginLog.loginTime')" class="pr-24px">
               <NDatePicker
                 v-model:value="dateRange"
+                :disabled="!fieldAllowed(props.queryFields, 'loginTime')"
                 type="datetimerange"
                 clearable
                 class="w-full"

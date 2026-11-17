@@ -4,21 +4,41 @@ import DeptUsersModal from '../dept-users-modal.vue';
 
 const pages = vi.hoisted(() => ({
   first: {
+    authorizationEpoch: '7',
     current: 1,
     size: 100,
     total: 101,
     records: [
+      ...Array.from({ length: 99 }, (_, i) => ({
+        userId: String(1000 + i),
+        userName: `user${i}`,
+        nickname: null,
+        status: '1',
+        fieldAccess: {
+          departments: { read: 'plain', replace: true },
+          userName: { read: 'plain' },
+          nickname: { read: 'plain' }
+        },
+        isMember: false,
+        isPrimary: false
+      })),
       {
         userId: '10',
         userName: 'primary',
         nickname: 'Primary',
         status: '1',
+        fieldAccess: {
+          departments: { read: 'plain', replace: true },
+          userName: { read: 'plain' },
+          nickname: { read: 'plain' }
+        },
         isMember: true,
         isPrimary: true
       }
     ]
   },
   second: {
+    authorizationEpoch: '7',
     current: 2,
     size: 100,
     total: 101,
@@ -28,6 +48,11 @@ const pages = vi.hoisted(() => ({
         userName: 'candidate',
         nickname: null,
         status: '1',
+        fieldAccess: {
+          departments: { read: 'plain', replace: true },
+          userName: { read: 'plain' },
+          nickname: { read: 'plain' }
+        },
         isMember: false,
         isPrimary: false
       }
@@ -159,4 +184,29 @@ describe('dept-users-modal', () => {
     await vm.handleSubmit();
     expect(serviceMocks.fetchUpdateDeptUsers).not.toHaveBeenCalled();
   });
+
+  it.each(['epoch', 'duplicate', 'total', 'short', 'label', 'size'])(
+    'refuses an inconsistent %s across pages',
+    async kind => {
+      const second = structuredClone(pages.second);
+      if (kind === 'epoch') second.authorizationEpoch = '8';
+      if (kind === 'duplicate') second.records[0].userId = '10';
+      if (kind === 'total') second.total = 102;
+      if (kind === 'short') second.records = [];
+      if (kind === 'label') delete (second.records[0] as Partial<(typeof second.records)[0]>).userName;
+      if (kind === 'size') second.size = 20;
+      serviceMocks.fetchGetDeptUsers
+        .mockResolvedValueOnce({ data: pages.first })
+        .mockResolvedValueOnce({ data: second });
+      const wrapper = mount(DeptUsersModal, {
+        props: { visible: false, deptId: '500', deptName: 'Test' },
+        global: { stubs }
+      });
+      await wrapper.setProps({ visible: true });
+      await flushPromises();
+      await (wrapper.vm as unknown as { handleSubmit: () => Promise<void> }).handleSubmit();
+      expect(serviceMocks.fetchUpdateDeptUsers).not.toHaveBeenCalled();
+      wrapper.unmount();
+    }
+  );
 });

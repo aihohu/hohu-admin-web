@@ -5,6 +5,7 @@ import { Icon } from '@iconify/vue';
 import { enableStatusRecord, userGenderRecord } from '@/constants/business';
 import { REG_PWD } from '@/constants/reg';
 import { fetchChangePassword, fetchGetUserProfile, fetchUpdateUserProfile, fetchUploadFile } from '@/service/api';
+import { createClientSessionGuard } from '@/utils/auth-session';
 import { useAuthStore } from '@/store/modules/auth';
 import { buildUserPatch, createUserDraft, fieldCapability, fieldRead } from '@/hooks/business/user-field-draft';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
@@ -138,17 +139,23 @@ async function handleSaveInfo() {
 }
 
 async function handleChangePassword() {
+  const isCurrent = createClientSessionGuard(() => authStore.authSessionRevision);
+  if (!isCurrent()) return;
   await validatePwd();
+  if (!isCurrent()) return;
   changingPwd.value = true;
   const { error } = await fetchChangePassword({
     oldPassword: pwdModel.oldPassword,
     newPassword: pwdModel.newPassword
   });
+  if (!isCurrent()) return;
   changingPwd.value = false;
   if (!error) {
     window.$message?.success($t('page.profile.passwordChangeSuccess'));
-    authStore.resetStore();
-    toLogin();
+    const reset = authStore.resetStore();
+    const isResetCurrent = createClientSessionGuard(() => authStore.authSessionRevision);
+    await reset;
+    if (isResetCurrent()) toLogin();
   }
 }
 
@@ -212,8 +219,8 @@ onMounted(() => {
             </div>
             <NText class="text-18px font-bold mb-4px">{{ profile.userName }}</NText>
             <NSpace :size="8" class="mb-16px">
-              <NTag v-for="role in profile.roles" :key="role" type="primary" size="small">
-                {{ role }}
+              <NTag v-for="(role, index) in profile.roles" :key="index" type="primary" size="small">
+                {{ role ?? '-' }}
               </NTag>
             </NSpace>
           </div>

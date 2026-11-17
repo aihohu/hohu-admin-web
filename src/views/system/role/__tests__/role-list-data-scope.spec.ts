@@ -7,8 +7,11 @@ const routeHarness = vi.hoisted(() => ({ query: {} as Record<string, unknown> })
 vi.mock('../modules/field-policy-drawer.vue', () => ({ default: { template: '<div />' } }));
 
 vi.mock('vue-router', () => ({
+  onBeforeRouteLeave: vi.fn(),
   useRoute: () => ({ query: routeHarness.query })
 }));
+vi.mock('@/service/api/field-policy', () => ({ fieldPolicyRepository: {} }));
+vi.mock('@/store/modules/auth', () => ({ useAuthStore: () => ({ userInfo: { userId: '101' }, token: 'test-token' }) }));
 
 vi.mock('@sa/hooks', () => ({
   useBoolean: () => ({ bool: ref(false), setTrue: vi.fn() })
@@ -48,15 +51,34 @@ vi.mock('@/hooks/common/table', async importOriginal => {
   const original = await importOriginal<typeof import('@/hooks/common/table')>();
   return {
     ...original,
-    useNaivePaginatedTable: (options: { columns: () => NaiveUI.TableColumn<Api.SystemManage.RoleSummary>[] }) => ({
-      columns: ref(options.columns()),
-      columnChecks: ref([]),
-      data: ref([]),
-      loading: ref(false),
-      getData: vi.fn(),
-      getDataByPage: vi.fn(),
-      mobilePagination: computed(() => ({}))
-    }),
+    useNaivePaginatedTable: (options: {
+      columns: () => NaiveUI.TableColumn<Api.SystemManage.RoleSummary>[];
+      transform: (response: unknown) => unknown;
+    }) => {
+      options.transform({
+        error: null,
+        data: {
+          records: [],
+          total: 0,
+          current: 1,
+          size: 10,
+          fieldPolicy: {
+            read: ['role_name', 'role_code', 'data_scope', 'status'],
+            query: ['role_name', 'role_code', 'data_scope', 'status'],
+            canCreate: true
+          }
+        }
+      });
+      return {
+        columns: ref(options.columns()),
+        columnChecks: ref([]),
+        data: ref([]),
+        loading: ref(false),
+        getData: vi.fn(),
+        getDataByPage: vi.fn(),
+        mobilePagination: computed(() => ({}))
+      };
+    },
     useTableOperate: () => ({
       drawerVisible: ref(false),
       operateType: ref('add'),
