@@ -4,10 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [v0.2.0]
 
-### User Field Policy Interaction
+### System-wide Field Policy Interaction
 
-- Add user field policy candidate management, validation, revision conflicts, explicit activation and freezing with permission-aware feedback.
-- Render user lists, filters, forms and PATCH payloads from the server's field capabilities. Hidden and write-only fields are not reconstructed from stale client state; authorization changes require current server decisions.
+- Add field permission management to the existing role actions beside menu permissions, using the shared business-object catalog. Provide the recommended configuration, allow-all and deny-all controls alongside separate reading, creating, updating, querying, importing and exporting purposes; functional button permissions remain separate requirements.
+- Manage candidates, validation, revision conflicts, complete tenant manifests, explicit activation and freezing through the real management API and controlled preparation identity handoff. Saving a candidate does not activate it; ungranted fields are denied after enforcement, and platform-fixed restrictions remain controlled by the server.
+- Render lists, filters, forms, trees, selectors and sparse update payloads for users, ordinary and relationship objects, configuration, settings and tasks from the server's capabilities. Hidden and write-only fields are not reconstructed from stale client state; authorization changes require current server decisions.
+- Preserve field provenance and denial feedback across registered import/export, template, error-file and download flows. UI visibility does not grant server authority, and cached older Web submissions remain subject to server-side write validation.
 - Clear private AI results after field authority becomes stale and recover the conversation through a read-only request without resending messages or confirmations.
 
 ### Compatibility and Release
