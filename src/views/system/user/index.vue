@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { NButton, NPopconfirm, NSpace, NTag } from 'naive-ui';
 import { enableStatusRecord, userGenderRecord } from '@/constants/business';
@@ -20,6 +20,7 @@ import UserSearch from './modules/user-search.vue';
 import UserImportModal from './modules/user-import-modal.vue';
 import UserExportModal from './modules/user-export-modal.vue';
 import UserImportHistory from './modules/user-import-history.vue';
+import { projectedUserColumn, userListColumns } from './modules/user-list-columns';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
@@ -181,6 +182,15 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
   ]
 });
 
+const visibleColumns = computed(() => userListColumns(columns.value, data.value, $t('fieldPolicy.unavailable')));
+const visibleChecks = computed({
+  get: () => columnChecks.value.filter(column => projectedUserColumn(column.key, data.value)),
+  set: (selected: NaiveUI.TableColumnCheck[]) => {
+    const hidden = columnChecks.value.filter(column => !projectedUserColumn(column.key, data.value));
+    columnChecks.value = [...selected, ...hidden];
+  }
+});
+
 const {
   drawerVisible,
   operateType,
@@ -295,7 +305,7 @@ function handleExported() {
     <NCard :title="$t('page.system.user.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <TableHeaderOperation
-          v-model:columns="columnChecks"
+          v-model:columns="visibleChecks"
           :disabled-delete="checkedRowKeys.length === 0"
           :loading="loading"
           add-auth="system:user:add"
@@ -328,7 +338,7 @@ function handleExported() {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
-        :columns="columns"
+        :columns="visibleColumns"
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
