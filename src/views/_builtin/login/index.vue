@@ -117,14 +117,17 @@ const bgColor = computed(() => {
           <NAlert v-if="maintenance" type="info" class="mt-16px">
             {{ $t(session?.ended ? 'fieldPolicy.prepareEnded' : 'fieldPolicy.prepareHint') }}
           </NAlert>
-          <NFormItem
-            v-if="showTenantCode && !session?.ended"
-            :label="$t('page.login.common.tenantCodePlaceholder')"
-            class="mt-16px"
-          >
-            <NInput v-model:value="tenantCode" @blur="loadCapabilities" @keyup.enter="loadCapabilities" />
-          </NFormItem>
           <div v-if="!session?.ended" class="pt-24px">
+            <NFormItem v-if="showTenantCode" size="large" :show-label="false">
+              <NInput
+                v-model:value="tenantCode"
+                size="large"
+                :placeholder="$t('page.login.common.tenantCodePlaceholder')"
+                :input-props="{ 'aria-label': $t('page.login.common.tenantCodePlaceholder') }"
+                @blur="loadCapabilities"
+                @keyup.enter="loadCapabilities"
+              />
+            </NFormItem>
             <Transition :name="themeStore.page.animateMode" mode="out-in" appear>
               <component
                 :is="activeModule.component"
