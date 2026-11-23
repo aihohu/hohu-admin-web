@@ -6,6 +6,7 @@ type Session = { token: string; expiresIn: number; tenantId: string; actorId: st
 
 export function createPreparationClient(onExpired: () => void) {
   let token = '';
+  let generation = 0;
   const transport = createFlatRequest<Envelope, unknown, Record<string, unknown>>(
     { baseURL: window.location.origin, timeout: 25000 },
     {
@@ -16,7 +17,11 @@ export function createPreparationClient(onExpired: () => void) {
       isBackendSuccess: response => response.data.code === 200,
       transform: response => response.data.data,
       onError(error) {
-        if (error.response?.status === 401 && token) {
+        if (
+          error.response?.status === 401 &&
+          token &&
+          error.config?.headers.get('Authorization') === `Bearer ${token}`
+        ) {
           token = '';
           onExpired();
         }
@@ -35,8 +40,10 @@ export function createPreparationClient(onExpired: () => void) {
   return {
     repository: createFieldPolicyRepository(call),
     async login(credentials: { tenantCode: string; userName: string; password: string }) {
+      const attempt = ++generation;
       token = '';
       const session = await call<Session>('/policy-prepare/login', credentials);
+      if (generation !== attempt) throw new FieldPolicyError('FIELD_POLICY_UNAVAILABLE', 401);
       if (session.protocol !== 'field-management/1')
         throw new FieldPolicyError('FIELD_POLICY_CLIENT_INCOMPATIBLE', 409);
       token = session.token;
@@ -56,6 +63,7 @@ export function createPreparationClient(onExpired: () => void) {
       transport.cancelAllRequest();
     },
     dispose() {
+      generation++;
       token = '';
       transport.cancelAllRequest();
     }

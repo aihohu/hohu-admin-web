@@ -65,15 +65,28 @@ jobs:
         run: pnpm test:coverage --maxWorkers=2 --coverage.reportsDirectory=.local/reports/coverage
 
       - name: Build production assets and verify notices
+        env:
+          WEB_SOURCE_SHA: ${{ inputs.source_sha || github.sha }}
         run: |
           pnpm build --outDir .local/artifacts/web-dist
           test -s .local/artifacts/web-dist/index.html
           test -s .local/artifacts/web-dist/licenses/LICENSE
           test -s .local/artifacts/web-dist/licenses/NOTICE
           test -s .local/artifacts/web-dist/licenses/THIRD_PARTY_NOTICES.md
-          pnpm build:policy --outDir .local/artifacts/policy-dist
-          test -s .local/artifacts/policy-dist/policy-prepare.html
-          test -s .local/artifacts/policy-dist/policy-preparation.json
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          # The stable 0.1 channel builds its own pinned source without a field-policy console.
+          if json.loads(Path("package.json").read_text())["version"].startswith("0.1."):
+              raise SystemExit(0)
+          root = Path(".local/artifacts/web-dist")
+          assert not (root / "policy-prepare.html").exists()
+          manifest = json.loads((root / "policy-preparation.json").read_text())
+          assert manifest["sourceCommit"] == os.environ["WEB_SOURCE_SHA"]
+          assert manifest["protocol"] == "field-management/2" and "index.html" in manifest["files"]
+          for name, digest in manifest["files"].items():
+              assert hashlib.sha256((root / name).read_bytes()).hexdigest() == digest, name
+          PY
           git diff --exit-code
 
       - name: Upload coverage diagnostics

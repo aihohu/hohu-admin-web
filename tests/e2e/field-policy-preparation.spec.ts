@@ -9,10 +9,11 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
   );
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.name));
-  await page.goto('/');
-  await page.locator('input[autocomplete="username"]').fill('admin');
-  await page.locator('input[autocomplete="current-password"]').fill(process.env.POLICY_PREPARATION_PASSWORD!);
-  await page.getByRole('button', { name: '登录准备会话', exact: true }).click();
+  await page.goto('/system/role');
+  await page.getByPlaceholder('请输入用户名', { exact: true }).fill('admin');
+  await page.getByPlaceholder('请输入密码', { exact: true }).fill(process.env.POLICY_PREPARATION_PASSWORD!);
+  await page.getByRole('button', { name: '确认', exact: true }).click();
+  await expect(page).toHaveURL(new URL('/system/role', process.env.POLICY_PREPARATION_URL).href);
   await expect(page.getByRole('button', { name: '退出准备会话' })).toBeVisible();
   await page.getByRole('button', { name: '字段权限', exact: true }).first().click();
   await expect(page.getByRole('button', { name: '默认推荐配置', exact: true })).toBeEnabled();
@@ -87,7 +88,7 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
   expect(Math.max(...buttons.map(box => box!.y)) - Math.min(...buttons.map(box => box!.y))).toBeLessThan(4);
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '退出准备会话', exact: true }).click();
-  await expect(page.getByRole('button', { name: '登录准备会话', exact: true })).toBeVisible();
+  await expect(page.getByPlaceholder('请输入用户名', { exact: true })).toBeVisible();
   const stored = await page.evaluate(() =>
     JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } })
   );

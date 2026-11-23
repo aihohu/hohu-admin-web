@@ -28,7 +28,6 @@
   "type": "module",
   "scripts": {
     "build": "vite build --mode prod",
-    "build:policy": "vite build --config vite.policy.config.ts --mode prod",
     "build:test": "vite build --mode test",
     "cleanup": "sa cleanup",
     "commit": "sa git-commit",

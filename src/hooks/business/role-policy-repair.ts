@@ -7,7 +7,7 @@ import type { fetchGetRoleList } from '@/service/api/system';
 type RoleResult = Awaited<ReturnType<typeof fetchGetRoleList>>;
 type RoleRepository = Pick<FieldPolicyRepository, 'roles'>;
 
-export async function loadRolePolicyAnchors(repo: RoleRepository, signal?: AbortSignal) {
+export async function loadRolePolicyAnchors(repo: RoleRepository, signal?: AbortSignal, includeTitles = false) {
   const records: Api.SystemManage.RoleSummary[] = [];
   let cursor = '0';
   let previous = 0n;
@@ -31,7 +31,13 @@ export async function loadRolePolicyAnchors(repo: RoleRepository, signal?: Abort
       )
         throw new FieldPolicyError('FIELD_POLICY_UNAVAILABLE', 503);
       previous = BigInt(role.roleId);
-      records.push({ roleId: role.roleId, delegable: false, blockedReasonCode: 'FIELD_POLICY_UNAVAILABLE' });
+      records.push({
+        roleId: role.roleId,
+        delegable: false,
+        blockedReasonCode: 'FIELD_POLICY_UNAVAILABLE',
+        ...(includeTitles && typeof role.roleName === 'string' ? { roleName: role.roleName } : {}),
+        ...(includeTitles && typeof role.roleCode === 'string' ? { roleCode: role.roleCode } : {})
+      });
     }
     if (page.nextCursor === null) return records;
     if (!page.records.length || page.nextCursor !== page.records.at(-1)?.roleId)
@@ -78,8 +84,8 @@ export function useRolePolicyRepair(options: {
     const filtered = Object.entries(params).some(
       ([key, value]) => !['current', 'size'].includes(key) && value !== null && value !== undefined && value !== ''
     );
-    if (!result.error || !options.canRepair() || filtered || body?.errorCode !== 'FIELD_POLICY_UNAVAILABLE')
-      return result;
+    const fieldRefusal = body?.errorCode === 'FIELD_POLICY_UNAVAILABLE' || body?.errorCode === 'FIELD_POLICY_DENIED';
+    if (!result.error || !options.canRepair() || filtered || !fieldRefusal) return result;
     try {
       const rows = await loadRolePolicyAnchors(options.repository, abort.signal);
       if (current !== generation || !options.canRepair()) return result;

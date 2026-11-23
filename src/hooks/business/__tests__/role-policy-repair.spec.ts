@@ -31,33 +31,52 @@ it.each(['tenant', 'version', 'duplicate', 'overflow'])('rejects mixed or incomp
   await expect(loadRolePolicyAnchors({ roles })).rejects.toThrow();
 });
 
-it('opens repair only for current dedicated authority, clear filters and the known unavailable state', async () => {
-  const scope = effectScope();
-  const identity = shallowRef('71/101');
-  const params = { current: 1, size: 10, roleName: null };
-  const roles = vi.fn().mockResolvedValue({ ...context, records: [{ roleId: '100' }], nextCursor: null });
-  const fetchRoles = vi.fn().mockResolvedValue({
-    data: null,
-    error: { response: { data: { errorCode: 'FIELD_POLICY_UNAVAILABLE' } } },
-    response: {}
+it.each(['roleName', 'roleCode'])('retains only controller-projected %s during maintenance', async key => {
+  const roles = vi.fn().mockResolvedValue({
+    ...context,
+    records: [{ roleId: '100', [key]: 'allowed', status: '1' }, { roleId: '101' }],
+    nextCursor: null
   });
-  const model = scope.run(() =>
-    useRolePolicyRepair({ identity, params, repository: { roles }, fetchRoles, canRepair: () => true })
-  )!;
-  const result = await model.load();
-  expect(result.data?.records).toEqual([
-    { roleId: '100', delegable: false, blockedReasonCode: 'FIELD_POLICY_UNAVAILABLE' }
-  ]);
-  expect(model.repairMode.value).toBe(true);
-  fetchRoles.mockResolvedValueOnce({
-    data: null,
-    error: { response: { data: { errorCode: 'MISSING_PERMISSION' } } },
-    response: {}
+  const [first, second] = await loadRolePolicyAnchors({ roles }, undefined, true);
+  expect(first).toEqual({
+    roleId: '100',
+    [key]: 'allowed',
+    delegable: false,
+    blockedReasonCode: 'FIELD_POLICY_UNAVAILABLE'
   });
-  await model.load();
-  expect(roles).toHaveBeenCalledTimes(1);
-  scope.stop();
+  expect(second).not.toHaveProperty(key);
 });
+
+it.each(['FIELD_POLICY_UNAVAILABLE', 'FIELD_POLICY_DENIED'])(
+  'opens repair only for dedicated authority and clear filters on %s',
+  async errorCode => {
+    const scope = effectScope();
+    const identity = shallowRef('71/101');
+    const params = { current: 1, size: 10, roleName: null };
+    const roles = vi.fn().mockResolvedValue({ ...context, records: [{ roleId: '100' }], nextCursor: null });
+    const fetchRoles = vi.fn().mockResolvedValue({
+      data: null,
+      error: { response: { data: { errorCode } } },
+      response: {}
+    });
+    const model = scope.run(() =>
+      useRolePolicyRepair({ identity, params, repository: { roles }, fetchRoles, canRepair: () => true })
+    )!;
+    const result = await model.load();
+    expect(result.data?.records).toEqual([
+      { roleId: '100', delegable: false, blockedReasonCode: 'FIELD_POLICY_UNAVAILABLE' }
+    ]);
+    expect(model.repairMode.value).toBe(true);
+    fetchRoles.mockResolvedValueOnce({
+      data: null,
+      error: { response: { data: { errorCode: 'MISSING_PERMISSION' } } },
+      response: {}
+    });
+    await model.load();
+    expect(roles).toHaveBeenCalledTimes(1);
+    scope.stop();
+  }
+);
 
 it('discards a repair result after identity handoff', async () => {
   const scope = effectScope();

@@ -15,6 +15,8 @@ import PwdLogin from './modules/pwd-login.vue';
 import Register from './modules/register.vue';
 import ResetPwd from './modules/reset-pwd.vue';
 import BindWechat from './modules/bind-wechat.vue';
+import { isMaintenanceConsole } from '@/utils/maintenance-console';
+import { useFieldMaintenance } from '@/store/modules/field-maintenance';
 
 interface Props {
   /** The login module */
@@ -22,6 +24,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const maintenance = isMaintenanceConsole();
+const session = maintenance ? useFieldMaintenance() : undefined;
 
 const tenantCode = shallowRef('default');
 const capabilities = shallowRef<AccountCapabilities | null>(null);
@@ -30,6 +34,7 @@ const showTenantCode = shallowRef(
 );
 let sequence = 0;
 async function loadCapabilities() {
+  if (maintenance) return;
   const current = ++sequence;
   capabilities.value = null;
   if (showTenantCode.value && !tenantCode.value.trim()) return;
@@ -43,6 +48,10 @@ watch(tenantCode, () => {
 const appStore = useAppStore();
 const themeStore = useThemeStore();
 onMounted(async () => {
+  if (maintenance) {
+    showTenantCode.value = true;
+    return;
+  }
   const { data } = await fetchLoginOptions();
   if (data) showTenantCode.value = shouldShowTenantCodeInput(data.tenantMode, data.tenantLocator);
   await loadCapabilities();
@@ -105,10 +114,17 @@ const bgColor = computed(() => {
         </header>
         <main class="pt-24px">
           <h3 class="text-18px text-primary font-medium">{{ $t(activeModule.label) }}</h3>
-          <NFormItem v-if="showTenantCode" :label="$t('page.login.common.tenantCodePlaceholder')" class="mt-16px">
+          <NAlert v-if="maintenance" type="info" class="mt-16px">
+            {{ $t(session?.ended ? 'fieldPolicy.prepareEnded' : 'fieldPolicy.prepareHint') }}
+          </NAlert>
+          <NFormItem
+            v-if="showTenantCode && !session?.ended"
+            :label="$t('page.login.common.tenantCodePlaceholder')"
+            class="mt-16px"
+          >
             <NInput v-model:value="tenantCode" @blur="loadCapabilities" @keyup.enter="loadCapabilities" />
           </NFormItem>
-          <div class="pt-24px">
+          <div v-if="!session?.ended" class="pt-24px">
             <Transition :name="themeStore.page.animateMode" mode="out-in" appear>
               <component
                 :is="activeModule.component"

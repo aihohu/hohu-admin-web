@@ -134,7 +134,7 @@
   "tenant_id": "Tenant identity (protected)",
   "email_verified_at": "Email verification time (protected)",
   "prepareTitle": "Controlled field policy preparation",
-  "prepareHint": "Normal API, scheduler and background business jobs remain stopped. This page manages candidates only.",
+  "prepareHint": "Business writes are paused. Configure field permissions in Roles, activate each tenant, then finish maintenance.",
   "prepareLogin": "Sign in to preparation",
   "prepareLogout": "Sign out of preparation",
   "prepareFinish": "End preparation session",

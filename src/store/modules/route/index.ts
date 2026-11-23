@@ -253,6 +253,19 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   }
 
   /** Init static auth route */
+  function initMaintenanceRoutes() {
+    const routes = createStaticRoutes();
+    const system = routes.authRoutes.find(route => route.name === 'system');
+    if (!system) throw new Error('Role management route missing');
+    addConstantRoutes(routes.constantRoutes.filter(route => route.name === 'login'));
+    addAuthRoutes([{ ...system, children: system.children.filter(child => child.name === 'system_role') }]);
+    handleConstantAndAuthRoutes();
+    setRouteHome('system_role');
+    handleUpdateRootRouteRedirect('system_role');
+    setIsInitConstantRoute(true);
+    setIsInitAuthRoute(true);
+  }
+
   function initStaticAuthRoute() {
     const { authRoutes: staticAuthRoutes } = createStaticRoutes();
 
@@ -411,6 +424,7 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
     resetRouteCache,
     breadcrumbs,
     initConstantRoute,
+    initMaintenanceRoutes,
     isInitConstantRoute,
     initAuthRoute,
     isInitAuthRoute,
