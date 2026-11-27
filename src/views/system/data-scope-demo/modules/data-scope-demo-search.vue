@@ -4,6 +4,8 @@ import { jsonClone } from '@sa/utils';
 import { enableStatusOptions } from '@/constants/business';
 import { translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
+defineProps<{ allowedFields?: string[] }>();
 
 defineOptions({
   name: 'DataScopeDemoSearch'
@@ -35,6 +37,7 @@ function search() {
         <NForm :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
             <NFormItemGi
+              v-if="fieldAllowed(allowedFields, 'title')"
               span="24 s:12 m:6"
               :label="$t('page.system.dataScopeDemo.title_field')"
               path="title"
@@ -43,6 +46,7 @@ function search() {
               <NInput v-model:value="model.title" :placeholder="$t('page.system.dataScopeDemo.form.title')" />
             </NFormItemGi>
             <NFormItemGi
+              v-if="fieldAllowed(allowedFields, 'status')"
               span="24 s:12 m:6"
               :label="$t('page.system.dataScopeDemo.status')"
               path="status"

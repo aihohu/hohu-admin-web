@@ -123,8 +123,8 @@ const agentOptions = computed<DropdownOption[]>(() => [
   AUTO_AGENT_OPTION,
   ...aiStore.availableAgents.map(a => ({
     key: a.code,
-    label: localizedText(a.name, a.i18nKeys?.name),
-    description: localizedText(a.description, a.i18nKeys?.description)
+    label: a.name === undefined ? t('fieldPolicy.unavailable') : localizedText(a.name, a.i18nKeys?.name),
+    description: a.description === undefined ? '' : localizedText(a.description, a.i18nKeys?.description)
   }))
 ]);
 
@@ -353,7 +353,7 @@ function formatFileSize(bytes: number): string {
               {{
                 aiStore.selectedAgentCode === 'auto'
                   ? t('page.ai.chat.agentAutoName')
-                  : currentAgent?.name || t('page.ai.chat.agentAutoName')
+                  : (currentAgent?.name ?? t('fieldPolicy.unavailable'))
               }}
             </span>
             <IconIcRoundArrowDropDown class="text-14px opacity-70" />

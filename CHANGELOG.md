@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.0]
+
+### System-wide Field Policy Interaction
+
+- Keep the same login address and role drawer throughout installation, upgrade and normal operation. Maintenance uses a short-lived in-memory identity and the verified standard Web build.
+
+- Add field permission management to the existing role actions beside menu permissions, using the shared business-object catalog. Provide the recommended configuration, allow-all and deny-all controls alongside separate reading, creating, updating, querying, importing and exporting purposes; functional button permissions remain separate requirements.
+- Manage candidates, validation, revision conflicts, complete tenant manifests, explicit activation and freezing through the real management API and controlled preparation identity handoff. Saving a candidate does not activate it; ungranted fields are denied after enforcement, and platform-fixed restrictions remain controlled by the server.
+- Render lists, filters, forms, trees, selectors and sparse update payloads for users, ordinary and relationship objects, configuration, settings and tasks from the server's capabilities. Hidden and write-only fields are not reconstructed from stale client state; authorization changes require current server decisions.
+- Preserve field provenance and denial feedback across registered import/export, template, error-file and download flows. UI visibility does not grant server authority, and cached older Web submissions remain subject to server-side write validation.
+- Clear private AI results after field authority becomes stale and recover the conversation through a read-only request without resending messages or confirmations.
+
+### Compatibility and Release
+
+- Pair Web 0.2.0 with Backend 0.2.0. The version entry prepares a candidate; the matching Backend product `release.json` determines the final image pair, verified platforms, CLI procedure and upgrade sources.
+- Existing tenants remain in legacy mode until explicit qualified activation. Upgrade cached clients and verify denied older submissions against the target backend before opening access.
+- Follow the 0.2 controlled installation and recovery procedure. A successful component build does not establish product installation or recovery qualification; mobile and desktop clients remain outside this release.
+
 ## [v0.1.6]
 
 ### Compatibility Fixes

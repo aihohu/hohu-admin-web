@@ -288,6 +288,7 @@ jobs:
         with:
           context: .local/release-source
           file: .local/release-source/Dockerfile
+          build-args: WEB_SOURCE_SHA=${{ needs.prepare.outputs.source_sha }}
           platforms: linux/amd64,linux/arm64
           push: true
           # ACR rejects OCI attestation artifacts with empty config descriptors.

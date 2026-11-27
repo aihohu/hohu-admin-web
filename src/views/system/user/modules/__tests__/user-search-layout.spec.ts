@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { reactive, ref } from 'vue';
+import { fetchGetAllRoles } from '@/service/api';
 import UserSearch from '../user-search.vue';
 
 vi.mock('@/service/api', () => ({
@@ -39,7 +40,7 @@ const stubs = {
 };
 
 describe('user-search layout', () => {
-  it('桌面端操作按钮占一列，与七个筛选项组成两行', () => {
+  it('操作按钮占据当前响应式网格的最右一列', () => {
     const model = reactive<Api.SystemManage.UserSearchParams>({
       current: 1,
       size: 10,
@@ -52,10 +53,29 @@ describe('user-search layout', () => {
       roleCode: null
     });
     const wrapper = mount(UserSearch, {
-      props: { model },
+      props: { model, filters: [] },
       global: { stubs }
     });
 
-    expect(wrapper.find('[data-testid="user-search-actions"]').attributes('span')).toBe('24 s:12 m:6');
+    const actions = wrapper.get('[data-testid="user-search-actions"]');
+    expect(actions.attributes('span')).toBe('24 s:12 m:6');
+    expect(actions.attributes()).toHaveProperty('suffix');
   });
+});
+
+it('only renders granted search controls and only loads usable role options', async () => {
+  vi.mocked(fetchGetAllRoles).mockClear();
+  const wrapper = mount(UserSearch, {
+    props: { model: { current: 1, size: 10 }, filters: ['userName', 'status'] },
+    global: { stubs }
+  });
+  expect(wrapper.find('[path="nickname"]').exists()).toBe(false);
+  expect(wrapper.find('[path="userName"]').exists()).toBe(true);
+  expect(wrapper.find('[path="userPhone"]').exists()).toBe(false);
+  expect(fetchGetAllRoles).not.toHaveBeenCalled();
+  await wrapper.setProps({ filters: ['userPhone', 'roleCode'] });
+  expect(wrapper.find('[path="userPhone"]').exists()).toBe(true);
+  expect(fetchGetAllRoles).toHaveBeenCalledTimes(1);
+  await wrapper.setProps({ filters: [] });
+  expect(wrapper.find('[path="roleCode"]').exists()).toBe(false);
 });

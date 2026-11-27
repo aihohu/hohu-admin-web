@@ -262,7 +262,7 @@ describe('stream projection handoff', () => {
     await sending;
 
     expect(store.currentConversationId).toBe('conversation-2');
-    expect(store.currentMessages.map(message => ('content' in message ? message.content : message.errorCode))).toEqual([
+    expect(store.currentMessages.map(message => ('status' in message ? message.errorCode : message.content))).toEqual([
       'new conversation'
     ]);
     expect(store.streamingText).toBe('');

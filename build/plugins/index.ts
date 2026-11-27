@@ -7,6 +7,7 @@ import { setupElegantRouter } from './router';
 import { setupUnocss } from './unocss';
 import { setupUnplugin } from './unplugin';
 import { setupHtmlPlugin } from './html';
+import { consoleManifest } from './console-manifest';
 import { setupDevtoolsPlugin } from './devtools';
 
 export function setupVitePlugins(viteEnv: Env.ImportMeta, buildTime: string) {
@@ -19,6 +20,7 @@ export function setupVitePlugins(viteEnv: Env.ImportMeta, buildTime: string) {
     ...setupUnplugin(viteEnv),
     progress(),
     setupHtmlPlugin(buildTime),
+    consoleManifest(),
     vueRootValidator()
   ];
 

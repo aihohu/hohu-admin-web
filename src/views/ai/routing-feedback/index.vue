@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, h, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, onMounted, onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { NCard, NDataTable, NInput, NRadio, NRadioGroup, NSpace, NStatistic, NGrid, NGridItem } from 'naive-ui';
 import type { DataTableColumn } from 'naive-ui';
 import dayjs from 'dayjs';
 import { fetchRoutingFeedbackList, fetchRoutingFeedbackSummary } from '@/service/api';
 import { $t } from '@/locales';
+import { deliveryColumns } from '@/hooks/business/delivery-fields';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 
 defineOptions({
   name: 'AiRoutingFeedback'
@@ -20,6 +22,7 @@ let summaryRequest = 0;
 
 async function loadSummary() {
   const request = ++summaryRequest;
+  summary.value = null;
   summaryLoading.value = true;
   const { error, data } = await fetchRoutingFeedbackSummary(days.value);
   if (request !== summaryRequest) return;
@@ -34,20 +37,34 @@ const listLoading = shallowRef(false);
 const current = ref(1);
 const size = ref(20);
 const total = ref(0);
+const fieldPolicy = shallowRef<Api.Common.DeliveryCapabilities>();
 let listRequest = 0;
+onScopeDispose(() => {
+  summaryRequest++;
+  listRequest++;
+  summary.value = null;
+  listData.value = [];
+});
 
 async function loadList() {
   const request = ++listRequest;
+  listData.value = [];
+  total.value = 0;
   listLoading.value = true;
   const { error, data } = await fetchRoutingFeedbackList({
     days: days.value,
     current: current.value,
     size: size.value,
     feedback: 'wrong',
-    originalAgent: originalAgent.value || undefined,
-    correctedAgent: correctedAgent.value || undefined
+    originalAgent: fieldAllowed(fieldPolicy.value?.query, 'originalAgent')
+      ? originalAgent.value || undefined
+      : undefined,
+    correctedAgent: fieldAllowed(fieldPolicy.value?.query, 'correctedAgent')
+      ? correctedAgent.value || undefined
+      : undefined
   });
   if (request !== listRequest) return;
+  fieldPolicy.value = error ? undefined : data.fieldPolicy;
   if (!error) {
     listData.value = data.records;
     total.value = data.total;
@@ -66,28 +83,9 @@ const columns = computed<DataTableColumn<Api.AiRoutingFeedback.ListItem>[]>(() =
   { title: $t('page.ai.routingFeedback.user'), key: 'userName', width: 120 },
   {
     title: $t('page.ai.routingFeedback.agentFlow'),
-    key: 'agentFlow',
-    render: (row: Api.AiRoutingFeedback.ListItem) => `${row.originalAgentName} → ${row.correctedAgentName || '-'}`
-  },
-  {
-    title: 'TraceId',
-    key: 'traceId',
-    width: 200,
-    render: (row: Api.AiRoutingFeedback.ListItem) => {
-      const traceId = row.traceId;
-      return traceId
-        ? h(
-            'a',
-            {
-              class: 'text-primary underline cursor-pointer',
-              onClick: () => {
-                window.open(`/ai/trace?traceId=${encodeURIComponent(traceId)}`, '_blank');
-              }
-            },
-            `${traceId.slice(0, 8)}...`
-          )
-        : '-';
-    }
+    key: 'originalAgentName',
+    render: (row: Api.AiRoutingFeedback.ListItem) =>
+      `${row.originalAgentName ?? $t('fieldPolicy.unavailable')} → ${row.correctedAgentName ?? (row.correctedAgent === null ? '—' : $t('fieldPolicy.unavailable'))}`
   }
 ]);
 
@@ -103,7 +101,7 @@ const topWrongColumns = computed<DataTableColumn<Api.AiRoutingFeedback.TopWrongA
 ]);
 
 const wrongRateDisplay = computed(() => {
-  if (!summary.value) return '0%';
+  if (!summary.value) return '—';
   return `${(summary.value.wrongRate * 100).toFixed(1)}%`;
 });
 
@@ -128,6 +126,8 @@ function onPageSizeChange(s: number) {
   current.value = 1;
   loadList();
 }
+
+const visibleColumns = computed(() => deliveryColumns(columns.value, listData.value, fieldPolicy.value));
 
 onMounted(() => {
   loadSummary();
@@ -158,21 +158,21 @@ defineExpose({ days });
         <NGridItem>
           <NStatistic
             :label="$t('page.ai.routingFeedback.total')"
-            :value="summary?.total ?? 0"
+            :value="summary?.total ?? '—'"
             :loading="summaryLoading"
           />
         </NGridItem>
         <NGridItem>
           <NStatistic
             :label="$t('page.ai.routingFeedback.correct')"
-            :value="summary?.correct ?? 0"
+            :value="summary?.correct ?? '—'"
             :loading="summaryLoading"
           />
         </NGridItem>
         <NGridItem>
           <NStatistic
             :label="$t('page.ai.routingFeedback.wrong')"
-            :value="summary?.wrong ?? 0"
+            :value="summary?.wrong ?? '—'"
             :loading="summaryLoading"
           />
         </NGridItem>
@@ -186,7 +186,7 @@ defineExpose({ days });
       </NGrid>
     </NCard>
 
-    <NCard :title="$t('page.ai.routingFeedback.topWrongAgentsTop10')">
+    <NCard v-if="summary?.topWrongAgents !== undefined" :title="$t('page.ai.routingFeedback.topWrongAgentsTop10')">
       <NDataTable :columns="topWrongColumns" :data="summary?.topWrongAgents ?? []" :loading="summaryLoading" />
     </NCard>
 
@@ -194,19 +194,21 @@ defineExpose({ days });
       <NSpace align="center" :size="12" class="mb-3">
         <NInput
           v-model:value="originalAgent"
+          :disabled="!fieldAllowed(fieldPolicy?.query, 'originalAgent')"
           :placeholder="$t('page.ai.routingFeedback.originalAgentPlaceholder')"
           clearable
           style="width: 200px"
         />
         <NInput
           v-model:value="correctedAgent"
+          :disabled="!fieldAllowed(fieldPolicy?.query, 'correctedAgent')"
           :placeholder="$t('page.ai.routingFeedback.correctedAgentPlaceholder')"
           clearable
           style="width: 200px"
         />
       </NSpace>
       <NDataTable
-        :columns="columns"
+        :columns="visibleColumns"
         :data="listData"
         :loading="listLoading"
         remote

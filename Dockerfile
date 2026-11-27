@@ -16,7 +16,11 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 
 COPY . .
 
-RUN pnpm build
+ARG VITE_TENANT_MODE=single
+ENV VITE_TENANT_MODE=${VITE_TENANT_MODE}
+ARG WEB_SOURCE_SHA
+
+RUN WEB_SOURCE_SHA="$WEB_SOURCE_SHA" pnpm build
 
 # --- Production Stage ---
 FROM nginx:1.31.2-alpine

@@ -143,6 +143,8 @@ See [package.json](./package.json) and [pnpm-lock.yaml](./pnpm-lock.yaml) for ex
 
 ## Development and contributions
 
+The Web image defaults to `single` tenant mode. Build a hosted Web with `docker build --build-arg VITE_TENANT_MODE=hosted -t your-web-image .` and configure the Backend for hosted tenants separately. This is a compile-time choice; setting it on a running Nginx container does not change the built interface or grant tenant access.
+
 Use Composition API with `<script setup lang="ts">`. Pages live in `src/views/`, requests in `src/service/api/`, API types in `src/typings/api/`, and translated interface text in `src/locales/`. Reuse the shared request layer for authentication, refresh, and errors rather than adding page-specific clients.
 
 During development, `@elegant-router` generates routes automatically. Use `pnpm gen-route` only when the dev server is stopped, pregeneration is needed, or routes are out of sync. Generating a frontend route does not create a backend menu or grant access. See [Web pages and requests](https://hohu.org/guide/development/web.html) and [add a module](https://hohu.org/guide/development/module.html).

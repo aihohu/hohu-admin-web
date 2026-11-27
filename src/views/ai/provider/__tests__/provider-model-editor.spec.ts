@@ -82,6 +82,92 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => wrappers.splice(0).forEach(wrapper => wrapper.unmount()));
 
 describe('model editor interactions', () => {
+  it('ignores model reads from the previous provider after switching targets', async () => {
+    const { fetchGetProviderModels } = await import('@/service/api');
+    let finish!: (value: unknown) => void;
+    vi.mocked(fetchGetProviderModels).mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          finish = resolve;
+        }) as never
+    );
+    const { wrapper } = createEditor('edit');
+    await wrapper.setProps({ visible: true });
+    await wrapper.setProps({ rowData: { ...wrapper.props('rowData')!, providerId: '102', name: 'Second provider' } });
+    await flushPromises();
+    finish({ data: [{ modelId: 'old', name: 'Stale model', capabilities: ['text'] }], error: null });
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('Stale model');
+    expect((wrapper.findAll('.n-form .n-input input')[1].element as HTMLInputElement).value).toBe('Second provider');
+  });
+  it('does not close a reopened drawer when the previous save completes', async () => {
+    const { fetchUpdateProvider } = await import('@/service/api');
+    let finish!: (value: unknown) => void;
+    vi.mocked(fetchUpdateProvider).mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          finish = resolve;
+        }) as never
+    );
+    const { wrapper } = createEditor('edit');
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    await wrapper.findAll('.n-form .n-input input')[1].setValue('First save');
+    await wrapper.get('footer .n-button--primary-type').trigger('click');
+    await flushPromises();
+    await wrapper.setProps({ visible: false });
+    await wrapper.setProps({
+      visible: true,
+      rowData: { ...wrapper.props('rowData')!, providerId: '102', name: 'Second provider' }
+    });
+    finish({ data: null, error: null });
+    await flushPromises();
+    expect(wrapper.emitted('update:visible')?.flat() ?? []).not.toContain(false);
+    expect(wrapper.emitted('submitted')).toBeUndefined();
+    expect(wrapper.get('footer .n-button--primary-type').attributes('disabled')).toBeUndefined();
+  });
+  it('preserves unknown model configuration on a metadata-only edit', async () => {
+    const { fetchGetProviderModels, fetchUpdateProviderModel } = await import('@/service/api');
+    vi.mocked(fetchGetProviderModels).mockResolvedValueOnce({
+      data: [
+        {
+          modelId: '301',
+          providerId: '101',
+          name: 'Old model',
+          capabilities: ['text'],
+          baseUrl: null,
+          isEnabled: true,
+          sortOrder: 0,
+          config: null
+        }
+      ]
+    } as never);
+    vi.mocked(fetchUpdateProviderModel).mockResolvedValueOnce({ data: null, error: null } as never);
+    const { wrapper } = createEditor('edit');
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    await wrapper.get('.model-card .n-button').trigger('click');
+    await wrapper.get('.model-form .n-input input').setValue('Renamed model');
+    await wrapper.get('[data-testid="provider-model-submit"]').trigger('click');
+    await flushPromises();
+    expect(fetchUpdateProviderModel).toHaveBeenCalledWith(
+      '101',
+      '301',
+      expect.not.objectContaining({ config: expect.anything() })
+    );
+    expect(vi.mocked(fetchUpdateProviderModel).mock.calls[0][2]).not.toHaveProperty('config');
+  });
+  it('preserves hidden provider configuration when only metadata is changed', async () => {
+    const { fetchUpdateProvider } = await import('@/service/api');
+    vi.mocked(fetchUpdateProvider).mockResolvedValueOnce({ data: null, error: null } as never);
+    const { wrapper } = createEditor('edit');
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    await wrapper.findAll('.n-form .n-input input')[1].setValue('Renamed');
+    await wrapper.get('footer .n-button--primary-type').trigger('click');
+    await flushPromises();
+    expect(fetchUpdateProvider).toHaveBeenCalledWith('101', { name: 'Renamed' });
+  });
   it('blocks configuration submission while a model is unfinished and stages it only after validation', async () => {
     const { fetchSaveProvider, fetchAddProviderModel } = await import('@/service/api');
     const { wrapper } = createEditor();

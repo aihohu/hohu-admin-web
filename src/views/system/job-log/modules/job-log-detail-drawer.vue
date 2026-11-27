@@ -22,7 +22,7 @@ const statusMap: Record<string, { type: NaiveUI.ThemeColor; label: string }> = {
 };
 
 const statusInfo = computed(() => {
-  if (!props.rowData) return null;
+  if (!props.rowData?.status) return null;
   return statusMap[props.rowData.status];
 });
 </script>
@@ -30,23 +30,23 @@ const statusInfo = computed(() => {
 <template>
   <NModal v-model:show="visible" preset="card" :title="$t('page.system.jobLog.detailTitle')" class="w-600px">
     <NDescriptions v-if="rowData" label-placement="left" bordered :column="1" size="small">
-      <NDescriptionsItem :label="$t('page.system.jobLog.jobName')">
+      <NDescriptionsItem v-if="Object.hasOwn(rowData, 'jobName')" :label="$t('page.system.jobLog.jobName')">
         {{ rowData.jobName }}
       </NDescriptionsItem>
-      <NDescriptionsItem :label="$t('page.system.jobLog.jobKey')">
+      <NDescriptionsItem v-if="Object.hasOwn(rowData, 'jobKey')" :label="$t('page.system.jobLog.jobKey')">
         {{ rowData.jobKey }}
       </NDescriptionsItem>
       <NDescriptionsItem :label="$t('page.system.jobLog.status')">
         <NTag v-if="statusInfo" :type="statusInfo.type">{{ statusInfo.label }}</NTag>
         <span v-else>-</span>
       </NDescriptionsItem>
-      <NDescriptionsItem :label="$t('page.system.jobLog.startTime')">
+      <NDescriptionsItem v-if="Object.hasOwn(rowData, 'startTime')" :label="$t('page.system.jobLog.startTime')">
         {{ rowData.startTime }}
       </NDescriptionsItem>
-      <NDescriptionsItem :label="$t('page.system.jobLog.endTime')">
+      <NDescriptionsItem v-if="Object.hasOwn(rowData, 'endTime')" :label="$t('page.system.jobLog.endTime')">
         {{ rowData.endTime || '-' }}
       </NDescriptionsItem>
-      <NDescriptionsItem :label="$t('page.system.jobLog.duration')">
+      <NDescriptionsItem v-if="Object.hasOwn(rowData, 'duration')" :label="$t('page.system.jobLog.duration')">
         {{ rowData.duration != null ? `${rowData.duration}ms` : '-' }}
       </NDescriptionsItem>
       <NDescriptionsItem v-if="rowData.errorMsg" :label="$t('page.system.jobLog.errorMsg')">

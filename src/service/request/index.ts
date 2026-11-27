@@ -1,10 +1,13 @@
 import type { AxiosResponse } from 'axios';
+import { CanceledError } from 'axios';
+import { isMaintenanceConsole } from '@/utils/maintenance-console';
 import { BACKEND_ERROR_CODE, createFlatRequest, createRequest } from '@sa/axios';
 import { useAuthStore } from '@/store/modules/auth';
 import { localStg } from '@/utils/storage';
 import { getServiceBaseURL } from '@/utils/service';
 import { $t } from '@/locales';
 import { getAuthorization, handleExpiredRequest, showErrorMsg } from './shared';
+import { assertRequestSession, bindRequestSession, currentRequestSession } from './session';
 import type { RequestInstanceState } from './type';
 
 const isHttpProxy = import.meta.env.DEV && import.meta.env.VITE_HTTP_PROXY === 'Y';
@@ -34,10 +37,14 @@ export const request = createFlatRequest(
       errMsgStack: [],
       refreshTokenPromise: null
     } as RequestInstanceState,
+    onRequestStart: bindRequestSession,
+    isResponseCurrent: response => currentRequestSession(response.config),
     transform(response: AxiosResponse<App.Service.Response<any>>) {
       return response.data.data;
     },
     async onRequest(config) {
+      if (isMaintenanceConsole()) throw new CanceledError('Business admission is closed');
+      assertRequestSession(config);
       const Authorization = getAuthorization();
       Object.assign(config.headers, { Authorization });
 
@@ -62,18 +69,20 @@ export const request = createFlatRequest(
       return String(response.data.code) === import.meta.env.VITE_SERVICE_SUCCESS_CODE;
     },
     async onBackendFail(response, instance) {
+      assertRequestSession(response.config);
       const authStore = useAuthStore();
       const responseCode = String(response.data?.code ?? '');
       // 兜底：HTTP 状态码 401 也触发登出，不依赖响应体格式
       const isUnauthorized = response.status === 401;
 
       function handleLogout() {
-        authStore.resetStore();
+        if (currentRequestSession(response.config)) authStore.resetStore();
       }
 
       function logoutAndCleanup() {
-        handleLogout();
         window.removeEventListener('beforeunload', handleLogout);
+        if (!currentRequestSession(response.config)) return;
+        handleLogout();
 
         request.state.errMsgStack = request.state.errMsgStack.filter(msg => msg !== response.data?.msg);
       }
@@ -83,8 +92,9 @@ export const request = createFlatRequest(
       const hasRefreshToken = !!localStg.get('refreshToken');
 
       if (isUnauthorized && hasRefreshToken && !isRefreshEndpoint) {
-        const success = await handleExpiredRequest(request.state);
+        const success = await handleExpiredRequest(request.state, response.config.hohuAuthSessionRevision);
         if (success) {
+          assertRequestSession(response.config);
           const Authorization = getAuthorization();
           Object.assign(response.config.headers, { Authorization });
           return instance.request(response.config) as Promise<AxiosResponse>;
@@ -134,8 +144,9 @@ export const request = createFlatRequest(
       // the api `refreshToken` can not return error code in `expiredTokenCodes`, otherwise it will be a dead loop, should return `logoutCodes` or `modalLogoutCodes`
       const expiredTokenCodes = import.meta.env.VITE_SERVICE_EXPIRED_TOKEN_CODES?.split(',') || [];
       if (expiredTokenCodes.length > 0 && expiredTokenCodes.includes(responseCode)) {
-        const success = await handleExpiredRequest(request.state);
+        const success = await handleExpiredRequest(request.state, response.config.hohuAuthSessionRevision);
         if (success) {
+          assertRequestSession(response.config);
           const Authorization = getAuthorization();
           Object.assign(response.config.headers, { Authorization });
 
@@ -146,6 +157,8 @@ export const request = createFlatRequest(
       return null;
     },
     onError(error) {
+      if (error.code === 'ERR_CANCELED') return;
+      assertRequestSession(error.config);
       // when the request is fail, you can show error message
 
       let message = error.message;
@@ -195,10 +208,14 @@ export const demoRequest = createRequest(
     baseURL: otherBaseURL.demo
   },
   {
+    onRequestStart: bindRequestSession,
+    isResponseCurrent: response => currentRequestSession(response.config),
     transform(response: AxiosResponse<App.Service.DemoResponse>) {
       return response.data.result;
     },
     async onRequest(config) {
+      if (isMaintenanceConsole()) throw new CanceledError('Business admission is closed');
+      assertRequestSession(config);
       const { headers } = config;
 
       // set token
@@ -213,11 +230,14 @@ export const demoRequest = createRequest(
       // you can change this logic by yourself
       return response.data.status === '200';
     },
-    async onBackendFail(_response) {
+    async onBackendFail(response) {
+      assertRequestSession(response.config);
       // when the backend response code is not "200", it means the request is fail
       // for example: the token is expired, refresh token and retry request
     },
     onError(error) {
+      if (error.code === 'ERR_CANCELED') return;
+      assertRequestSession(error.config);
       // when the request is fail, you can show error message
 
       let message = error.message;

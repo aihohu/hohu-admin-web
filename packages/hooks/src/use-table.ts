@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, onScopeDispose, ref } from 'vue';
 import type { Ref, VNodeChild } from 'vue';
 import useBoolean from './use-boolean';
 import useLoading from './use-loading';
@@ -72,6 +72,11 @@ export default function useTable<ResponseData, ApiData, Column, Pagination exten
   const { api, pagination, transform, columns, getColumnChecks, getColumns, onFetched, immediate = true } = options;
 
   const data = ref([]) as Ref<ApiData[]>;
+  let requestGeneration = 0;
+  onScopeDispose(() => {
+    requestGeneration++;
+    data.value = [];
+  });
 
   const columnChecks = ref(getColumnChecks(columns())) as Ref<TableColumnCheck[]>;
 
@@ -91,10 +96,13 @@ export default function useTable<ResponseData, ApiData, Column, Pagination exten
   }
 
   async function getData() {
+    const generation = ++requestGeneration;
+    data.value = [];
     try {
       startLoading();
 
       const response = await api();
+      if (generation !== requestGeneration) return;
 
       const transformed = transform(response);
 
@@ -104,7 +112,7 @@ export default function useTable<ResponseData, ApiData, Column, Pagination exten
 
       await onFetched?.(transformed);
     } finally {
-      endLoading();
+      if (generation === requestGeneration) endLoading();
     }
   }
 

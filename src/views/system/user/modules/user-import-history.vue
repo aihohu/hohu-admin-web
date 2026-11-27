@@ -1,5 +1,6 @@
 <script setup lang="tsx">
-import { computed, ref } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
+import { fieldAllowed } from '@/hooks/business/ordinary-fields';
 import type { DataTableColumns } from 'naive-ui';
 import { NButton, NEmpty, NTag } from 'naive-ui';
 import {
@@ -20,6 +21,9 @@ interface Emits {
 const emit = defineEmits<Emits>();
 
 const visible = ref<boolean>(false);
+const pagePolicy = shallowRef<Api.SystemManage.TransferCapabilities>();
+const logPolicy = shallowRef<Api.SystemManage.TransferCapabilities>();
+let batchRequest = 0, logRequest = 0, detailRequest = 0;
 const detailVisible = ref<boolean>(false);
 
 const loading = ref<boolean>(false);
@@ -51,7 +55,7 @@ const statusOptions: { label: string; value: Api.SystemManage.UserImportBatchSta
   { label: 'CANCELLED', value: 'CANCELLED' }
 ];
 
-function tagType(status: Api.SystemManage.UserImportBatchStatus): NaiveUI.ThemeColor {
+function tagType(status?: Api.SystemManage.UserImportBatchStatus): NaiveUI.ThemeColor {
   switch (status) {
     case 'SUCCESS':
       return 'success';
@@ -70,6 +74,7 @@ function tagType(status: Api.SystemManage.UserImportBatchStatus): NaiveUI.ThemeC
 }
 
 function isCancellable(b: Api.SystemManage.UserImportBatch): boolean {
+  if (b.fieldPolicy) return b.fieldPolicy.canCancel;
   return b.status === 'PREVIEW_DONE' || b.status === 'RUNNING';
 }
 
@@ -84,7 +89,7 @@ const batchColumns = computed<DataTableColumns<Api.SystemManage.UserImportBatch>
     title: () => $t('common.importHistoryDrawer.statusLabel'),
     key: 'status',
     width: 140,
-    render: row => <NTag size="small" type={tagType(row.status)}>{row.status}</NTag>
+    render: row => row.status ? <NTag size="small" type={tagType(row.status)}>{row.status}</NTag> : null
   },
   {
     title: () => $t('common.importHistoryDrawer.filenameLabel'),
@@ -192,44 +197,61 @@ const logColumns = computed<DataTableColumns<Api.SystemManage.UserImportBatchLog
   },
   {
     title: () => $t('common.importHistoryDrawer.logsDetailLabel'),
-    key: 'detail',
+    key: 'counts',
     minWidth: 220,
     ellipsis: { tooltip: true },
-    render: row => (row.detail ? JSON.stringify(row.detail) : '-')
+    render: row => row.counts ? JSON.stringify(row.counts) : (row.fieldPolicy ? null : row.detail ? JSON.stringify(row.detail) : '-')
   }
 ]);
 
+const visibleBatchColumns = computed(() => batchColumns.value.filter(column => !('key' in column) ||
+  ['batchId', 'operate'].includes(String(column.key)) || !pagePolicy.value || fieldAllowed(pagePolicy.value.read, String(column.key))));
+const visibleLogColumns = computed(() => logColumns.value.filter(column => !('key' in column) ||
+  !logPolicy.value || fieldAllowed(logPolicy.value.read, String(column.key))));
+function summaryVisible(key: string) { return Boolean(selectedBatch.value && Object.hasOwn(selectedBatch.value, key)); }
+
 async function loadBatches(): Promise<void> {
+  const request = ++batchRequest;
   loading.value = true;
   const params: Api.SystemManage.UserImportBatchQuery = {
     current: current.value,
     size: size.value,
-    status: statusFilter.value
+    status: !pagePolicy.value || fieldAllowed(pagePolicy.value.query, 'status') ? statusFilter.value : null
   };
   const { data, error } = await fetchGetImportBatchList(params);
+  if (request !== batchRequest || !visible.value) return;
   loading.value = false;
   if (error || !data) return;
+  pagePolicy.value = data.fieldPolicy;
+  if (pagePolicy.value && !fieldAllowed(pagePolicy.value.query, 'status')) statusFilter.value = null;
   batches.value = data.records;
   total.value = data.total;
 }
 
 async function loadLogs(batchId: string): Promise<void> {
+  const request = ++logRequest;
   logsLoading.value = true;
   const params: Api.SystemManage.UserImportBatchLogQuery = { current: logsCurrent.value, size: 20 };
   const { data, error } = await fetchGetImportBatchLogs(batchId, params);
+  if (request !== logRequest || selectedBatch.value?.batchId !== batchId || !detailVisible.value) return;
   logsLoading.value = false;
   if (error || !data) return;
+  logPolicy.value = data.fieldPolicy;
   logs.value = data.records;
   logsTotal.value = data.total;
 }
 
 async function handleOpenDetail(batch: Api.SystemManage.UserImportBatch): Promise<void> {
+  const request = ++detailRequest;
+  logRequest += 1;
+  logPolicy.value = undefined;
   selectedBatch.value = batch;
   logsCurrent.value = 1;
   logs.value = [];
   logsTotal.value = 0;
   detailVisible.value = true;
   const { data, error } = await fetchGetImportBatchDetail(batch.batchId);
+  if (request !== detailRequest || !detailVisible.value) return;
   if (!error && data) {
     selectedBatch.value = data;
   }
@@ -253,7 +275,7 @@ function openCancelModal(batchId: string): void {
 }
 
 async function confirmCancel(): Promise<boolean> {
-  if (!cancelTargetId.value) return false;
+  if (!cancelTargetId.value || cancelling.value) return false;
   if (!cancelReason.value.trim()) {
     window.$message?.warning($t('common.importHistoryDrawer.cancelReasonPlaceholder'));
     return false;
@@ -273,6 +295,15 @@ async function confirmCancel(): Promise<boolean> {
 }
 
 function handleAfterLeave(): void {
+  batchRequest += 1;
+  logRequest += 1;
+  detailRequest += 1;
+  detailVisible.value = false;
+  cancelModalVisible.value = false;
+  selectedBatch.value = null;
+  logs.value = [];
+  pagePolicy.value = undefined;
+  logPolicy.value = undefined;
   batches.value = [];
   total.value = 0;
   current.value = 1;
@@ -292,6 +323,7 @@ defineExpose({ open });
     <NDrawerContent :title="$t('common.importHistoryDrawer.title')" closable>
       <NSpace align="center" class="mb-12px">
         <NSelect
+          v-if="!pagePolicy || fieldAllowed(pagePolicy.query, 'status')"
           v-model:value="statusFilter"
           :options="statusOptions"
           :placeholder="$t('common.importHistoryDrawer.filterStatusPlaceholder')"
@@ -309,7 +341,7 @@ defineExpose({ open });
       </NSpace>
 
       <NDataTable
-        :columns="batchColumns"
+        :columns="visibleBatchColumns"
         :data="batches"
         :loading="loading"
         :pagination="{
@@ -339,56 +371,98 @@ defineExpose({ open });
             <NDescriptionsItem :label="$t('common.importHistoryDrawer.batchIdLabel')">
               {{ selectedBatch.batchId }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.statusLabel')">
+            <NDescriptionsItem v-if="summaryVisible('status')" :label="$t('common.importHistoryDrawer.statusLabel')">
               <NTag size="small" :type="tagType(selectedBatch.status)">{{ selectedBatch.status }}</NTag>
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.filenameLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('filename')"
+              :label="$t('common.importHistoryDrawer.filenameLabel')"
+            >
               {{ selectedBatch.filename ?? '-' }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.operatorLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('operatorName')"
+              :label="$t('common.importHistoryDrawer.operatorLabel')"
+            >
               {{ selectedBatch.operatorName ?? '-' }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.totalRowsLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('totalRows')"
+              :label="$t('common.importHistoryDrawer.totalRowsLabel')"
+            >
               {{ selectedBatch.totalRows }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.expiresAtLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('expiresAt')"
+              :label="$t('common.importHistoryDrawer.expiresAtLabel')"
+            >
               {{ formatImportTime(selectedBatch.expiresAt) }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.summaryNewLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('summaryNew')"
+              :label="$t('common.importHistoryDrawer.summaryNewLabel')"
+            >
               {{ selectedBatch.summaryNew }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.summaryExistsLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('summaryExists')"
+              :label="$t('common.importHistoryDrawer.summaryExistsLabel')"
+            >
               {{ selectedBatch.summaryExists }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.summaryConflictLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('summaryConflict')"
+              :label="$t('common.importHistoryDrawer.summaryConflictLabel')"
+            >
               {{ selectedBatch.summaryConflict }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.summaryOutOfScopeLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('summaryOutOfScope')"
+              :label="$t('common.importHistoryDrawer.summaryOutOfScopeLabel')"
+            >
               {{ selectedBatch.summaryOutOfScope }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.successCountLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('successCount')"
+              :label="$t('common.importHistoryDrawer.successCountLabel')"
+            >
               {{ selectedBatch.successCount }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.skippedCountLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('skippedCount')"
+              :label="$t('common.importHistoryDrawer.skippedCountLabel')"
+            >
               {{ selectedBatch.skippedCount }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.overwrittenCountLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('overwrittenCount')"
+              :label="$t('common.importHistoryDrawer.overwrittenCountLabel')"
+            >
               {{ selectedBatch.overwrittenCount }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.failedCountLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('failedCount')"
+              :label="$t('common.importHistoryDrawer.failedCountLabel')"
+            >
               {{ selectedBatch.failedCount }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.createdAtLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('createdAt')"
+              :label="$t('common.importHistoryDrawer.createdAtLabel')"
+            >
               {{ formatImportTime(selectedBatch.createdAt) }}
             </NDescriptionsItem>
-            <NDescriptionsItem :label="$t('common.importHistoryDrawer.finishedAtLabel')">
+            <NDescriptionsItem
+              v-if="summaryVisible('finishedAt')"
+              :label="$t('common.importHistoryDrawer.finishedAtLabel')"
+            >
               {{ formatImportTime(selectedBatch.finishedAt) }}
             </NDescriptionsItem>
           </NDescriptions>
         </NTabPane>
         <NTabPane name="logs" :tab="$t('common.importHistoryDrawer.logsTabTitle')">
           <NDataTable
-            :columns="logColumns"
+            :columns="visibleLogColumns"
             :data="logs"
             :loading="logsLoading"
             size="small"
