@@ -31,6 +31,8 @@ const repository = maintenance?.repository ?? fieldPolicyRepository;
 const fieldPolicyIdentity = computed(() => maintenance ? maintenance.identity : authStore.userInfo.userId + ':' + authStore.token);
 const { hasAuth, hasSuperAdminAuth } = useAuth();
 const route = useRoute();
+const canConfigureFields = computed(() => maintenance ? Boolean(maintenance.identity) : hasSuperAdminAuth('system:role:field-policy-view'));
+const selectedDelegable = shallowRef(false);
 const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
 const { bool: aiAgentAuthVisible, setTrue: openAiAgentAuthModal } = useBoolean();
 
@@ -172,14 +174,14 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       minWidth: 360,
       render: row => (
         <div class="flex-center flex-nowrap gap-8px whitespace-nowrap">
-          {row.delegable && hasAuth('system:role:menu-auth') && (
+          {!canConfigureFields.value && row.delegable && hasAuth('system:role:menu-auth') && (
             <NButton type="info" ghost size="small" onClick={() => onMenuAuthClick(row.roleId)}>
               {$t('page.system.role.menuAuth')}
             </NButton>
           )}
-          {(maintenance ? Boolean(maintenance.identity) : hasSuperAdminAuth('system:role:field-policy-view')) && (
-            <NButton type="info" ghost size="small" onClick={() => { fieldPolicyRoleId.value = row.roleId; fieldPolicyVisible.value = true; }}>
-              {$t('fieldPolicy.title')}
+          {canConfigureFields.value && (
+            <NButton type="info" ghost size="small" onClick={() => { fieldPolicyRoleId.value = row.roleId; selectedDelegable.value = Boolean(row.delegable); fieldPolicyVisible.value = true; }}>
+              {$t('fieldPolicy.rolePermissions')}
             </NButton>
           )}
           {row.delegable && hasAuth('system:role:ai-agent-auth') && (
@@ -300,12 +302,18 @@ async function onAgentMenuAuthClick(id: string) {
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
     <NAlert v-if="maintenance" type="warning">{{ $t('fieldPolicy.prepareHint') }}</NAlert>
     <RoleSearch
-      v-else
+      v-else-if="!fieldPolicyVisible"
       :model="searchParams"
       @update:model="Object.assign(searchParams, $event)"
       @search="getDataByPage"
     />
-    <NCard :title="$t('page.system.role.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
+    <NCard
+      v-show="!fieldPolicyVisible"
+      :title="$t('page.system.role.title')"
+      :bordered="false"
+      size="small"
+      class="card-wrapper sm:flex-1-hidden"
+    >
       <template #header-extra>
         <NButton v-if="maintenance" @click="finishMaintenance">{{ $t('fieldPolicy.prepareFinish') }}</NButton>
         <TableHeaderOperation
@@ -352,7 +360,7 @@ async function onAgentMenuAuthClick(id: string) {
       :role-id="fieldPolicyRoleId"
       :identity="fieldPolicyIdentity"
       :repository="repository"
-      :can-menu="!repairMode && hasAuth('system:role:menu-auth')"
+      :can-menu="selectedDelegable && !repairMode && hasAuth('system:role:menu-auth')"
       :can-edit-role="!repairMode && hasAuth('system:role:edit')"
       @navigate="
         target => {

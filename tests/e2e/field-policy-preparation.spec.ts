@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('real stopped installation: credentials, role drawer, candidate, manifest and logout', async ({
+test('real stopped installation: credentials, role permissions, candidate, manifest and logout', async ({
   page
 }, testInfo) => {
   test.skip(
@@ -15,15 +15,17 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
   await page.getByRole('button', { name: '确认', exact: true }).click();
   await expect(page).toHaveURL(new URL('/system/role', process.env.POLICY_PREPARATION_URL).href);
   await expect(page.getByRole('button', { name: '退出准备会话' })).toBeVisible();
-  await page.getByRole('button', { name: '字段权限', exact: true }).first().click();
-  await expect(page.getByRole('button', { name: '默认推荐配置', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: '权限配置', exact: true }).first().click();
+  const panel = page.getByTestId('role-permissions');
+  await panel.getByRole('button', { name: '字段权限', exact: true }).last().click();
+  await expect(panel.getByRole('button', { name: '仅允许所选字段' })).toBeVisible();
   await expect(page.locator('.n-spin-body')).toHaveCount(0);
   await expect(page.getByText('fieldPolicy.system.user', { exact: true })).toHaveCount(0);
   for (const object of ['字典类型', '字典项', '数据范围演示', '用户']) {
-    await page.locator('.n-drawer .n-select').first().click();
+    await panel.locator('.n-select').first().click();
     await page.locator('.n-base-select-option').filter({ hasText: object }).click();
     await expect(page.locator('.n-spin-body')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: '默认推荐配置', exact: true })).toBeEnabled();
+    if (object !== '用户') await expect(panel.getByRole('button', { name: '默认推荐配置', exact: true })).toBeEnabled();
     await expect(page.getByText(/fieldPolicy\./)).toHaveCount(0);
     if (object !== '用户') {
       await page.screenshot({
@@ -34,11 +36,17 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
     }
   }
   await page.screenshot({ path: testInfo.outputPath('drawer-desktop.png'), fullPage: true, animations: 'disabled' });
+  if (!(await panel.getByRole('button', { name: '仅允许所选字段' }).isVisible()))
+    await panel.getByRole('button', { name: '字段权限', exact: true }).last().click();
+  await panel.getByRole('button', { name: '仅允许所选字段' }).click();
+  await panel.getByRole('button', { name: '从空白选择' }).click();
+  await panel.getByRole('checkbox', { name: '手机号', exact: true }).check();
+  await panel.getByText('其他字段用途', { exact: true }).click();
   await page.getByRole('button', { name: '默认推荐配置', exact: true }).click();
   await page.getByRole('button', { name: '全部拒绝', exact: true }).click();
   await page.getByRole('button', { name: '确认', exact: true }).click();
   await expect(page.locator('.n-dialog')).toHaveCount(0);
-  await page.keyboard.press('Escape');
+  await panel.getByRole('button', { name: '返回角色管理' }).click();
   await expect(page.locator('.n-dialog')).toBeVisible();
   await page.getByRole('button', { name: '取消', exact: true }).click();
   await page.getByRole('button', { name: '撤回上次草稿修改', exact: true }).click();
@@ -58,11 +66,7 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
   expect(saved.status()).toBe(200);
   const submitted = saved.request().postDataJSON();
   expect(typeof submitted.expectedVersion).toBe('string');
-  expect(
-    submitted.rules.some(
-      (rule: { fieldId: string; level: string }) => rule.fieldId === 'user_phone' && rule.level === 'masked'
-    )
-  ).toBe(true);
+  expect(submitted.listPolicy).toMatchObject({ mode: 'allow_selected', read: ['user_phone'], query: [] });
   expect((await saved.json()).data.activeManifestDigest).toBeNull();
   await expect(page.getByText('候选已保存，当前生效策略未改变。')).toBeVisible();
   await page.getByRole('button', { name: '预览租户清单', exact: true }).click();
@@ -79,6 +83,8 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
   await expect(page.locator('.n-dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '激活策略', exact: true })).toBeDisabled();
   await page.setViewportSize({ width: 390, height: 844 });
+  if (!(await panel.getByRole('button', { name: '默认推荐配置', exact: true }).isVisible()))
+    await panel.getByText('其他字段用途', { exact: true }).click();
   await page.getByRole('button', { name: '默认推荐配置', exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath('drawer-mobile.png'), fullPage: true, animations: 'disabled' });
   const buttons = await Promise.all(
@@ -86,7 +92,7 @@ test('real stopped installation: credentials, role drawer, candidate, manifest a
   );
   expect(buttons.every(Boolean)).toBe(true);
   expect(Math.max(...buttons.map(box => box!.y)) - Math.min(...buttons.map(box => box!.y))).toBeLessThan(4);
-  await page.keyboard.press('Escape');
+  await panel.getByRole('button', { name: '返回角色管理' }).click();
   await page.getByRole('button', { name: '退出准备会话', exact: true }).click();
   await expect(page.getByPlaceholder('请输入用户名', { exact: true })).toBeVisible();
   const stored = await page.evaluate(() =>
