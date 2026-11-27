@@ -2,7 +2,7 @@ import { computed, onScopeDispose, shallowRef, watch } from 'vue';
 import type { Ref } from 'vue';
 import { FieldPolicyError } from '@/service/api/field-policy-contract';
 import type { FieldPolicyRepository } from '@/service/api/field-policy-contract';
-import { fingerprint } from './field-policy-rules';
+import { fingerprint, ruleKey } from './field-policy-rules';
 
 export function useFieldPolicy(options: {
   roleId: Ref<string>;
@@ -15,6 +15,7 @@ export function useFieldPolicy(options: {
   const manifest = shallowRef<Api.FieldManagement.Manifest | null>(null);
   const objectId = shallowRef('');
   const rules = shallowRef<Api.FieldManagement.Rule[]>([]);
+  const listPolicy = shallowRef<Api.FieldManagement.ListPolicy | null>(null);
   const reason = shallowRef('');
   const busy = shallowRef(false);
   const reloadRequired = shallowRef(false);
@@ -29,7 +30,11 @@ export function useFieldPolicy(options: {
   let readyTimer: ReturnType<typeof setTimeout> | undefined;
   const readyExpired = shallowRef(true);
   const dirty = computed(() =>
-    Boolean(document.value && fingerprint(rules.value) !== fingerprint(document.value.rules))
+    Boolean(
+      document.value &&
+      (fingerprint(rules.value) !== fingerprint(document.value.rules) ||
+        JSON.stringify(listPolicy.value) !== JSON.stringify(document.value.listPolicy ?? null))
+    )
   );
   const editable = computed(() =>
     Boolean(
@@ -80,6 +85,7 @@ export function useFieldPolicy(options: {
     catalog.value = null;
     manifest.value = null;
     rules.value = [];
+    listPolicy.value = null;
     reason.value = '';
     history.value = [];
     reloadRequired.value = false;
@@ -105,7 +111,7 @@ export function useFieldPolicy(options: {
     else reloadRequired.value = true;
   }
 
-  async function load(selected = objectId.value) {
+  async function load(selected = objectId.value || 'system.user') {
     if (!options.roleId.value || !options.identity.value || unknownRequest.value) return;
     reset();
     const current = generation;
@@ -148,6 +154,7 @@ export function useFieldPolicy(options: {
       catalog.value = { ...page, objects };
       document.value = value;
       rules.value = structuredClone(value.rules);
+      listPolicy.value = structuredClone(value.listPolicy ?? null);
       manifest.value = state;
       const remaining = state.readyUntil ? Date.parse(state.readyUntil) - Date.now() : 0;
       readyExpired.value = !Number.isFinite(remaining) || remaining <= 0;
@@ -160,6 +167,17 @@ export function useFieldPolicy(options: {
     } finally {
       if (current === generation) busy.value = false;
     }
+  }
+
+  function setListPolicy(value: Api.FieldManagement.ListPolicy) {
+    if (!editable.value || objectId.value !== 'system.user') return;
+    if (!listPolicy.value) {
+      const owned = new Set(document.value?.listAccesses?.map(ruleKey));
+      rules.value = rules.value.filter(rule => !owned.has(ruleKey(rule)));
+      history.value = [];
+    }
+    listPolicy.value = structuredClone(value);
+    clearPreview();
   }
 
   function setRules(value: Api.FieldManagement.Rule[]) {
@@ -180,7 +198,8 @@ export function useFieldPolicy(options: {
       catalogDigest: value.catalogDigest,
       expectedVersion: value.headVersion,
       expectedBindingVersion: value.bindingVersion,
-      rules: rules.value
+      rules: rules.value,
+      ...(listPolicy.value ? { listPolicy: listPolicy.value } : {})
     };
   }
   async function preview() {
@@ -339,6 +358,8 @@ export function useFieldPolicy(options: {
     reset,
     load,
     setRules,
+    listPolicy,
+    setListPolicy,
     undo,
     preview,
     publish,

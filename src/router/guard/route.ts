@@ -4,6 +4,8 @@ import { useAuthStore } from '@/store/modules/auth';
 import { useRouteStore } from '@/store/modules/route';
 import { localStg } from '@/utils/storage';
 import { getRouteName } from '@/router/elegant/transform';
+import { isMaintenanceConsole } from '@/utils/maintenance-console';
+import { useFieldMaintenance } from '@/store/modules/field-maintenance';
 
 /**
  * create route guard
@@ -12,6 +14,15 @@ import { getRouteName } from '@/router/elegant/transform';
  */
 export function createRouteGuard(router: Router) {
   router.beforeEach(async (to, from) => {
+    if (isMaintenanceConsole()) {
+      const routes = useRouteStore();
+      if (!routes.isInitConstantRoute) {
+        routes.initMaintenanceRoutes();
+        return { path: to.path, replace: true };
+      }
+      const target = useFieldMaintenance().identity ? 'system_role' : 'login';
+      return to.name === target && !to.params.module ? true : { name: target, replace: true };
+    }
     // Compatibility link uses the normal login and role-protected Agent page.
     if (to.name === 'platform') return { path: '/ai/agent', replace: true };
     const location = await initRoute(to);

@@ -6,8 +6,7 @@ import {
   NDescriptions,
   NDescriptionsItem,
   NDivider,
-  NDrawer,
-  NDrawerContent,
+  NCard,
   NEmpty,
   NFormItem,
   NInput,
@@ -21,9 +20,10 @@ import {
 } from 'naive-ui';
 import type { FieldPolicyRepository } from '@/service/api/field-policy-contract';
 import { useFieldPolicy } from '@/hooks/business/field-policy-management';
-import { recommendRules } from '@/hooks/business/field-policy-rules';
+import { recommendRules, ruleKey } from '@/hooks/business/field-policy-rules';
 import { roleDataScopeRecord } from '@/constants/business';
 import { $t } from '@/locales';
+import UserListPermissions from './user-list-permissions.vue';
 import FieldPolicyRules from './field-policy-rules.vue';
 import FieldPolicyPreview from './field-policy-preview.vue';
 
@@ -63,12 +63,38 @@ const {
   canActivate
 } = model;
 const label = (key: string) => $t(`fieldPolicy.${key.replaceAll('.', '_')}`);
+const canGiveReason = computed(() => {
+  const caps = document.value?.capabilities;
+  return !busy.value && !reloadRequired.value && !unknownRequest.value && (caps?.edit || caps?.freeze);
+});
 const roleTitle = computed(
-  () => document.value?.role.roleName ?? $t('fieldPolicy.roleAnchorValue', { id: document.value?.role.roleId ?? '' })
+  () =>
+    document.value?.role.roleName ??
+    $t('fieldPolicy.roleAnchorValue', {
+      id: document.value?.role.roleId ?? ''
+    })
 );
 const object = computed(() => catalog.value?.objects.find(o => o.objectId === objectId.value));
+const advancedObject = computed(() => {
+  const current = object.value;
+  if (!current || !model.listPolicy.value) return current;
+  const owned = new Set(document.value?.listAccesses?.map(ruleKey));
+  return {
+    ...current,
+    fields: current.fields
+      .map(field => ({
+        ...field,
+        choices: field.choices.filter(choice => !owned.has(ruleKey({ fieldId: field.fieldId, access: choice.access })))
+      }))
+      .filter(field => field.choices.length)
+  };
+});
 const objectOptions = computed(
-  () => catalog.value?.objects.map(o => ({ value: o.objectId, label: label(o.objectId) })) ?? []
+  () =>
+    catalog.value?.objects.map(o => ({
+      value: o.objectId,
+      label: label(o.objectId)
+    })) ?? []
 );
 const scopeLabel = computed(() => {
   const scope = document.value?.role.dataScope as Api.SystemManage.Role['dataScope'] | undefined;
@@ -118,10 +144,7 @@ function selectObject(value: string) {
     });
 }
 function navigate(target: 'menu' | 'edit') {
-  leaving(() => {
-    visible.value = false;
-    emit('navigate', target);
-  });
+  if (!busy.value && !unknownRequest.value) emit('navigate', target);
 }
 function beforeUnload(event: BeforeUnloadEvent) {
   if (visible.value && (dirty.value || unknownRequest.value || busy.value)) {
@@ -139,7 +162,9 @@ function confirmManifest() {
   const preview = manifestPreview.value;
   dialog.warning({
     title: label('sealManifest'),
-    content: $t('fieldPolicy.tenantManifestHint', { count: manifestPreview.value?.items.length ?? 0 }),
+    content: $t('fieldPolicy.tenantManifestHint', {
+      count: manifestPreview.value?.items.length ?? 0
+    }),
     positiveText: $t('common.confirm'),
     negativeText: $t('common.cancel'),
     onPositiveClick: async () => {
@@ -184,76 +209,99 @@ function confirmActivation(operation: 'ready' | 'activate') {
 </script>
 
 <template>
-  <NDrawer
-    :show="visible"
-    width="min(880px, 100vw)"
-    @update:show="
-      open => {
-        if (!open) close();
-      }
-    "
+  <NCard
+    v-if="visible"
+    data-testid="role-permissions"
+    :title="label('rolePermissions') + ' · ' + roleTitle"
+    size="small"
+    class="overflow-auto"
   >
-    <NDrawerContent :title="label('title') + ' · ' + roleTitle" closable :native-scrollbar="false">
-      <NSpin :show="busy">
-        <NSpace align="center" justify="space-between" class="mb-16px">
-          <NSpace>
-            <NTag size="small" type="warning">{{ label('candidateStatus') }}</NTag>
-            <NText>{{ label('version') }} {{ document?.bindingVersion ?? '—' }}</NText>
-            <NTag v-if="dirty" size="small">{{ label('draft') }}</NTag>
-          </NSpace>
-          <NButton size="small" :disabled="busy || !!unknownRequest" @click="leaving(() => model.load())">
-            {{ label('reload') }}
-          </NButton>
+    <template #header-extra>
+      <NButton size="small" @click="close">{{ label('returnToRoles') }}</NButton>
+    </template>
+    <NSpin :show="busy">
+      <NSpace align="center" justify="space-between" class="mb-16px">
+        <NSpace>
+          <NTag size="small" type="warning">{{ label('candidateStatus') }}</NTag>
+          <NText>{{ label('version') }} {{ document?.bindingVersion ?? '—' }}</NText>
+          <NTag v-if="dirty" size="small">{{ label('draft') }}</NTag>
         </NSpace>
-        <NAlert v-if="reloadRequired" type="warning" class="mb-16px">{{ label('reloadRequired') }}</NAlert>
-        <NAlert v-if="unknownRequest" type="warning" class="mb-16px">
-          {{ label('unknownHint') }}
-          <p class="break-all">{{ unknownRequest }}</p>
-          <NButton :disabled="busy" @click="model.checkReceipt">{{ label('checkReceipt') }}</NButton>
-        </NAlert>
-        <template v-if="document && object">
-          <NAlert v-if="!document.capabilities.edit" type="info" class="mb-16px">{{ label('readOnly') }}</NAlert>
-          <NDescriptions :column="2" size="small" class="mb-12px">
-            <NDescriptionsItem :label="$t('page.system.role.roleName')">
-              {{ roleTitle }}
-              <span v-if="document.role.roleCode">({{ document.role.roleCode }})</span>
-            </NDescriptionsItem>
-            <NDescriptionsItem :label="label('tenant')">{{ document.tenantId }}</NDescriptionsItem>
-            <NDescriptionsItem :label="$t('page.system.role.dataScope.label')">
-              {{ scopeLabel }}
-              <NButton v-if="canEditRole" text size="small" type="primary" @click="navigate('edit')">
-                {{ $t('common.edit') }}
-              </NButton>
-            </NDescriptionsItem>
-          </NDescriptions>
-          <p class="mb-16px">
-            <NText depth="3">{{ label('menuRelationship') }}</NText>
-            <NButton v-if="canMenu" text type="primary" size="small" @click="navigate('menu')">
-              {{ $t('page.system.role.menuAuth') }}
+        <NButton size="small" :disabled="busy || !!unknownRequest" @click="leaving(() => model.load())">
+          {{ label('reload') }}
+        </NButton>
+      </NSpace>
+      <NAlert v-if="reloadRequired" type="warning" class="mb-16px">{{ label('reloadRequired') }}</NAlert>
+      <NAlert v-if="unknownRequest" type="warning" class="mb-16px">
+        {{ label('unknownHint') }}
+        <p class="break-all">{{ unknownRequest }}</p>
+        <NButton :disabled="busy" @click="model.checkReceipt">{{ label('checkReceipt') }}</NButton>
+      </NAlert>
+      <template v-if="document && object">
+        <NAlert v-if="!document.capabilities.edit" type="info" class="mb-16px">{{ label('readOnly') }}</NAlert>
+        <NDescriptions :column="2" size="small" class="mb-12px">
+          <NDescriptionsItem :label="$t('page.system.role.roleName')">
+            {{ roleTitle }}
+            <span v-if="document.role.roleCode">({{ document.role.roleCode }})</span>
+          </NDescriptionsItem>
+          <NDescriptionsItem :label="label('tenant')">{{ document.tenantId }}</NDescriptionsItem>
+          <NDescriptionsItem :label="$t('page.system.role.dataScope.label')">
+            {{ scopeLabel }}
+            <NButton v-if="canEditRole" text size="small" type="primary" @click="navigate('edit')">
+              {{ $t('common.edit') }}
             </NButton>
-          </p>
-          <NFormItem :label="label('object')">
-            <NSelect
-              :value="objectId"
-              :options="objectOptions"
-              :disabled="busy || !!unknownRequest"
-              @update:value="selectObject"
-            />
-          </NFormItem>
-          <NAlert type="info" class="mb-12px">{{ label('candidate') }}</NAlert>
+          </NDescriptionsItem>
+        </NDescriptions>
+        <p class="mb-16px">
+          <NText depth="3">{{ label('menuRelationship') }}</NText>
+          <NButton v-if="canMenu && !document.listFields" text type="primary" size="small" @click="navigate('menu')">
+            {{ $t('page.system.role.menuAuth') }}
+          </NButton>
+        </p>
+        <NFormItem :label="label('object')">
+          <NSelect
+            :value="objectId"
+            :options="objectOptions"
+            :disabled="busy || !!unknownRequest"
+            @update:value="selectObject"
+          />
+        </NFormItem>
+        <NAlert type="info" class="mb-12px">{{ label('candidate') }}</NAlert>
+        <UserListPermissions
+          v-if="document.listFields"
+          :document="document"
+          :policy="model.listPolicy.value"
+          :disabled="!editable"
+          :can-menu="!!canMenu"
+          @change="model.setListPolicy"
+          @menu="navigate('menu')"
+        />
+        <NButton
+          v-if="model.listPolicy.value"
+          size="small"
+          :disabled="busy || reloadRequired || !!unknownRequest"
+          @click="model.preview"
+        >
+          {{ label('preview') }}
+        </NButton>
+        <component :is="model.listPolicy.value ? 'details' : 'section'" v-if="advancedObject" class="my-3">
+          <summary v-if="model.listPolicy.value">{{ label('otherUses') }}</summary>
           <FieldPolicyRules
-            :object="object"
+            :object="advancedObject"
             :rules="rules"
             :disabled="!editable"
             :complete="!!catalog?.complete"
             @change="model.setRules"
           >
             <template #recommend>
-              <NButton size="small" :disabled="!editable" @click="model.setRules(recommendRules(rules, object.fields))">
+              <NButton
+                size="small"
+                :disabled="!editable"
+                @click="model.setRules(recommendRules(rules, advancedObject!.fields))"
+              >
                 {{ label('recommend') }}
               </NButton>
             </template>
-            <template #preview>
+            <template v-if="!model.listPolicy.value" #preview>
               <NButton size="small" :disabled="busy || reloadRequired || !!unknownRequest" @click="model.preview">
                 {{ label('preview') }}
               </NButton>
@@ -262,54 +310,54 @@ function confirmActivation(operation: 'ready' | 'activate') {
           <NButton text size="small" :disabled="!editable || !history.length" class="mt-8px" @click="model.undo">
             {{ label('undo') }}
           </NButton>
-          <FieldPolicyPreview v-if="previewResult" :preview="previewResult" />
-          <NFormItem :label="label('reason')" class="mt-16px">
-            <NInput
-              v-model:value="reason"
-              type="textarea"
-              :maxlength="500"
-              :input-props="{ 'aria-label': label('reason') }"
-              :disabled="
-                busy ||
-                reloadRequired ||
-                !!unknownRequest ||
-                !(document.capabilities.edit || document.capabilities.freeze)
-              "
-            />
-          </NFormItem>
-          <NButton type="primary" :disabled="!canPublish" @click="save">{{ label('saveCandidate') }}</NButton>
-          <NDivider />
-          <p class="mb-12px font-semibold">{{ label('tenantManifest') }}</p>
-          <NAlert v-if="manifest?.activationBlockers.includes('QUALIFICATION_REQUIRED')" type="warning" class="mb-12px">
-            {{ label('qualificationRequired') }}
-          </NAlert>
-          <p class="mb-12px break-all">
-            {{ label('candidateDigest') }}: {{ manifest?.candidateManifestDigest ?? '—' }}
-          </p>
-          <NSpace>
-            <NButton :disabled="!editable || dirty" @click="model.reviewManifest">
-              {{ label('previewManifest') }}
-            </NButton>
-            <NButton :disabled="!editable || dirty || !manifestPreview || !reason.trim()" @click="confirmManifest">
-              {{ label('sealManifest') }}
-            </NButton>
-            <NButton :disabled="!canReady" @click="confirmActivation('ready')">{{ label('ready') }}</NButton>
-            <NButton :disabled="!canActivate" @click="confirmActivation('activate')">{{ label('activate') }}</NButton>
-            <NButton
-              v-if="manifest?.activeManifestDigest"
-              type="warning"
-              :disabled="busy || reloadRequired || !!unknownRequest || !document.capabilities.freeze || !reason.trim()"
-              @click="confirmFreeze"
-            >
-              {{ label('freeze') }}
-            </NButton>
-          </NSpace>
-          <p v-if="manifestPreview" class="mt-12px">
-            {{ $t('fieldPolicy.tenantManifestHint', { count: manifestPreview.items.length }) }}
-          </p>
-        </template>
-        <NEmpty v-else-if="!busy" :description="label('loadingFailed')" />
-      </NSpin>
-    </NDrawerContent>
-  </NDrawer>
+        </component>
+        <FieldPolicyPreview v-if="previewResult" :preview="previewResult" />
+        <NFormItem :label="label('reason')" class="mt-16px">
+          <NInput
+            v-model:value="reason"
+            type="textarea"
+            :maxlength="500"
+            :input-props="{ 'aria-label': label('reason') }"
+            :disabled="!canGiveReason"
+          />
+        </NFormItem>
+        <NButton type="primary" :disabled="!canPublish" @click="save">{{ label('saveCandidate') }}</NButton>
+        <NDivider />
+        <p class="mb-12px font-semibold">{{ label('tenantManifest') }}</p>
+        <NAlert v-if="manifest?.activationBlockers.includes('QUALIFICATION_REQUIRED')" type="warning" class="mb-12px">
+          {{ label('qualificationRequired') }}
+        </NAlert>
+        <p class="mb-12px break-all">
+          {{ label('candidateDigest') }}:
+          {{ manifest?.candidateManifestDigest ?? '—' }}
+        </p>
+        <NSpace>
+          <NButton :disabled="!editable || dirty" @click="model.reviewManifest">
+            {{ label('previewManifest') }}
+          </NButton>
+          <NButton :disabled="!editable || dirty || !manifestPreview || !reason.trim()" @click="confirmManifest">
+            {{ label('sealManifest') }}
+          </NButton>
+          <NButton :disabled="!canReady" @click="confirmActivation('ready')">{{ label('ready') }}</NButton>
+          <NButton :disabled="!canActivate" @click="confirmActivation('activate')">{{ label('activate') }}</NButton>
+          <NButton
+            v-if="manifest?.activeManifestDigest"
+            type="warning"
+            :disabled="busy || reloadRequired || !!unknownRequest || !document.capabilities.freeze || !reason.trim()"
+            @click="confirmFreeze"
+          >
+            {{ label('freeze') }}
+          </NButton>
+        </NSpace>
+        <p v-if="manifestPreview" class="mt-12px">
+          {{
+            $t('fieldPolicy.tenantManifestHint', {
+              count: manifestPreview.items.length
+            })
+          }}
+        </p>
+      </template>
+      <NEmpty v-else-if="!busy" :description="label('loadingFailed')" />
+    </NSpin>
+  </NCard>
 </template>

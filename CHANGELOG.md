@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### System-wide Field Policy Interaction
 
+- Keep the same login address and role drawer throughout installation, upgrade and normal operation. Maintenance uses a short-lived in-memory identity and the verified standard Web build.
+
 - Add field permission management to the existing role actions beside menu permissions, using the shared business-object catalog. Provide the recommended configuration, allow-all and deny-all controls alongside separate reading, creating, updating, querying, importing and exporting purposes; functional button permissions remain separate requirements.
 - Manage candidates, validation, revision conflicts, complete tenant manifests, explicit activation and freezing through the real management API and controlled preparation identity handoff. Saving a candidate does not activate it; ungranted fields are denied after enforcement, and platform-fixed restrictions remain controlled by the server.
 - Render lists, filters, forms, trees, selectors and sparse update payloads for users, ordinary and relationship objects, configuration, settings and tasks from the server's capabilities. Hidden and write-only fields are not reconstructed from stale client state; authorization changes require current server decisions.

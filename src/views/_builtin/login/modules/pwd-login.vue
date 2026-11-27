@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, reactive, shallowRef } from 'vue';
+import { useRouter } from 'vue-router';
+import { isMaintenanceConsole } from '@/utils/maintenance-console';
+import { useFieldMaintenance } from '@/store/modules/field-maintenance';
 import { useAuthStore } from '@/store/modules/auth';
 import { useRouterPush } from '@/hooks/common/router';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
@@ -13,6 +16,9 @@ defineOptions({
 });
 
 const authStore = useAuthStore();
+const router = useRouter();
+const session = isMaintenanceConsole() ? useFieldMaintenance() : undefined;
+const pending = shallowRef(false);
 const { toggleLoginModule } = useRouterPush();
 const { formRef, validate } = useNaiveForm();
 
@@ -37,7 +43,21 @@ const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
 });
 
 async function handleSubmit() {
+  if (pending.value) return;
   await validate();
+  if (session) {
+    pending.value = true;
+    try {
+      await session.login(model.userName, model.password, props.tenantCode);
+      await router.replace({ name: 'system_role' });
+    } catch {
+      window.$message?.error($t('fieldPolicy.loginFailed'));
+    } finally {
+      model.password = '';
+      pending.value = false;
+    }
+    return;
+  }
   await authStore.login(model.userName, model.password, true, props.tenantCode);
 }
 </script>
@@ -55,7 +75,7 @@ async function handleSubmit() {
         :placeholder="$t('page.login.common.passwordPlaceholder')"
       />
     </NFormItem>
-    <NButton type="primary" size="large" round block :loading="authStore.loginLoading" @click="handleSubmit">
+    <NButton type="primary" size="large" round block :loading="pending || authStore.loginLoading" @click="handleSubmit">
       {{ $t('common.confirm') }}
     </NButton>
     <AccountLinks

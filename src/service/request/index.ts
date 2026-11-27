@@ -1,4 +1,6 @@
 import type { AxiosResponse } from 'axios';
+import { CanceledError } from 'axios';
+import { isMaintenanceConsole } from '@/utils/maintenance-console';
 import { BACKEND_ERROR_CODE, createFlatRequest, createRequest } from '@sa/axios';
 import { useAuthStore } from '@/store/modules/auth';
 import { localStg } from '@/utils/storage';
@@ -41,6 +43,7 @@ export const request = createFlatRequest(
       return response.data.data;
     },
     async onRequest(config) {
+      if (isMaintenanceConsole()) throw new CanceledError('Business admission is closed');
       assertRequestSession(config);
       const Authorization = getAuthorization();
       Object.assign(config.headers, { Authorization });
@@ -211,6 +214,7 @@ export const demoRequest = createRequest(
       return response.data.result;
     },
     async onRequest(config) {
+      if (isMaintenanceConsole()) throw new CanceledError('Business admission is closed');
       assertRequestSession(config);
       const { headers } = config;
 

@@ -9,7 +9,11 @@ declare namespace Api {
       maskId: string | null;
     };
     type ChoiceValue = 'unset' | 'deny' | 'allow' | 'plain' | 'masked';
-    type Choice = { access: Access; values: ChoiceValue[]; safeRecommendation: boolean };
+    type Choice = {
+      access: Access;
+      values: ChoiceValue[];
+      safeRecommendation: boolean;
+    };
     type Field = {
       fieldId: string;
       valueType: string;
@@ -20,8 +24,18 @@ declare namespace Api {
       sources: { objectId: string; fieldId: string }[];
       choices: Choice[];
     };
-    type Object = { objectId: string; domainKind: string; scopeAdapter: string; fields: Field[] };
-    type Capabilities = { view: boolean; edit: boolean; activate: boolean; freeze: boolean };
+    type Object = {
+      objectId: string;
+      domainKind: string;
+      scopeAdapter: string;
+      fields: Field[];
+    };
+    type Capabilities = {
+      view: boolean;
+      edit: boolean;
+      activate: boolean;
+      freeze: boolean;
+    };
     type Context = {
       catalogDigest: string;
       headVersion: string;
@@ -37,15 +51,39 @@ declare namespace Api {
       actionCatalogDigest: string;
       complete: boolean;
     };
-    type Role = { roleId: string; roleName?: string; roleCode?: string; dataScope?: string; status?: string };
+    type Role = {
+      roleId: string;
+      roleName?: string;
+      roleCode?: string;
+      dataScope?: string;
+      status?: string;
+    };
+    type FieldSelections = { read: string[]; query: string[] };
+    type ListPolicy = FieldSelections & {
+      mode: 'restrict_selected' | 'allow_selected';
+      sensitive?: FieldSelections;
+    };
     type Document = Context & {
+      listPolicy?: ListPolicy | null;
+      listFields?: FieldSelections;
+      copyFields?: FieldSelections | null;
+      listMenuIds?: string[];
+      listAccesses?: Pick<Rule, 'fieldId' | 'access'>[];
+      sensitiveFields?: string[];
+      listActionGranted?: boolean;
+      listRemainder?: Rule[];
       role: Role;
       objectId: string;
       bindingVersion: string;
       revisionId: string | null;
       rules: Rule[];
     };
-    type ManifestItem = { roleId: string; objectId: string; revisionId: string; rulesDigest: string };
+    type ManifestItem = {
+      roleId: string;
+      objectId: string;
+      revisionId: string;
+      rulesDigest: string;
+    };
     type Manifest = Context & {
       candidateManifestId: string | null;
       readyUntil: string | null;
@@ -56,7 +94,13 @@ declare namespace Api {
       activationBlockers: string[];
       rolloutState: string;
     };
-    type Draft = { catalogDigest: string; expectedVersion: string; expectedBindingVersion: string; rules: Rule[] };
+    type Draft = {
+      catalogDigest: string;
+      expectedVersion: string;
+      expectedBindingVersion: string;
+      rules: Rule[];
+      listPolicy?: ListPolicy;
+    };
     type ManifestDraft = { catalogDigest: string; expectedVersion: string };
     type Activation = ManifestDraft & {
       expectedEpoch: string;
@@ -64,12 +108,22 @@ declare namespace Api {
       requestId: string;
       reason: string;
     };
-    type Mutation = { previewDigest: string; reason: string; requestId: string };
+    type Mutation = {
+      previewDigest: string;
+      reason: string;
+      requestId: string;
+    };
     type Preview = Context & {
       previewDigest: string;
       expiresAt: string;
-      diff: { fieldId: string; access: Access; before: Rule | null; after: Rule | null }[];
+      diff: {
+        fieldId: string;
+        access: Access;
+        before: Rule | null;
+        after: Rule | null;
+      }[];
       changeCount: number;
+      listMode?: ListPolicy['mode'];
       sampleTruncated: boolean;
       safeSamples: never[];
       items: ManifestItem[];

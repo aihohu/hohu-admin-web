@@ -1,7 +1,7 @@
 <script setup lang="tsx">
 import { localizedText } from '@/locales';
-import { computed, nextTick, onMounted, reactive, shallowRef } from 'vue';
-import { onBeforeRouteLeave, useRoute } from 'vue-router';
+import { computed, nextTick, onMounted, reactive, shallowRef, watch } from 'vue';
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { NAlert, NButton, NPopconfirm, NTag } from 'naive-ui';
 import { useBoolean } from '@sa/hooks';
 import { enableStatusRecord, roleDataScopeRecord } from '@/constants/business';
@@ -11,10 +11,12 @@ import { useAppStore } from '@/store/modules/app';
 import { useAuthStore } from '@/store/modules/auth';
 import { fieldPolicyRepository } from '@/service/api/field-policy';
 import { useAuth } from '@/hooks/business/auth';
-import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
+import { useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { $t } from '@/locales';
 import { fieldAllowed } from '@/hooks/business/ordinary-fields';
-import { useRolePolicyRepair } from '@/hooks/business/role-policy-repair';
+import { loadRolePolicyAnchors, useRolePolicyRepair } from '@/hooks/business/role-policy-repair';
+import { isMaintenanceConsole } from '@/utils/maintenance-console';
+import { useFieldMaintenance } from '@/store/modules/field-maintenance';
 import RoleOperateDrawer from './modules/role-operate-drawer.vue';
 import RoleSearch from './modules/role-search.vue';
 import MenuAuthModal from './modules/menu-auth-modal.vue';
@@ -24,9 +26,13 @@ import FieldPolicyDrawer from './modules/field-policy-drawer.vue';
 const fieldPolicy = shallowRef<Api.SystemManage.OrdinaryCapabilities>();
 const appStore = useAppStore();
 const authStore = useAuthStore();
-const fieldPolicyIdentity = computed(() => authStore.userInfo.userId + ':' + authStore.token);
+const maintenance = isMaintenanceConsole() ? useFieldMaintenance() : undefined;
+const repository = maintenance?.repository ?? fieldPolicyRepository;
+const fieldPolicyIdentity = computed(() => maintenance ? maintenance.identity : authStore.userInfo.userId + ':' + authStore.token);
 const { hasAuth, hasSuperAdminAuth } = useAuth();
 const route = useRoute();
+const canConfigureFields = computed(() => maintenance ? Boolean(maintenance.identity) : hasSuperAdminAuth('system:role:field-policy-view'));
+const selectedDelegable = shallowRef(false);
 const { bool: menuAuthVisible, setTrue: openMenuAuthModal } = useBoolean();
 const { bool: aiAgentAuthVisible, setTrue: openAiAgentAuthModal } = useBoolean();
 
@@ -36,7 +42,32 @@ const editingRole = shallowRef<Api.SystemManage.Role | null>(null);
 const fieldPolicyRoleId = shallowRef('');
 const fieldPolicyVisible = shallowRef(false);
 const fieldPolicyDrawer = shallowRef<InstanceType<typeof FieldPolicyDrawer> | null>(null);
-onBeforeRouteLeave(() => fieldPolicyVisible.value ? (fieldPolicyDrawer.value?.confirmLeave() ?? false) : true);
+onBeforeRouteLeave(() => fieldPolicyVisible.value && (!maintenance || maintenance.identity) ? (fieldPolicyDrawer.value?.confirmLeave() ?? false) : true);
+if (maintenance) {
+  const router = useRouter();
+  watch(() => maintenance.identity, identity => {
+    if (!identity) {
+      fieldPolicyVisible.value = false;
+      void router.replace({ name: 'login' });
+    }
+  }, { flush: 'sync' });
+}
+function finishMaintenance() {
+  window.$dialog?.warning({
+    title: $t('fieldPolicy.prepareFinish'),
+    content: $t('fieldPolicy.prepareFinishHint'),
+    positiveText: $t('common.confirm'),
+    negativeText: $t('common.cancel'),
+    onPositiveClick: async () => {
+      try {
+        await maintenance?.finish();
+      } catch {
+        window.$message?.error($t('fieldPolicy.prepareUnavailable'));
+        return false;
+      }
+    }
+  });
+}
 
 const searchParams: Api.SystemManage.RoleSearchParams = reactive({
   current: 1,
@@ -48,12 +79,32 @@ const searchParams: Api.SystemManage.RoleSearchParams = reactive({
 });
 
 const roleRepair = useRolePolicyRepair({ identity: fieldPolicyIdentity, params: searchParams, repository: fieldPolicyRepository, fetchRoles: () => fetchGetRoleList(searchParams), canRepair: () => hasSuperAdminAuth('system:role:field-policy-view') });
-const { repairMode } = roleRepair;
+const repairMode = computed(() => Boolean(maintenance) || roleRepair.repairMode.value);
+async function maintenanceRoles(): Promise<Api.SystemManage.RoleList | null> {
+  const identity = maintenance?.identity;
+  if (!identity) return null;
+  try {
+    const records = await loadRolePolicyAnchors(repository, undefined, true);
+    if (identity !== maintenance?.identity) return null;
+    const current = searchParams.current ?? 1;
+    const size = searchParams.size ?? 10;
+    return {
+      records: records.slice((current - 1) * size, current * size),
+      total: records.length,
+      current,
+      size,
+      fieldPolicy: { read: [], query: [], create: [], update: [], canCreate: false }
+    };
+  } catch {
+    if (identity === maintenance?.identity) window.$message?.error($t('fieldPolicy.prepareUnavailable'));
+    return null;
+  }
+}
 const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useNaivePaginatedTable({
-  api: roleRepair.load,
-  transform: response => {
-    fieldPolicy.value = response.error ? undefined : response.data.fieldPolicy;
-    return defaultTransform(response);
+  api: async () => maintenance ? { data: await maintenanceRoles() } : roleRepair.load(),
+  transform: ({ data: page }) => {
+    fieldPolicy.value = page?.fieldPolicy;
+    return { data: page?.records ?? [], total: page?.total ?? 0, pageNum: page?.current ?? 1, pageSize: page?.size ?? 10 };
   },
   onPaginationParamsChange: params => {
     searchParams.current = params.page;
@@ -123,14 +174,14 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       minWidth: 360,
       render: row => (
         <div class="flex-center flex-nowrap gap-8px whitespace-nowrap">
-          {row.delegable && hasAuth('system:role:menu-auth') && (
+          {!canConfigureFields.value && row.delegable && hasAuth('system:role:menu-auth') && (
             <NButton type="info" ghost size="small" onClick={() => onMenuAuthClick(row.roleId)}>
               {$t('page.system.role.menuAuth')}
             </NButton>
           )}
-          {hasSuperAdminAuth('system:role:field-policy-view') && (
-            <NButton type="info" ghost size="small" onClick={() => { fieldPolicyRoleId.value = row.roleId; fieldPolicyVisible.value = true; }}>
-              {$t('fieldPolicy.title')}
+          {canConfigureFields.value && (
+            <NButton type="info" ghost size="small" onClick={() => { fieldPolicyRoleId.value = row.roleId; selectedDelegable.value = Boolean(row.delegable); fieldPolicyVisible.value = true; }}>
+              {$t('fieldPolicy.rolePermissions')}
             </NButton>
           )}
           {row.delegable && hasAuth('system:role:ai-agent-auth') && (
@@ -169,7 +220,11 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
 
 const visibleColumns = computed<NaiveUI.TableColumn<Api.SystemManage.RoleSummary>[]>(() => repairMode.value ? [
   { key: 'roleId', title: $t('fieldPolicy.roleAnchor'), align: 'center', minWidth: 180 },
-  ...columns.value.filter(column => 'key' in column && column.key === 'operate')
+  ...columns.value.filter(column => {
+    if (!('key' in column)) return false;
+    const key = column.key;
+    return key === 'operate' || (maintenance && (key === 'roleName' || key === 'roleCode') && data.value.some(row => Object.hasOwn(row, key)));
+  })
 ] : columns.value.filter(column => !('key' in column) ||
   ['index', 'operate'].includes(String(column.key)) || fieldAllowed(fieldPolicy.value?.read, String(column.key))));
 
@@ -186,6 +241,7 @@ const {
 
 // Replay cached tool filters when arriving from an AI result card.
 onMounted(async () => {
+  if (maintenance) return;
   const aiQueryId = route.query.ai_query_id;
   if (typeof aiQueryId !== 'string' || !aiQueryId) return;
   const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
@@ -244,10 +300,24 @@ async function onAgentMenuAuthClick(id: string) {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <RoleSearch :model="searchParams" @update:model="Object.assign(searchParams, $event)" @search="getDataByPage" />
-    <NCard :title="$t('page.system.role.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
+    <NAlert v-if="maintenance" type="warning">{{ $t('fieldPolicy.prepareHint') }}</NAlert>
+    <RoleSearch
+      v-else-if="!fieldPolicyVisible"
+      :model="searchParams"
+      @update:model="Object.assign(searchParams, $event)"
+      @search="getDataByPage"
+    />
+    <NCard
+      v-show="!fieldPolicyVisible"
+      :title="$t('page.system.role.title')"
+      :bordered="false"
+      size="small"
+      class="card-wrapper sm:flex-1-hidden"
+    >
       <template #header-extra>
+        <NButton v-if="maintenance" @click="finishMaintenance">{{ $t('fieldPolicy.prepareFinish') }}</NButton>
         <TableHeaderOperation
+          v-else
           v-model:columns="columnChecks"
           :show-add="fieldPolicy?.canCreate === true"
           :disabled-delete="checkedRowKeys.length === 0"
@@ -289,8 +359,8 @@ async function onAgentMenuAuthClick(id: string) {
       v-model:visible="fieldPolicyVisible"
       :role-id="fieldPolicyRoleId"
       :identity="fieldPolicyIdentity"
-      :repository="fieldPolicyRepository"
-      :can-menu="!repairMode && hasAuth('system:role:menu-auth')"
+      :repository="repository"
+      :can-menu="selectedDelegable && !repairMode && hasAuth('system:role:menu-auth')"
       :can-edit-role="!repairMode && hasAuth('system:role:edit')"
       @navigate="
         target => {

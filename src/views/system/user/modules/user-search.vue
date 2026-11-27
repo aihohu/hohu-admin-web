@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, toRaw } from 'vue';
-import { jsonClone } from '@sa/utils';
+import { computed, ref, watch } from 'vue';
+import type { SearchFilter } from './user-search-filters';
 import { enableStatusOptions, userGenderOptions } from '@/constants/business';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { fetchGetAllRoles } from '@/service/api';
@@ -15,6 +15,7 @@ interface Emits {
   (e: 'search'): void;
 }
 
+const props = defineProps<{ filters: SearchFilter[] }>();
 const emit = defineEmits<Emits>();
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
@@ -32,31 +33,31 @@ const rules = computed<Record<RuleKey, App.Global.FormRule>>(() => {
   };
 });
 
-const roles = ref<Api.SystemManage.AllRole[]>([]);
+const roles = ref<Api.SystemManage.AllRole[] | null>(null);
 const roleOptions = computed(() =>
-  roles.value.map(r => ({ label: localizedText(r.roleName, r.i18nKeys?.roleName), value: r.roleCode }))
+  (roles.value ?? []).map(r => ({ label: localizedText(r.roleName, r.i18nKeys?.roleName), value: r.roleCode }))
 );
 
-async function loadRoles() {
-  const { data, error } = await fetchGetAllRoles();
-  if (!error && data) {
-    roles.value = data;
-  }
-}
-
-onMounted(() => {
-  loadRoles();
-});
-
-const defaultModel = jsonClone(toRaw(model.value));
-
-function resetModel() {
-  Object.assign(model.value, defaultModel);
-}
+watch(
+  () => props.filters.includes('roleCode'),
+  async (enabled, _, onCleanup) => {
+    roles.value = null;
+    if (!enabled) return;
+    let current = true;
+    onCleanup(() => {
+      current = false;
+    });
+    const { data, error } = await fetchGetAllRoles();
+    if (!current) return;
+    if (!error && data) roles.value = data;
+    else model.value.roleCode = null;
+  },
+  { immediate: true, flush: 'sync' }
+);
 
 async function reset() {
   await restoreValidation();
-  resetModel();
+  for (const key of props.filters) model.value[key] = null;
 }
 
 async function search() {
@@ -71,22 +72,47 @@ async function search() {
       <NCollapseItem :title="$t('common.search')" name="user-search">
         <NForm ref="formRef" :model="model" :rules="rules" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.user.userName')" path="userName" class="pr-24px">
+            <NFormItemGi
+              v-if="filters.includes('userName')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.user.userName')"
+              path="userName"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.userName" :placeholder="$t('page.system.user.form.userName')" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.user.nickname')" path="nickname" class="pr-24px">
+            <NFormItemGi
+              v-if="filters.includes('nickname')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.user.nickname')"
+              path="nickname"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.nickname" :placeholder="$t('page.system.user.form.nickname')" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.user.userPhone')" path="userPhone" class="pr-24px">
+            <NFormItemGi
+              v-if="filters.includes('userPhone')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.user.userPhone')"
+              path="userPhone"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.userPhone" :placeholder="$t('page.system.user.form.userPhone')" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.user.userEmail')" path="userEmail" class="pr-24px">
+            <NFormItemGi
+              v-if="filters.includes('userEmail')"
+              span="24 s:12 m:6"
+              :label="$t('page.system.user.userEmail')"
+              path="userEmail"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.userEmail" :placeholder="$t('page.system.user.form.userEmail')" />
             </NFormItemGi>
             <NFormItemGi
+              v-if="filters.includes('status')"
               span="24 s:12 m:6"
               :label="$t('page.system.user.userStatus')"
-              path="userStatus"
+              path="status"
               class="pr-24px"
             >
               <NSelect
@@ -97,6 +123,7 @@ async function search() {
               />
             </NFormItemGi>
             <NFormItemGi
+              v-if="filters.includes('userGender')"
               span="24 s:12 m:6"
               :label="$t('page.system.user.userGender')"
               path="userGender"
@@ -109,7 +136,13 @@ async function search() {
                 clearable
               />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.system.user.userRole')" class="pr-24px">
+            <NFormItemGi
+              v-if="filters.includes('roleCode') && roles"
+              span="24 s:12 m:6"
+              :label="$t('page.system.user.userRole')"
+              path="roleCode"
+              class="pr-24px"
+            >
               <NSelect
                 v-model:value="model.roleCode"
                 :placeholder="$t('page.system.user.form.userRole')"
@@ -117,7 +150,7 @@ async function search() {
                 clearable
               />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" class="pr-24px" data-testid="user-search-actions">
+            <NFormItemGi suffix span="24 s:12 m:6" class="pr-24px" data-testid="user-search-actions">
               <NSpace class="w-full" justify="end">
                 <NButton @click="reset">
                   <template #icon>

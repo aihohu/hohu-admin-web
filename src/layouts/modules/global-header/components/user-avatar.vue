@@ -10,12 +10,15 @@ import { useRouterPush } from '@/hooks/common/router';
 import { useSvgIcon } from '@/hooks/common/icon';
 import { $t } from '@/locales';
 import { runtimeSettings } from '@/utils/runtime-settings';
+import { useFieldMaintenance } from '@/store/modules/field-maintenance';
+import { isMaintenanceConsole } from '@/utils/maintenance-console';
 
 defineOptions({
   name: 'UserAvatar'
 });
 
 const authStore = useAuthStore();
+const maintenance = isMaintenanceConsole() ? useFieldMaintenance() : undefined;
 const avatar = computed(() => authStore.userInfo.userAvatar || runtimeSettings.value?.defaultAvatar || '');
 const { routerPushByKey, toLogin } = useRouterPush();
 const { SvgIconVNode } = useSvgIcon();
@@ -87,7 +90,10 @@ function handleDropdown(key: DropdownKey) {
 </script>
 
 <template>
-  <NButton v-if="!authStore.isLogin" quaternary @click="loginOrRegister">
+  <NButton v-if="maintenance?.identity" quaternary @click="maintenance.logout()">
+    {{ $t('fieldPolicy.prepareLogout') }}
+  </NButton>
+  <NButton v-else-if="!authStore.isLogin" quaternary @click="loginOrRegister">
     {{ $t('page.login.common.loginOrRegister') }}
   </NButton>
   <NDropdown v-else placement="bottom" trigger="click" :options="options" @select="handleDropdown">

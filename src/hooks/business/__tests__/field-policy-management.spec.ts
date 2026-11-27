@@ -60,6 +60,24 @@ function setup(repo = repository()) {
 }
 
 describe('real policy management draft lifecycle', () => {
+  it('binds the chosen list mode to the same draft, preview and role identity', async () => {
+    const { model, repo, scope, role } = setup();
+    await model.load();
+    const policy = {
+      mode: 'allow_selected',
+      read: ['nickname'],
+      query: []
+    } as const;
+    model.setListPolicy({ ...policy, read: [...policy.read], query: [] });
+    expect(model.dirty.value).toBe(true);
+    await model.preview();
+    expect(repo.preview.mock.calls[0][2]).toMatchObject({ listPolicy: policy });
+    role.value = '202';
+    expect(model.listPolicy.value).toBeNull();
+    expect(model.previewResult.value).toBeNull();
+    scope.stop();
+  });
+
   it('sends separate qualified ready and activate commands for the exact tenant manifest', async () => {
     const { model, repo, scope } = setup();
     const state = {
@@ -199,7 +217,12 @@ describe('real policy management draft lifecycle', () => {
   });
   it('rejects incomplete catalog and does not offer edits', async () => {
     const { model, repo, scope } = setup();
-    repo.catalog.mockResolvedValue({ ...context, objects: [], complete: false, nextCursor: null });
+    repo.catalog.mockResolvedValue({
+      ...context,
+      objects: [],
+      complete: false,
+      nextCursor: null
+    });
     await model.load();
     expect(model.editable.value).toBe(false);
     expect(repo.object).not.toHaveBeenCalled();
@@ -319,7 +342,13 @@ describe('real policy management draft lifecycle', () => {
     );
     const pending = model.load();
     role.value = 'other';
-    resolve({ ...context, objects: [], complete: true, nextCursor: null, actionCatalogDigest: '' });
+    resolve({
+      ...context,
+      objects: [],
+      complete: true,
+      nextCursor: null,
+      actionCatalogDigest: ''
+    });
     await pending;
     expect(model.document.value).toBeNull();
     scope.stop();

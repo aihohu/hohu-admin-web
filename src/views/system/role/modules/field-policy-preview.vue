@@ -37,6 +37,7 @@ const columns = computed(() => [
 <template>
   <section class="my-16px" :aria-label="label('preview')">
     <NAlert type="info" class="mb-12px">{{ label('abstractPreview') }}</NAlert>
+    <p v-if="preview.listMode" class="my-2">{{ label(preview.listMode) }}</p>
     <NDataTable :columns="columns" :data="preview.diff" :row-key="ruleKey" size="small" :scroll-x="550" />
     <p v-if="preview.sampleTruncated">{{ label('samplesTruncated') }}</p>
   </section>
