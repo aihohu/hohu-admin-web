@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, shallowRef, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { NButton, NPopconfirm, NSpace, NTag } from 'naive-ui';
 import { enableStatusRecord, userGenderRecord } from '@/constants/business';
@@ -7,11 +7,11 @@ import { REG_PWD } from '@/constants/reg';
 import {
   fetchBatchDeleteUser,
   fetchDeleteUser,
-  fetchGetUserList,
   fetchResetUserPassword
 } from '@/service/api';
 import { fetchAiQueryCache } from '@/service/api/ai';
 import { useAppStore } from '@/store/modules/app';
+import { useAuthStore } from '@/store/modules/auth';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
 import { useAuth } from '@/hooks/business/auth';
 import { $t, localizedText } from '@/locales';
@@ -21,9 +21,13 @@ import UserImportModal from './modules/user-import-modal.vue';
 import UserExportModal from './modules/user-export-modal.vue';
 import UserImportHistory from './modules/user-import-history.vue';
 import { projectedUserColumn, userListColumns } from './modules/user-list-columns';
+import { clearUnavailable, loadSearchPage, permittedFilters } from './modules/user-search-filters';
 
-const appStore = useAppStore();
+const authStore = useAuthStore();
 const { hasAuth } = useAuth();
+const access = shallowRef<Api.SystemManage.User['fieldAccess']>();
+const filters = computed(() => permittedFilters(access.value, hasAuth('system:role:list')));
+const appStore = useAppStore();
 const route = useRoute();
 
 const userImportModalRef = ref();
@@ -43,8 +47,18 @@ const searchParams: Api.SystemManage.UserSearchParams = reactive({
 });
 
 const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagination } = useNaivePaginatedTable({
-  api: () => fetchGetUserList(searchParams),
-  transform: response => defaultTransform(response),
+  immediate: false,
+  api: async () => {
+    const session = authStore.authSessionRevision;
+    clearUnavailable(searchParams, filters.value);
+    const page = await loadSearchPage({ ...searchParams }, () => authStore.authSessionRevision === session);
+    return { ...page, session };
+  },
+  transform: ({ response, access: latest, session }) => {
+    if (session !== authStore.authSessionRevision) return { data: [], pageNum: 1, pageSize: 10, total: 0 };
+    access.value = latest;
+    return defaultTransform(response);
+  },
   onPaginationParamsChange: params => {
     searchParams.current = params.page;
     searchParams.size = params.pageSize;
@@ -203,11 +217,23 @@ const {
   // closeDrawer
 } = useTableOperate(data, 'userId', getData);
 
+watch(filters, allowed => clearUnavailable(searchParams, allowed), { flush: 'sync' });
+watch(() => authStore.authSessionRevision, () => {
+  access.value = undefined;
+  data.value = [];
+  clearUnavailable(searchParams, []);
+  if (authStore.isLogin) void getDataByPage(1);
+}, { flush: 'sync' });
+
 // Replay cached tool filters when arriving from an AI result card.
 onMounted(async () => {
+  const session = authStore.authSessionRevision;
+  await getData();
+  if (session !== authStore.authSessionRevision) return;
   const aiQueryId = route.query.ai_query_id;
   if (typeof aiQueryId !== 'string' || !aiQueryId) return;
   const { data: cache, error } = await fetchAiQueryCache(aiQueryId);
+  if (session !== authStore.authSessionRevision) return;
   if (error) {
     window.$message?.error($t('common.filterReplayLoadFailed'));
     return;
@@ -218,15 +244,15 @@ onMounted(async () => {
     return;
   }
   // query_cache 返回 filters（snake_case），映射到 searchParams（camelCase）
-  const filters = cache.filters || {};
-  if (filters.status === '1' || filters.status === '2') {
-    searchParams.status = filters.status;
+  const cached = cache.filters || {};
+  if (cached.status === '1' || cached.status === '2') {
+    searchParams.status = cached.status;
   }
-  if (filters.user_gender === '0' || filters.user_gender === '1' || filters.user_gender === '2') {
-    searchParams.userGender = filters.user_gender;
+  if (cached.user_gender === '0' || cached.user_gender === '1' || cached.user_gender === '2') {
+    searchParams.userGender = cached.user_gender;
   }
-  if (typeof filters.user_name === 'string') {
-    searchParams.userName = filters.user_name;
+  if (typeof cached.user_name === 'string') {
+    searchParams.userName = cached.user_name;
   }
   // 触发首次查询应用筛选
   await getData();
@@ -301,7 +327,12 @@ function handleExported() {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <UserSearch v-model:model="searchParams" @search="getDataByPage" />
+    <UserSearch
+      :key="authStore.authSessionRevision"
+      v-model:model="searchParams"
+      :filters="filters"
+      @search="getDataByPage"
+    />
     <NCard :title="$t('page.system.user.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <TableHeaderOperation
