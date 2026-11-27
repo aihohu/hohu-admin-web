@@ -10,6 +10,14 @@ const formMocks = vi.hoisted(() => ({
 const permissions = vi.hoisted(() => new Set<string>());
 
 vi.mock('@/service/api', () => ({
+  fetchUserWriteForm: vi.fn().mockResolvedValue({
+    data: {
+      fields: ['userName', 'nickname', 'userGender', 'userPhone', 'userEmail', 'status', 'password'],
+      canSubmit: true,
+      assignRoles: true,
+      assignDepartments: true
+    }
+  }),
   fetchGetAllRoles: vi.fn().mockResolvedValue({ error: null, data: [] }),
   fetchGetAssignableRoles: vi.fn().mockResolvedValue({
     error: null,
@@ -71,6 +79,27 @@ async function mountDrawer(
 }
 
 describe('user-operate-drawer', () => {
+  it('sends only permitted create inputs even if a stale model still contains a phone', async () => {
+    const { fetchUserWriteForm, fetchSaveUser } = await import('@/service/api');
+    vi.mocked(fetchUserWriteForm).mockResolvedValueOnce({
+      data: {
+        fields: ['userName', 'status', 'password'],
+        canSubmit: true,
+        assignRoles: false,
+        assignDepartments: false
+      }
+    } as Awaited<ReturnType<typeof fetchUserWriteForm>>);
+    const wrapper = await mountDrawer();
+    const vm = wrapper.vm as unknown as {
+      canEdit: (name: string) => boolean;
+      model: Record<string, unknown>;
+      handleSubmit: () => Promise<void>;
+    };
+    expect(vm.canEdit('userPhone')).toBe(false);
+    Object.assign(vm.model, { userName: 'qawriter', password: 'TestPwd123', userPhone: '13000000000' });
+    await vm.handleSubmit();
+    expect(fetchSaveUser).toHaveBeenCalledWith({ userName: 'qawriter', password: 'TestPwd123', status: '1' });
+  });
   it('submits only changed fields and never a masked display value', async () => {
     const { fetchUpdateUser } = await import('@/service/api');
     const row = {
@@ -93,6 +122,28 @@ describe('user-operate-drawer', () => {
     vm.model.nickname = 'Changed';
     await vm.handleSubmit();
     expect(fetchUpdateUser).toHaveBeenCalledWith('203', { nickname: 'Changed' });
+  });
+
+  it('shows readable profile values without sending them when only gender can be updated', async () => {
+    const { fetchUpdateUser, fetchUserWriteForm } = await import('@/service/api');
+    vi.mocked(fetchUserWriteForm).mockResolvedValueOnce({
+      data: { fields: ['userGender'], canSubmit: true }
+    } as Awaited<ReturnType<typeof fetchUserWriteForm>>);
+    const wrapper = await mountDrawer('edit', {
+      userId: '205',
+      nickname: 'Alice',
+      fieldAccess: { nickname: { read: 'plain', update: true } }
+    } as unknown as Api.SystemManage.User);
+    const vm = wrapper.vm as unknown as {
+      model: Record<string, unknown>;
+      canEdit: (field: string) => boolean;
+      handleSubmit: () => Promise<void>;
+    };
+    expect(vm.model.nickname).toBe('Alice');
+    expect(vm.canEdit('nickname')).toBe(false);
+    Object.assign(vm.model, { nickname: 'stale', userGender: '1' });
+    await vm.handleSubmit();
+    expect(fetchUpdateUser).toHaveBeenCalledWith('205', { userGender: '1' });
   });
 
   it('does not replace unresolved role sets', async () => {
@@ -125,7 +176,7 @@ describe('user-operate-drawer', () => {
 
     expect(userNamePattern.test('测试1')).toBe(true);
     expect(userNamePattern.test('qa_e2e_004')).toBe(false);
-    expect(vm.rules.roleIds.some(rule => rule.required)).toBe(true);
+    expect(vm.rules.roleIds.some(rule => rule.required)).toBe(false);
   });
 
   it('创建成功后关闭抽屉并通知列表刷新', async () => {

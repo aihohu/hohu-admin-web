@@ -58,7 +58,7 @@ declare namespace Api {
       dataScope?: string;
       status?: string;
     };
-    type FieldSelections = { read: string[]; query: string[] };
+    type FieldSelections = { read: string[]; query: string[]; create?: string[]; update?: string[] };
     type ListPolicy = FieldSelections & {
       mode: 'restrict_selected' | 'allow_selected';
       sensitive?: FieldSelections;
@@ -68,6 +68,7 @@ declare namespace Api {
       listFields?: FieldSelections;
       copyFields?: FieldSelections | null;
       listMenuIds?: string[];
+      actionMenuIds?: Partial<Record<keyof FieldSelections, string[]>>;
       listAccesses?: Pick<Rule, 'fieldId' | 'access'>[];
       sensitiveFields?: string[];
       listActionGranted?: boolean;

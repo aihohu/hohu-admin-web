@@ -78,7 +78,14 @@ const object = computed(() => catalog.value?.objects.find(o => o.objectId === ob
 const advancedObject = computed(() => {
   const current = object.value;
   if (!current || !model.listPolicy.value) return current;
-  const owned = new Set(document.value?.listAccesses?.map(ruleKey));
+  const owned = new Set(
+    document.value?.listAccesses
+      ?.filter(rule => {
+        const purpose = rule.access.purpose.split('.')[1] as keyof Api.FieldManagement.FieldSelections;
+        return model.listPolicy.value?.[purpose] !== undefined;
+      })
+      .map(ruleKey)
+  );
   return {
     ...current,
     fields: current.fields

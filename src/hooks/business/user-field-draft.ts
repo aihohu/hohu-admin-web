@@ -23,24 +23,29 @@ export function fieldCapability(source: Source, field: string, capability: Capab
   return entry !== null && Reflect.get(entry.access, capability) === true;
 }
 
-export function createUserDraft(source: Source, fields: readonly string[]): Source {
+export function createUserDraft(source: Source, fields: readonly string[], writable?: readonly string[]): Source {
   const draft: Source = {};
   for (const field of fields) {
     if (fieldRead(source, field) === 'plain' && Object.hasOwn(source, field)) draft[field] = source[field];
-    else if (fieldCapability(source, field, 'update')) draft[field] = '';
+    else if (writable?.includes(field) ?? fieldCapability(source, field, 'update')) draft[field] = '';
   }
   return draft;
 }
 
-export function buildUserPatch(source: Source, draft: Source, fields: readonly string[]): Source {
-  const initial = createUserDraft(source, fields);
+export function buildUserPatch(
+  source: Source,
+  draft: Source,
+  fields: readonly string[],
+  writable?: readonly string[]
+): Source {
+  const initial = createUserDraft(source, fields, writable);
   return Object.fromEntries(
     fields
       .filter(
         field =>
           Object.hasOwn(draft, field) &&
           draft[field] !== undefined &&
-          fieldCapability(source, field, 'update') &&
+          (writable?.includes(field) ?? fieldCapability(source, field, 'update')) &&
           !Object.is(initial[field], draft[field])
       )
       .map(field => [field, draft[field]])

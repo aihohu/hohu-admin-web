@@ -17,7 +17,7 @@ import { fetchGetMenuTree, fetchGetRoleMenuList } from '@/service/api';
 import { $t, localizedText } from '@/locales';
 
 type Policy = Api.FieldManagement.ListPolicy;
-type Purpose = 'read' | 'query';
+type Purpose = keyof Api.FieldManagement.FieldSelections;
 const props = defineProps<{
   document: Api.FieldManagement.Document;
   policy: Policy | null;
@@ -47,7 +47,9 @@ function menuCheck({ option }: { option: TreeOption }) {
   });
 }
 function menuAction({ option }: { option: TreeOption }) {
-  if (!listMenus.value.has(String(option.id))) return null;
+  const id = String(option.id);
+  const target = (['create', 'update', 'read'] as const).find(key => props.document.actionMenuIds?.[key]?.includes(id));
+  if (!target && !listMenus.value.has(id)) return null;
   return h(
     NButton,
     {
@@ -57,6 +59,7 @@ function menuAction({ option }: { option: TreeOption }) {
       onClick: (event: MouseEvent) => {
         event.stopPropagation();
         lastOpener = event.currentTarget as HTMLElement;
+        purpose.value = target ?? 'read';
         void toggle(true);
       }
     },
@@ -101,9 +104,22 @@ async function toggle(show: boolean) {
 function choose(copy: boolean) {
   const mode = switching.value;
   if (!mode || props.disabled) return;
-  const start = copy ? props.document.copyFields : { read: [], query: [] };
+  const start = copy
+    ? props.document.copyFields
+    : {
+        read: [],
+        query: [],
+        ...(props.document.listFields?.create ? { create: [] } : {}),
+        ...(props.document.listFields?.update ? { update: [] } : {})
+      };
   if (!start) return;
-  emit('change', { mode, read: [...start.read], query: [...start.query] });
+  emit('change', {
+    mode,
+    read: [...start.read],
+    query: [...start.query],
+    ...(start.create ? { create: [...start.create] } : {}),
+    ...(start.update ? { update: [...start.update] } : {})
+  });
   switching.value = null;
 }
 function selectSensitive(values: (string | number)[]) {
@@ -114,7 +130,7 @@ function selectSensitive(values: (string | number)[]) {
     ...props.policy.sensitive,
     [purpose.value]: values.map(String).sort()
   };
-  emit('change', { ...props.policy, sensitive });
+  emit('change', { ...props.policy, [purpose.value]: selection.value, sensitive });
 }
 function selectFields(values: (string | number)[]) {
   if (props.policy && !props.disabled)
@@ -201,7 +217,10 @@ function selectFields(values: (string | number)[]) {
           <NRadioGroup v-model:value="purpose" :aria-label="label('purpose')" size="small">
             <NRadioButton value="read">{{ label('read') }}</NRadioButton>
             <NRadioButton value="query">{{ label('query') }}</NRadioButton>
+            <NRadioButton v-if="document.listFields?.create" value="create">{{ label('create') }}</NRadioButton>
+            <NRadioButton v-if="document.listFields?.update" value="update">{{ label('update') }}</NRadioButton>
           </NRadioGroup>
+          <p v-if="policy[purpose] === undefined" class="my-3">{{ label('explicitWriteRules') }}</p>
           <p class="my-3">
             {{ label(policy.mode === 'restrict_selected' ? 'restrictedCount' : 'allowedCount') }}
             {{ selection.length }} / {{ options.length }}
@@ -212,7 +231,7 @@ function selectFields(values: (string | number)[]) {
                 v-for="field in options"
                 :key="field"
                 :value="field"
-                :disabled="policy.sensitive?.[purpose].includes(field)"
+                :disabled="policy.sensitive?.[purpose]?.includes(field)"
               >
                 {{ label(field) }}
               </NCheckbox>

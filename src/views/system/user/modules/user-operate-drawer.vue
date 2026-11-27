@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
 import { enableStatusOptions, userGenderOptions } from '@/constants/business';
 import {
   fetchGetAssignableRoles,
   fetchGetDeptTreeOption,
   fetchSaveUser,
+  fetchUserWriteForm,
   fetchUpdateUser,
   fetchUpdateUserDepartments,
   fetchUpdateUserRoles
@@ -64,26 +65,45 @@ type UserFormModel = Api.SystemManage.UpdateUserParams & {
 };
 
 const roleSetComplete = ref(false);
+const initialDepartmentChoice = ref(false);
+const writeForm = ref<Api.SystemManage.UserWriteForm | null>(null);
 const canAssignRoles = computed(
-  () => hasAuth('system:user:role-auth') && (props.operateType === 'add' || roleSetComplete.value)
+  () =>
+    hasAuth('system:user:role-auth') &&
+    (props.operateType === 'add' ? writeForm.value?.assignRoles : roleSetComplete.value)
 );
 const canAssignDepartments = computed(
   () =>
     hasAuth('system:dept:list') &&
-    (props.operateType === 'add' ||
-      (props.rowData &&
+    ((props.operateType === 'add' && (initialDepartmentChoice.value || writeForm.value?.assignDepartments)) ||
+      (props.operateType === 'edit' &&
+        props.rowData &&
         fieldRead(props.rowData, 'departments') === 'plain' &&
         fieldCapability(props.rowData, 'departments', 'replace') &&
         Array.isArray(props.rowData.userDepts)) ||
-      (props.rowData && !Object.hasOwn(props.rowData, 'fieldAccess') && Array.isArray(props.rowData.userDepts)))
+      (props.operateType === 'edit' &&
+        props.rowData &&
+        !Object.hasOwn(props.rowData, 'fieldAccess') &&
+        Array.isArray(props.rowData.userDepts)))
 );
 
 function canEdit(field: string) {
-  return props.operateType === 'add' || Boolean(props.rowData && fieldCapability(props.rowData, field, 'update'));
+  return Boolean(writeForm.value?.fields.includes(field));
 }
 
+const submitEnabled = computed(() =>
+  Boolean(
+    writeForm.value &&
+    (writeForm.value.canSubmit ||
+      (props.operateType === 'edit' && (canAssignRoles.value || canAssignDepartments.value)))
+  )
+);
+
 function showField(field: string) {
-  return canEdit(field) || Boolean(props.rowData && fieldRead(props.rowData, field) !== 'hidden');
+  return (
+    canEdit(field) ||
+    Boolean(props.operateType === 'edit' && props.rowData && fieldRead(props.rowData, field) !== 'hidden')
+  );
 }
 
 function replacement(field: string) {
@@ -109,17 +129,18 @@ type RuleKey = Extract<keyof UserFormModel, 'userName' | 'nickname' | 'password'
 
 const rules = computed<Record<RuleKey, App.Global.FormRule[]>>(() => ({
   userName: canEdit('userName') ? formRules.userName : [],
-  nickname: canEdit('nickname') && !replacement('nickname') ? [defaultRequiredRule] : [],
+  nickname: [],
   password: formRules.pwd,
-  roleIds: canAssignRoles.value
-    ? [
-        {
-          required: true,
-          type: 'array',
-          message: $t('page.system.user.form.userRoleRequired')
-        }
-      ]
-    : [],
+  roleIds:
+    props.operateType === 'edit' && canAssignRoles.value
+      ? [
+          {
+            required: true,
+            type: 'array',
+            message: $t('page.system.user.form.userRoleRequired')
+          }
+        ]
+      : [],
   status: canEdit('status') ? [defaultRequiredRule] : []
 }));
 
@@ -128,6 +149,9 @@ const initializing = ref(false);
 const initialRoleIds = ref<string[]>([]);
 const initialDeptAssignments = ref<Api.SystemManage.UserDeptItem[]>([]);
 let initializationGeneration = 0;
+onScopeDispose(() => {
+  initializationGeneration += 1;
+});
 
 /** the enabled role options */
 const candidateRoles = ref<Api.SystemManage.AssignableRole[]>([]);
@@ -249,9 +273,11 @@ function handleInitModel() {
   initialRoleIds.value = [];
   initialDeptAssignments.value = [];
   roleSetComplete.value = false;
+  initialDepartmentChoice.value = false;
+  deptTreeData.value = [];
 
   if (props.operateType === 'edit' && props.rowData) {
-    Object.assign(model.value, createUserDraft(props.rowData, userProfileFields));
+    Object.assign(model.value, createUserDraft(props.rowData, userProfileFields, writeForm.value?.fields));
     const userDepts = props.rowData.userDepts || [];
     checkedDeptKeys.value = userDepts.map(d => d.deptId);
     primaryDeptId.value = userDepts.find(d => d.isPrimary)?.deptId || userDepts[0]?.deptId || '';
@@ -270,12 +296,14 @@ function recoverFromPartialUpdate() {
 }
 
 async function handleSubmit() {
-  if (initializing.value || loading.value) return;
+  if (initializing.value || loading.value || !submitEnabled.value) return;
+  const generation = initializationGeneration;
   try {
     await validate();
   } catch {
     return;
   }
+  if (generation !== initializationGeneration || !submitEnabled.value) return;
   if (allSelectedDeptIds.value.length > 0 && !primaryDeptId.value) {
     window.$message?.error($t('page.system.user.form.primaryDeptRequired'));
     return;
@@ -305,6 +333,7 @@ async function handleSubmit() {
         res = await fetchUpdateUserRoles(props.rowData.userId, {
           roleIds: model.value.roleIds
         });
+        if (generation !== initializationGeneration) return;
         if (res.error) return;
         associationCommitted = true;
       }
@@ -312,18 +341,20 @@ async function handleSubmit() {
         res = await fetchUpdateUserDepartments(props.rowData.userId, {
           deptAssignments
         });
+        if (generation !== initializationGeneration) return;
         if (res.error) {
           if (associationCommitted) recoverFromPartialUpdate();
           return;
         }
         associationCommitted = true;
       }
-      const patch = buildUserPatch(props.rowData, model.value, userProfileFields);
+      const patch = buildUserPatch(props.rowData, model.value, userProfileFields, writeForm.value!.fields);
       if (Object.keys(patch).length > 0) {
         res = await fetchUpdateUser(props.rowData.userId, patch);
         if (res.error) {
           if (associationCommitted) recoverFromPartialUpdate();
-          else applyServerFieldErrors(res.error);
+          else if (!applyServerFieldErrors(res.error))
+            window.$message?.error(getServerErrorMessage(res.error) || $t('common.modifyFailed'));
           return;
         }
       } else {
@@ -333,10 +364,14 @@ async function handleSubmit() {
       }
     } else {
       const payload: Api.SystemManage.CreateUserParams = {
-        ...profile,
+        userName: profile.userName,
+        status: profile.status,
+        ...Object.fromEntries(
+          Object.entries(profile).filter(([field, value]) => canEdit(field) && value !== '' && value != null)
+        ),
         password: model.value.password,
-        deptIds: canAssignDepartments.value ? deptAssignments : [],
-        ...(canAssignRoles.value ? { roleIds: model.value.roleIds } : {})
+        ...(canAssignDepartments.value && writeForm.value?.assignDepartments ? { deptIds: deptAssignments } : {}),
+        ...(canAssignRoles.value && model.value.roleIds.length ? { roleIds: model.value.roleIds } : {})
       };
       res = await fetchSaveUser(payload);
     }
@@ -358,7 +393,29 @@ async function handleSubmit() {
 
 watch(model, () => clearServerFieldErrors(), { deep: true });
 
+let formRequest = 0;
+async function loadWriteForm() {
+  const request = ++formRequest;
+  const generation = initializationGeneration;
+  const { data, error } = await fetchUserWriteForm(
+    props.operateType === 'add' ? { deptIds: allSelectedDeptIds.value } : { userId: props.rowData!.userId }
+  );
+  if (request !== formRequest || generation !== initializationGeneration) return;
+  writeForm.value = error ? null : data;
+  return writeForm.value;
+}
+
+watch(
+  () => (props.operateType === 'add' ? allSelectedDeptIds.value.join(',') : ''),
+  async () => {
+    if (!visible.value || initializing.value || props.operateType !== 'add') return;
+    writeForm.value = null;
+    await loadWriteForm();
+  }
+);
+
 watch(visible, async isVisible => {
+  writeForm.value = null;
   if (!isVisible) {
     initializationGeneration += 1;
     initializing.value = false;
@@ -371,9 +428,15 @@ watch(visible, async isVisible => {
   restoreValidation();
   initializing.value = true;
   try {
+    const form = await loadWriteForm();
+    if (generation !== initializationGeneration || !form) return;
+    initialDepartmentChoice.value = Boolean(form.assignDepartments);
+    if (props.operateType === 'edit' && props.rowData) {
+      Object.assign(model.value, createUserDraft(props.rowData, userProfileFields, form.fields));
+    }
     await Promise.all([
       hasAuth('system:user:role-auth') &&
-      (props.operateType === 'add' || (props.rowData && fieldRead(props.rowData, 'roles') === 'plain'))
+      (props.operateType === 'add' ? form.assignRoles : props.rowData && fieldRead(props.rowData, 'roles') === 'plain')
         ? getRoleOptions(generation, currentRoleCodes)
         : Promise.resolve(),
       canAssignDepartments.value ? loadDeptTree(generation) : Promise.resolve()
@@ -413,7 +476,7 @@ watch(visible, async isVisible => {
           />
         </NFormItem>
         <NFormItem
-          v-if="props.operateType === 'add'"
+          v-if="props.operateType === 'add' && canEdit('password')"
           v-bind="fieldProps('password')"
           :label="$t('page.system.user.password')"
           path="password"
@@ -441,7 +504,10 @@ watch(visible, async isVisible => {
             <p v-if="replacement('userPhone')" class="mb-2 text-sm text-muted-color">
               {{ $t('page.system.user.form.replacementHint') }}
             </p>
-            <p v-if="props.rowData && fieldRead(props.rowData, 'userPhone') === 'masked'" class="mb-2">
+            <p
+              v-if="props.operateType === 'edit' && props.rowData && fieldRead(props.rowData, 'userPhone') === 'masked'"
+              class="mb-2"
+            >
               {{ props.rowData.userPhone }}
             </p>
             <NInput
@@ -469,7 +535,10 @@ watch(visible, async isVisible => {
             <p v-if="replacement('userEmail')" class="mb-2 text-sm text-muted-color">
               {{ $t('page.system.user.form.replacementHint') }}
             </p>
-            <p v-if="props.rowData && fieldRead(props.rowData, 'userEmail') === 'masked'" class="mb-2">
+            <p
+              v-if="props.operateType === 'edit' && props.rowData && fieldRead(props.rowData, 'userEmail') === 'masked'"
+              class="mb-2"
+            >
               {{ props.rowData.userEmail }}
             </p>
             <NInput
@@ -530,9 +599,15 @@ watch(visible, async isVisible => {
         </NFormItem>
       </NForm>
       <template #footer>
+        <p v-if="!initializing && !submitEnabled">{{ $t('fieldPolicy.writeFormUnavailable') }}</p>
         <NSpace :size="16">
           <NButton @click="closeDrawer">{{ $t('common.cancel') }}</NButton>
-          <NButton type="primary" :loading="loading || initializing" :disabled="initializing" @click="handleSubmit">
+          <NButton
+            type="primary"
+            :loading="loading || initializing"
+            :disabled="initializing || !submitEnabled"
+            @click="handleSubmit"
+          >
             {{ $t('common.confirm') }}
           </NButton>
         </NSpace>

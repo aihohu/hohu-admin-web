@@ -219,6 +219,8 @@ const {
 
 watch(filters, allowed => clearUnavailable(searchParams, allowed), { flush: 'sync' });
 watch(() => authStore.authSessionRevision, () => {
+  drawerVisible.value = false;
+  editingData.value = null;
   access.value = undefined;
   data.value = [];
   clearUnavailable(searchParams, []);
@@ -381,6 +383,7 @@ function handleExported() {
         class="sm:h-full"
       />
       <UserOperateDrawer
+        :key="authStore.authSessionRevision"
         v-model:visible="drawerVisible"
         :operate-type="operateType"
         :row-data="editingData"

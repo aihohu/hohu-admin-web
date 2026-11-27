@@ -106,6 +106,10 @@ export function fetchGetUserList(params?: Api.SystemManage.UserSearchParams) {
   });
 }
 
+export function fetchUserWriteForm(data: { userId?: string; deptIds?: string[] }) {
+  return request<Api.SystemManage.UserWriteForm>({ url: '/system/user/write-form', method: 'post', data });
+}
+
 export function fetchSaveUser(data: Api.SystemManage.CreateUserParams) {
   return request<App.Service.Response<any>>({
     url: '/system/user/add',
