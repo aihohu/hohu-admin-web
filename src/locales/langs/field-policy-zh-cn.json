@@ -1,4 +1,6 @@
 {
+  "explicitWriteRules": "当前使用已有的逐字段规则。选择字段后，本用途将按上方模式保存。",
+  "writeFormUnavailable": "当前权限不足以提交此表单。请核对所选部门、必填字段和角色授权。",
   "returnToRoles": "返回角色管理",
   "explicitSensitive": "单独允许敏感字段",
   "otherUses": "其他字段用途",
@@ -11,8 +13,8 @@
   "startBlank": "从空白选择",
   "startFollow": "从默认配置开始",
   "copyEffective": "复制当前可用字段",
-  "allowStart": "读取和查询分别选择。复制以该角色当前生效的查看功能和字段规则为准。",
-  "restrictStart": "普通字段跟随查看功能。敏感字段需要显式授权。",
+  "allowStart": "按用途分别选择字段。复制时使用该角色当前生效的功能权限与字段规则。",
+  "restrictStart": "普通字段跟随对应用途的功能权限。敏感字段需要显式授权。",
   "restrictedCount": "已限制",
   "allowedCount": "已允许",
   "openFieldsHint": "从菜单权限打开字段权限。",

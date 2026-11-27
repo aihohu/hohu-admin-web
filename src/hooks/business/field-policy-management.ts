@@ -171,10 +171,19 @@ export function useFieldPolicy(options: {
 
   function setListPolicy(value: Api.FieldManagement.ListPolicy) {
     if (!editable.value || objectId.value !== 'system.user') return;
-    if (!listPolicy.value) {
-      const owned = new Set(document.value?.listAccesses?.map(ruleKey));
-      rules.value = rules.value.filter(rule => !owned.has(ruleKey(rule)));
-      history.value = [];
+    {
+      const owned = new Set(
+        document.value?.listAccesses
+          ?.filter(rule => {
+            const purpose = rule.access.purpose.split('.')[1] as keyof Api.FieldManagement.FieldSelections;
+            return value[purpose] !== undefined && listPolicy.value?.[purpose] === undefined;
+          })
+          .map(ruleKey)
+      );
+      if (owned.size) {
+        rules.value = rules.value.filter(rule => !owned.has(ruleKey(rule)));
+        history.value = [];
+      }
     }
     listPolicy.value = structuredClone(value);
     clearPreview();

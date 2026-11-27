@@ -1,4 +1,6 @@
 {
+  "explicitWriteRules": "Existing individual rules apply. Selecting fields replaces those rules for this purpose when saved.",
+  "writeFormUnavailable": "Your permissions do not allow this submission. Check the department, required fields and role assignment.",
   "returnToRoles": "Back to roles",
   "explicitSensitive": "Explicit sensitive field grants",
   "otherUses": "Other field uses",
@@ -11,8 +13,8 @@
   "startBlank": "Start empty",
   "startFollow": "Start with defaults",
   "copyEffective": "Copy current fields",
-  "allowStart": "Choose read and query fields independently. Copy uses this role’s active action and field grants.",
-  "restrictStart": "Ordinary fields follow the view action. Sensitive fields require explicit grants.",
+  "allowStart": "Choose fields independently for each use. Copy uses this role’s active action and field grants.",
+  "restrictStart": "Ordinary fields follow the corresponding action. Sensitive fields require explicit grants.",
   "restrictedCount": "Restricted",
   "allowedCount": "Allowed",
   "openFieldsHint": "Open field permissions from the menu panel.",

@@ -170,13 +170,15 @@ declare namespace Api {
       status: Common.EnableStatus;
     };
 
-    type CreateUserParams = UserProfileParams & {
-      password: string;
-      /** explicit complete role set; omission uses the backend default role */
-      roleIds?: string[];
-      /** dept associations (required: at least one primary if non-empty) */
-      deptIds: Api.SystemManage.UserDeptItem[];
-    };
+    type UserWriteForm = { fields: string[]; canSubmit: boolean; assignRoles?: boolean; assignDepartments?: boolean };
+    type CreateUserParams = Pick<UserProfileParams, 'userName' | 'status'> &
+      Partial<UserProfileParams> & {
+        password: string;
+        /** explicit complete role set; omission uses the backend default role */
+        roleIds?: string[];
+        /** dept associations (required: at least one primary if non-empty) */
+        deptIds?: Api.SystemManage.UserDeptItem[];
+      };
 
     type UpdateUserParams = UserProfileParams;
 
